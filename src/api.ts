@@ -167,6 +167,33 @@ function readCache<T>(key: string, ttl: number): T | null {
 // le travail (nos catalogues sont servis en statique depuis notre domaine).
 const CACHE_MAX_CHARS = 300_000
 
+// Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
+// le monde : indispensable quand la FORME des données change (sinon un vieux
+// cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
+const DB_V = 'v6' // catalogues par collection
+const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
+const CHAR_V = 'v6' // fiches de personnage
+
+/** Purge les caches des versions précédentes : ils ne servent plus et
+ *  encombrent un localStorage déjà juste. */
+function purgeStaleCaches(): void {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      const db = key.match(/^ogs\.db\.(.+)\.(v\d+)$/)
+      if (db) {
+        if (db[2] !== (db[1] === 'relics' ? RELIC_V : DB_V)) localStorage.removeItem(key)
+        continue
+      }
+      const char = key.match(/^ogs\.char\.\d+\.(v\d+)$/)
+      if (char && char[1] !== CHAR_V) localStorage.removeItem(key)
+    }
+  } catch {
+    // localStorage indisponible : rien à purger
+  }
+}
+
+purgeStaleCaches()
+
 function writeCache<T>(key: string, data: T): void {
   try {
     const payload = JSON.stringify({ at: Date.now(), data } satisfies Cached<T>)
@@ -184,7 +211,7 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
   // v4 : image + description pour la fiche objet.
   // v5 : group/groupEn (catégorie orchestrion) + num (numéro d'album des cartes).
   // v6 : rank/spellType/aspect (magie bleue).
-  const cacheKey = `ogs.db.${kind}.v6`
+  const cacheKey = `ogs.db.${kind}.${DB_V}`
   if (!force) {
     const cached = readCache<Item[]>(cacheKey, DB_TTL)
     if (cached) return cached
@@ -310,7 +337,7 @@ async function seedFromCollect(lodestoneId: number): Promise<void> {
 
 export async function fetchCharacter(lodestoneId: number, force = false): Promise<Character> {
   // v5 : les personnages viennent de notre worker (Lodestone en direct)
-  const cacheKey = `ogs.char.${lodestoneId}.v6`
+  const cacheKey = `ogs.char.${lodestoneId}.${CHAR_V}`
   if (!force) {
     const cached = readCache<Character>(cacheKey, CHAR_TTL)
     if (cached) return cached
@@ -385,7 +412,7 @@ export interface RelicDb {
 }
 
 export async function fetchRelicDb(force = false): Promise<RelicDb> {
-  const cacheKey = 'ogs.db.relics.v1'
+  const cacheKey = `ogs.db.relics.${RELIC_V}`
   if (!force) {
     const cached = readCache<RelicDb>(cacheKey, DB_TTL)
     if (cached) return cached
@@ -444,7 +471,7 @@ export async function fetchRelicDb(force = false): Promise<RelicDb> {
 /** Invalide le cache local d'un perso (après édition dans « Mon Journal »). */
 export function invalidateCharacter(lodestoneId: number): void {
   try {
-    localStorage.removeItem(`ogs.char.${lodestoneId}.v6`)
+    localStorage.removeItem(`ogs.char.${lodestoneId}.${CHAR_V}`)
   } catch {
     // rien
   }

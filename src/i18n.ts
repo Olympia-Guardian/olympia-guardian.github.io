@@ -99,6 +99,17 @@ const STR = {
     en: 'update your character there if your latest loot is missing',
   },
   dataBy: { fr: 'Données', en: 'Data by' },
+  feedback: { fr: 'un souci, une idée ?', en: 'issues & ideas' },
+
+  // Multi-groupes
+  groupUnsaved: { fr: 'Groupe actuel', en: 'Current group' },
+  groupSave: { fr: '💾 Enregistrer ce groupe…', en: '💾 Save this group…' },
+  groupForget: { fr: '🗑 Oublier ce groupe', en: '🗑 Forget this group' },
+  groupNamePrompt: { fr: 'Nom du groupe :', en: 'Group name:' },
+  groupsTitle: {
+    fr: 'Tes groupes enregistrés sur ce navigateur — bascule de l\'un à l\'autre',
+    en: 'Groups saved on this browser — switch between them',
+  },
 
   // Roster
   team: { fr: 'Équipe', en: 'Team' },

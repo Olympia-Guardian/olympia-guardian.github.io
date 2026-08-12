@@ -108,6 +108,20 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
     const cached = readCache<Item[]>(cacheKey, DB_TTL)
     if (cached) return cached
   }
+  // Nos fichiers statiques d'abord (rafraîchis chaque nuit par GitHub Actions) :
+  // FFXIV Collect n'est sollicité en direct qu'en secours.
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/${kind}.json`)
+    if (res.ok) {
+      const items = (await res.json()) as Item[]
+      if (Array.isArray(items) && items.length > 0) {
+        writeCache(cacheKey, items)
+        return items
+      }
+    }
+  } catch {
+    // secours API en direct
+  }
   const path = KIND_INFO[kind].path
   const [resEn, resFr] = await Promise.all([
     fetch(`${API}/${path}?limit=1000`),
@@ -231,6 +245,18 @@ export async function fetchRelicDb(force = false): Promise<RelicDb> {
   if (!force) {
     const cached = readCache<RelicDb>(cacheKey, DB_TTL)
     if (cached) return cached
+  }
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/relics.json`)
+    if (res.ok) {
+      const db = (await res.json()) as RelicDb
+      if (db?.relics?.length > 0) {
+        writeCache(cacheKey, db)
+        return db
+      }
+    }
+  } catch {
+    // secours API en direct
   }
   const [resEn, resFr] = await Promise.all([
     fetch(`${API}/relics?limit=3000`),

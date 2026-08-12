@@ -2,17 +2,18 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { mergeRosterLWW, setHashParam, type RoomDoc, type RosterState } from './store'
 
 // ---------------------------------------------------------------------------
-// Salon de synchro : un document JSON partagé sur textdb.dev, adressé par un
-// ID que NOUS choisissons. Il ne transporte que le roster (les possessions
-// viennent toutes de FFXIV Collect). Propriétés clés vérifiées :
-//  - POST crée OU écrase à l'ID choisi → si le service purge le document,
-//    n'importe quel membre le re-crée à l'identique avec sa copie locale :
-//    le lien du groupe ne meurt jamais ;
+// Salon de synchro : un document JSON stocké par notre worker Cloudflare
+// (worker/index.js, D1), adressé par un ID que l'app choisit. Il ne transporte
+// que le roster (les possessions viennent toutes de FFXIV Collect).
+//  - POST crée ou écrase le salon → recréable à l'identique par n'importe quel
+//    membre : le lien du groupe ne meurt jamais ;
 //  - POST en text/plain = « simple request » CORS, pas de preflight ;
-//  - accès libre : l'ID (un UUID) fait office de secret du groupe.
+//  - l'ID (un UUID) fait office de secret du groupe.
+// Les salons historiques hébergés sur textdb.dev sont migrés au premier accès.
 // ---------------------------------------------------------------------------
 
-const ROOM_API = 'https://textdb.dev/api/data/'
+const ROOM_API = 'https://ogs-room.olympia-guardian.workers.dev/room/'
+const LEGACY_API = 'https://textdb.dev/api/data/'
 const POLL_MS = 90_000
 const PUSH_DEBOUNCE_MS = 1_500
 
@@ -20,11 +21,7 @@ export function newRoomId(): string {
   return 'ogs-' + crypto.randomUUID()
 }
 
-async function fetchRoom(roomId: string): Promise<RoomDoc | null> {
-  const res = await fetch(ROOM_API + roomId, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`salon injoignable (${res.status})`)
-  const text = await res.text()
-  if (!text.trim()) return null
+function parseDoc(text: string): RoomDoc | null {
   try {
     const doc = JSON.parse(text)
     if (doc && doc.v === 1 && doc.roster) return doc as RoomDoc
@@ -32,6 +29,26 @@ async function fetchRoom(roomId: string): Promise<RoomDoc | null> {
   } catch {
     return null
   }
+}
+
+async function fetchRoom(roomId: string): Promise<RoomDoc | null> {
+  const res = await fetch(ROOM_API + roomId, { cache: 'no-store' })
+  if (res.status === 404) {
+    // Salon inconnu du worker : peut-être un ancien salon textdb → migration
+    // transparente (le doc retourné sera poussé vers le worker par sync()).
+    try {
+      const legacy = await fetch(LEGACY_API + roomId, { cache: 'no-store' })
+      if (legacy.ok) {
+        const doc = parseDoc(await legacy.text())
+        if (doc) return doc
+      }
+    } catch {
+      // pas d'ancien salon
+    }
+    return null
+  }
+  if (!res.ok) throw new Error(`salon injoignable (${res.status})`)
+  return parseDoc(await res.text())
 }
 
 async function pushRoom(roomId: string, doc: RoomDoc): Promise<void> {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, type Kind } from './api'
 import { useDigest } from './digest'
+import { currentGroupHash, loadGroups, saveGroups, switchToGroup, type SavedGroup } from './groups'
 import { detectLang, kindLabel, persistLang, translate, LangContext, type Lang } from './i18n'
 import { ItemModal, type ShownItem } from './ItemModal'
 import { useRoom, type LocalState } from './room'
@@ -62,6 +63,30 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('planning')
   const [copied, setCopied] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
+
+  // Multi-groupes : registre local de groupes nommés, bascule par rechargement.
+  const [groups, setGroups] = useState<SavedGroup[]>(loadGroups)
+  const groupHash = currentGroupHash(roomId, roster.ids)
+  const currentGroupIdx = groups.findIndex((g) => g.hash === groupHash)
+  function onGroupAction(value: string) {
+    if (value === '__save') {
+      if (!groupHash) return
+      const name = prompt(t('groupNamePrompt'))?.trim()
+      if (!name) return
+      const next = [...groups.filter((g) => g.hash !== groupHash), { name, hash: groupHash }]
+      setGroups(next)
+      saveGroups(next)
+    } else if (value === '__forget') {
+      const next = groups.filter((g) => g.hash !== groupHash)
+      setGroups(next)
+      saveGroups(next)
+    } else {
+      const idx = Number(value)
+      if (Number.isInteger(idx) && groups[idx] && groups[idx].hash !== groupHash) {
+        switchToGroup(groups[idx].hash)
+      }
+    }
+  }
 
   // « Quoi de neuf depuis la dernière visite »
   const digest = useDigest(ready)
@@ -161,6 +186,23 @@ export default function App() {
             ))}
           </nav>
           <div className="topbar-actions">
+            {(groups.length > 0 || groupHash !== null) && (
+              <select
+                className="focus-select"
+                value={currentGroupIdx >= 0 ? String(currentGroupIdx) : ''}
+                onChange={(e) => onGroupAction(e.target.value)}
+                title={t('groupsTitle')}
+              >
+                {currentGroupIdx < 0 && <option value="">📁 {t('groupUnsaved')}</option>}
+                {groups.map((g, i) => (
+                  <option key={g.hash} value={i}>
+                    📁 {g.name}
+                  </option>
+                ))}
+                {groupHash && currentGroupIdx < 0 && <option value="__save">{t('groupSave')}</option>}
+                {currentGroupIdx >= 0 && <option value="__forget">{t('groupForget')}</option>}
+              </select>
+            )}
             {ready.length > 1 && (
               <select
                 className="focus-select"
@@ -303,7 +345,15 @@ export default function App() {
           <a href="https://ffxivcollect.com" target="_blank" rel="noreferrer">
             FFXIV Collect
           </a>{' '}
-          · {t('footer')} · FINAL FANTASY XIV © SQUARE ENIX
+          · {t('footer')} ·{' '}
+          <a
+            href="https://github.com/Olympia-Guardian/olympia-guardian.github.io/issues"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t('feedback')}
+          </a>{' '}
+          · FINAL FANTASY XIV © SQUARE ENIX
         </footer>
       </div>
     </LangContext.Provider>

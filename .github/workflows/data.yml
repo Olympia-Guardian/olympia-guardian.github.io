@@ -1,0 +1,42 @@
+# Rafraîchit chaque nuit les bases de données (public/data/) depuis FFXIV
+# Collect, puis déclenche le redéploiement si quelque chose a changé.
+name: Refresh data
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/fetch-data.mjs
+      - name: Commit & push si changement
+        id: commit
+        run: |
+          git config user.name "OGS Collect"
+          git config user.email "ogs-collect@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Data : rafraichissement quotidien des bases FFXIV Collect"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Les pushes faits avec GITHUB_TOKEN ne déclenchent pas les workflows
+      # on:push → on lance le déploiement explicitement.
+      - name: Déclencher le déploiement
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY"

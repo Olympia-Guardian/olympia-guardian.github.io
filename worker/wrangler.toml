@@ -1,0 +1,11 @@
+# Worker « ogs-room » : stockage durable des salons de synchro.
+# Déploiement : npx wrangler deploy (depuis ce dossier).
+name = "ogs-room"
+main = "index.js"
+compatibility_date = "2026-08-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ogs-rooms"
+database_id = "e5cfba84-26c7-41a3-900e-e31d610ed25f"

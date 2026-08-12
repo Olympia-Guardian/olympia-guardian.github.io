@@ -2684,7 +2684,10 @@ a.player-name:hover {
 }
 
 .relic-req-items {
-  flex: 1;
+  /* jamais plus de la moitié de la largeur : ça replie sur plusieurs lignes */
+  flex: 0 1 auto;
+  margin-left: auto;
+  max-width: 50%;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;

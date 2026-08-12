@@ -14,7 +14,13 @@ export interface Material {
   key?: string
   /** Catégorie pour les vues agrégées (défaut : objet). */
   cat?: 'currency' | 'item' | 'drop'
+  /** Icône officielle de l'objet (XIVAPI) — affichée dans le total d'en-tête. */
+  icon?: string
 }
+
+/** Icône d'objet servie par XIVAPI (même format que nos catalogues). */
+const XIV = (path: string) =>
+  `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(path)}`
 
 /** Libellés canoniques des objets fusionnés (affichage des totaux). */
 const CANON: Record<string, { fr: string; en: string }> = {
@@ -72,7 +78,8 @@ const m = (
   en: string,
   key?: string,
   cat?: Material['cat'],
-): Material => ({ qty, fr, en, key, cat })
+  icon?: string,
+): Material => ({ qty, fr, en, key, cat, icon })
 
 // Guides ffxiv-eorzea.com (sagas d'armes)
 const EZ = 'https://www.ffxiv-eorzea.com'
@@ -111,27 +118,27 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
           m(1, "flamme d'Ifrit", "Ifrit's Flame"),
           m(1, 'rafale de Garuda', "Garuda's Gale"),
           m(1, 'pierre de Titan', "Titan's Stone"),
-          m(1, "fiole d'huile de trempe (15 poétiques)", 'Quenching Oil (15 poetics)'),
+          m(1, 'huile de trempe de Radz-at-Han (15 poétiques)', 'Radz-at-Han Quenching Oil (15 poetics)', undefined, undefined, XIV('ui/icon/022000/022636_hr1.tex')),
         ],
       },
-      { url: ZOD2, materials: [m(3, 'lymphes de Thavnair (20 poétiques pièce)', 'Thavnairian Mist (20 poetics each)')] },
-      { url: ZOD2, materials: [m(12, 'âtmas (ALÉA 2.x)', 'Atmas (ARR FATEs)')] },
-      { url: ZOD3, materials: [m(9, 'tomes des chroniques (100 poétiques pièce)', 'Chronicle books (100 poetics each)')] },
+      { url: ZOD2, materials: [m(3, 'lymphes de Thavnair (20 poétiques pièce)', 'Thavnairian Mist (20 poetics each)', undefined, undefined, XIV('ui/icon/020000/020661_hr1.tex'))] },
+      { url: ZOD2, materials: [m(12, 'âtmas (ALÉA 2.x)', 'Atmas (ARR FATEs)', undefined, undefined, XIV('ui/icon/026000/026025_hr1.tex'))] },
+      { url: ZOD3, materials: [m(9, 'tomes des chroniques (100 poétiques pièce)', 'Chronicle books (100 poetics each)', undefined, undefined, XIV('ui/icon/026000/026446_hr1.tex'))] },
       {
         url: ZOD4,
         materials: [
-          m(1, 'parchemin stellaire', 'Star Scroll'),
-          m(3, 'encres enchantées de haute qualité (25 poétiques pièce)', 'Superior Enchanted Ink (25 poetics each)'),
-          m(75, 'alexandrites', 'Alexandrite'),
+          m(1, 'parchemin stellaire', 'Sphere Scroll', undefined, undefined, XIV('ui/icon/025000/025934_hr1.tex')),
+          m(3, 'encres enchantées de haute qualité (25 poétiques pièce)', 'Superior Enchanted Ink (25 poetics each)', undefined, undefined, XIV('ui/icon/025000/025923_hr1.tex')),
+          m(75, 'alexandrites', 'Alexandrite', undefined, undefined, XIV('ui/icon/021000/021290_hr1.tex')),
         ],
       },
       { url: ZOD5, materials: [m(2000, 'éclats de lumière (farm)', 'Light shards (grind)')] },
       {
         url: ZOD6,
         materials: [
-          m(800, 'mémoquartz allagois poétiques', 'Tomestones of Poetics', 'poetics', 'currency'),
-          m(80000, 'sceaux de grande compagnie', 'Grand Company seals', 'gc-seals', 'currency'),
-          m(500000, 'gils', 'gil', 'gil', 'currency'),
+          m(800, 'mémoquartz allagois poétiques', 'Tomestones of Poetics', 'poetics', 'currency', XIV('ui/icon/065000/065023_hr1.tex')),
+          m(80000, 'sceaux de grande compagnie', 'Grand Company seals', 'gc-seals', 'currency', XIV('ui/icon/065000/065004_hr1.tex')),
+          m(500000, 'gils', 'gil', 'gil', 'currency', XIV('ui/icon/065000/065002_hr1.tex')),
           m(8, 'objets craftés HQ (tarte, étoffe, bague…)', 'HQ crafted items (pie, cloth, ring…)'),
         ],
       },

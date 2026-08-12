@@ -11,7 +11,7 @@ import {
   type StepCost,
 } from '../relicCosts'
 import type { Member } from '../store'
-import { Meter, onAvatarImgError, onItemImgError } from '../ui'
+import { ITEM_FALLBACK, Meter, onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -232,6 +232,21 @@ function SeriesCard({
       </a>
     ) : null
 
+  // Total pour UNE relique de bout en bout (toutes étapes + objets « première
+  // arme »), affiché en icônes dans l'en-tête. Uniquement pour les séries dont
+  // les matériaux ont leurs icônes officielles.
+  const totalMats = (() => {
+    if (!costSteps) return []
+    const acc = new Map<string, Material>()
+    for (const st of costSteps) {
+      for (const mat of st.materials) mergeMaterial(acc, mat)
+      for (const mat of st.once ?? []) mergeMaterial(acc, mat)
+    }
+    return [...acc.values()]
+  })()
+  const showReq = totalMats.length > 0 && totalMats.some((mat) => mat.icon)
+  const compactQty = (n: number) => (n >= 10000 ? `${Math.round(n / 1000)}k` : fmt(n, lang))
+
   return (
     <article className="relic-series">
       <header className="relic-series-head">
@@ -243,6 +258,22 @@ function SeriesCard({
             : t(isArmor ? 'relicShape1Armor' : 'relicShape1', { jobs: info.jobs })}
         </span>
       </header>
+
+      {showReq && (
+        <div className="relic-req">
+          <span className="relic-remaining-label">{t(isArmor ? 'relicReqPiece' : 'relicReqWeapon')}</span>
+          {totalMats.map((mat) => (
+            <span
+              key={mat.key ?? mat.en}
+              className="relic-req-item"
+              title={`${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`}
+            >
+              <img src={mat.icon ?? ITEM_FALLBACK} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
+              <i>×{compactQty(mat.qty)}</i>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Totaux par joueur */}
       <div className="relic-players">

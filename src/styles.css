@@ -2666,3 +2666,32 @@ a.player-name:hover {
   letter-spacing: 0.07em;
   color: var(--muted);
 }
+
+/* total de la série en icônes, sous l'en-tête */
+.relic-req {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 2px 0 4px;
+}
+
+.relic-req-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: help;
+}
+
+.relic-req-item img {
+  border-radius: 5px;
+  border: 1px solid var(--ring);
+  background: var(--surface-2);
+}
+
+.relic-req-item i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}

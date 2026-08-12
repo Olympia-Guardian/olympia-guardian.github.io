@@ -152,6 +152,8 @@ const STR = {
   roleAiming: { fr: 'Tireur', en: 'Aiming' },
   roleCasting: { fr: 'Incantateur', en: 'Casting' },
   roleHealing: { fr: 'Soigneur', en: 'Healing' },
+  relicReqWeapon: { fr: 'total pour une arme :', en: 'total for one weapon:' },
+  relicReqPiece: { fr: 'total pour une pièce :', en: 'total for one piece:' },
   relicAddAll: { fr: 'Tout ajouter', en: 'Add all' },
   relicRemoveAll: { fr: 'Tout retirer', en: 'Remove all' },
   relicCheck: { fr: 'clique pour marquer comme obtenue', en: 'click to mark as obtained' },

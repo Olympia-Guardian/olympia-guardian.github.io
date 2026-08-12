@@ -36,10 +36,7 @@ function matsText(mats: { qty: number; fr: string; en: string }[], lang: string)
 }
 
 /** Matériaux d'une étape multipliés par le nombre d'armes manquantes. */
-function stepTotal(
-  step: StepCost,
-  missing: number,
-): { qty: number; fr: string; en: string }[] {
+function stepTotal(step: StepCost, missing: number): Material[] {
   return step.materials.map((mat) => ({ ...mat, qty: mat.qty * missing }))
 }
 
@@ -116,13 +113,16 @@ function RelicPanel({
           {matsText(stepCost.once, lang)}
         </p>
       )}
-      {stepCost?.url && (
-        <p className="modal-desc">
-          <a className="relic-guide" href={stepCost.url} target="_blank" rel="noreferrer">
-            {t('relicGuide')}
-          </a>
-        </p>
-      )}
+      {(() => {
+        const url = lang === 'en' ? (stepCost?.urlEn ?? costs?.urlEn ?? stepCost?.url) : stepCost?.url
+        return url ? (
+          <p className="modal-desc">
+            <a className="relic-guide" href={url} target="_blank" rel="noreferrer">
+              {t('relicGuide')}
+            </a>
+          </p>
+        ) : null
+      })()}
       <button
         className={`btn ${owned ? 'btn-ghost' : 'btn-primary'} item-panel-action`}
         onClick={onToggle}
@@ -225,12 +225,18 @@ function SeriesCard({
     return stepRelics[i].reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
   }
 
-  const guideLink = (url?: string) =>
-    url ? (
+  // Guide dans la langue de l'interface : FR → guides ffxiv-eorzea des sagas,
+  // EN → page consolegameswiki correspondante.
+  const guideUrl = (st?: StepCost) =>
+    lang === 'en' ? (st?.urlEn ?? costs?.urlEn ?? st?.url) : st?.url
+  const guideLink = (st?: StepCost) => {
+    const url = guideUrl(st)
+    return url ? (
       <a className="relic-guide" href={url} target="_blank" rel="noreferrer">
         {t('relicGuide')}
       </a>
     ) : null
+  }
 
   // Total pour UNE relique de bout en bout (toutes étapes + objets « première
   // arme »), affiché en icônes dans l'en-tête. Uniquement pour les séries dont
@@ -261,6 +267,18 @@ function SeriesCard({
     return [...acc.values()]
   })()
   const shownMats = reqLeft && remainingMats ? remainingMats : totalMats
+
+  /** Icône d'objet + quantité (réutilisée dans l'en-tête et chaque étape). */
+  const matIcon = (mat: Material) => (
+    <span
+      key={mat.key ?? mat.en}
+      className="relic-req-item"
+      title={`${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`}
+    >
+      <img src={mat.icon ?? ITEM_FALLBACK} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
+      <i>×{compactQty(mat.qty)}</i>
+    </span>
+  )
 
   return (
     <article className="relic-series">
@@ -298,16 +316,7 @@ function SeriesCard({
           )}
           <div className="relic-req-items">
             {shownMats.length === 0 && <span className="relic-done">{t('relicDone')}</span>}
-            {shownMats.map((mat) => (
-              <span
-                key={mat.key ?? mat.en}
-                className="relic-req-item"
-                title={`${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`}
-              >
-                <img src={mat.icon ?? ITEM_FALLBACK} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
-                <i>×{compactQty(mat.qty)}</i>
-              </span>
-            ))}
+            {shownMats.map(matIcon)}
           </div>
         </div>
       )}
@@ -366,25 +375,57 @@ function SeriesCard({
                           )}
                         </span>
                       )}
-                      {stepCost && stepCost.materials.length > 0 && (
-                        <span className="relic-step-mats">
-                          <span className="relic-remaining-label">{t(perKey)}</span>{' '}
-                          {matsText(stepCost.materials, lang)} {guideLink(stepCost.url)}
-                        </span>
+                      {/* Séries avec icônes : les étapes suivent le switch d'en haut. */}
+                      {stepCost && stepCost.materials.length > 0 && showReq && (
+                        <>
+                          <span className="relic-step-mats relic-step-iconrow">
+                            <span className="relic-remaining-label">
+                              {reqLeft && remainingMats
+                                ? list.length - c > 0
+                                  ? t('relicStepTotal', { n: list.length - c })
+                                  : ''
+                                : t(perKey)}
+                            </span>
+                            {reqLeft && remainingMats && list.length - c === 0 ? (
+                              <span className="relic-done">{t('relicDone')}</span>
+                            ) : (
+                              (reqLeft && remainingMats
+                                ? stepTotal(stepCost, list.length - c)
+                                : stepCost.materials
+                              ).map(matIcon)
+                            )}
+                            {guideLink(stepCost)}
+                          </span>
+                          {stepCost.once && (!reqLeft || list.length - c > 0) && (
+                            <span className="relic-step-mats relic-once relic-step-iconrow">
+                              <span className="relic-remaining-label">{t('relicOnce')}</span>
+                              {stepCost.once.map(matIcon)}
+                            </span>
+                          )}
+                        </>
                       )}
-                      {stepCost && stepCost.materials.length > 0 && list.length - c > 0 && (
-                        <span className="relic-step-mats relic-step-total">
-                          <span className="relic-remaining-label">
-                            {t('relicStepTotal', { n: list.length - c })}
-                          </span>{' '}
-                          {matsText(stepTotal(stepCost, list.length - c), lang)}
-                        </span>
-                      )}
-                      {stepCost?.once && (
-                        <span className="relic-step-mats relic-once">
-                          <span className="relic-remaining-label">{t('relicOnce')}</span>{' '}
-                          {matsText(stepCost.once, lang)}
-                        </span>
+                      {/* Séries encore sans icônes : lignes de texte historiques. */}
+                      {stepCost && stepCost.materials.length > 0 && !showReq && (
+                        <>
+                          <span className="relic-step-mats">
+                            <span className="relic-remaining-label">{t(perKey)}</span>{' '}
+                            {matsText(stepCost.materials, lang)} {guideLink(stepCost)}
+                          </span>
+                          {list.length - c > 0 && (
+                            <span className="relic-step-mats relic-step-total">
+                              <span className="relic-remaining-label">
+                                {t('relicStepTotal', { n: list.length - c })}
+                              </span>{' '}
+                              {matsText(stepTotal(stepCost, list.length - c), lang)}
+                            </span>
+                          )}
+                          {stepCost.once && (
+                            <span className="relic-step-mats relic-once">
+                              <span className="relic-remaining-label">{t('relicOnce')}</span>{' '}
+                              {matsText(stepCost.once, lang)}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                     <div className={isArmor ? 'relic-icon-groups' : undefined}>
@@ -456,7 +497,7 @@ function SeriesCard({
                         <span className="relic-step-mats">
                           {' '}
                           <span className="relic-remaining-label">{t(perKey)}</span>{' '}
-                          {matsText(stepCost.materials, lang)} {guideLink(stepCost.url)}
+                          {matsText(stepCost.materials, lang)} {guideLink(stepCost)}
                         </span>
                       )}
                       {stepCost?.once && (

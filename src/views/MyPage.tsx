@@ -10,6 +10,7 @@ import {
 } from '../api'
 import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
+import { typeLabel } from '../sources'
 import {
   GiMagnifyingGlass,
   GiPadlock,
@@ -92,7 +93,8 @@ function CardAlbum({
   ids: Set<number>
   onItemClick: (it: Item) => void
 }) {
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
+  const [srcType, setSrcType] = useState<string | null>(null)
   const pages = useMemo(() => {
     const sorted = [...allItems].sort((a, b) => a.order - b.order)
     const out: Item[][] = []
@@ -100,10 +102,45 @@ function CardAlbum({
     return out
   }, [allItems])
 
+  // Filtres par type de source, façon Lala (Haut fait, Quête, Défi, PNJ…)
+  const srcTypes = useMemo(() => {
+    const map = new Map<string, { total: number; owned: number }>()
+    for (const it of allItems) {
+      for (const type of new Set(it.sources.map((s) => s.type))) {
+        const entry = map.get(type) ?? { total: 0, owned: 0 }
+        entry.total++
+        if (ids.has(it.id)) entry.owned++
+        map.set(type, entry)
+      }
+    }
+    return [...map.entries()].sort((a, b) => b[1].total - a[1].total)
+  }, [allItems, ids])
+
+  const shows = (it: Item) =>
+    visible.has(it.id) && (!srcType || it.sources.some((s) => s.type === srcType))
+
   return (
-    <div className="album">
+    <div className="album-wrap">
+      <div className="cat-filter">
+        <button className={`cat-chip ${srcType === null ? 'is-active' : ''}`} onClick={() => setSrcType(null)}>
+          {t('scopeAll')}
+        </button>
+        {srcTypes.map(([type, { total, owned }]) => (
+          <button
+            key={type}
+            className={`cat-chip ${srcType === type ? 'is-active' : ''} ${owned === total ? 'is-done' : ''}`}
+            onClick={() => setSrcType(srcType === type ? null : type)}
+          >
+            {typeLabel(type, lang)}
+            <span className="cat-chip-count">
+              {owned}/{total}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="album">
       {pages.map((page, i) => {
-        const shown = page.filter((it) => visible.has(it.id))
+        const shown = page.filter((it) => shows(it))
         if (shown.length === 0) return null
         const owned = page.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
         return (
@@ -116,7 +153,7 @@ function CardAlbum({
             </header>
             <div className="album-grid">
               {page.map((it) => {
-                if (!visible.has(it.id)) return <span key={it.id} className="album-slot" />
+                if (!shows(it)) return <span key={it.id} className="album-slot" />
                 const has = ids.has(it.id)
                 return (
                   <button
@@ -134,6 +171,7 @@ function CardAlbum({
           </section>
         )
       })}
+      </div>
     </div>
   )
 }

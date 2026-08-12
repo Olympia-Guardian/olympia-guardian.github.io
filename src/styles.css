@@ -1667,10 +1667,16 @@ a.player-name:hover {
 }
 
 /* album de cartes : pages 5×6 côte à côte, comme l'album en jeu */
+.album-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .album {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 22px;
   align-items: flex-start;
 }
 
@@ -1678,7 +1684,7 @@ a.player-name:hover {
   background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: 10px 12px 12px;
+  padding: 12px 14px 14px;
 }
 
 .album-page-head {
@@ -1686,7 +1692,7 @@ a.player-name:hover {
   align-items: baseline;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .album-page-head b {
@@ -1695,8 +1701,8 @@ a.player-name:hover {
 
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(5, 62px);
-  gap: 6px;
+  grid-template-columns: repeat(5, 64px);
+  gap: 9px;
 }
 
 .album-card {

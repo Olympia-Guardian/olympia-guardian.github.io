@@ -441,9 +441,16 @@ function GroupedChecklist({
 }) {
   const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
+  // Les numéros sont des chaînes (« 087 »), et les rouleaux sans numéro
+  // portent « — » : Number() donnerait NaN et casserait le tri. Ordre
+  // croissant, les sans-numéro à la fin.
+  const numOf = (it: Item) => {
+    const n = parseInt(String(it.num ?? ''), 10)
+    return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER
+  }
   const allGroups = useMemo(() => {
     const map = new Map<string, Item[]>()
-    for (const it of [...items].sort((a, b) => Number(a.num ?? a.order) - Number(b.num ?? b.order))) {
+    for (const it of [...items].sort((a, b) => numOf(a) - numOf(b) || a.order - b.order)) {
       const g = (lang === 'fr' ? it.group : it.groupEn) ?? ''
       const arr = map.get(g)
       if (arr) arr.push(it)
@@ -511,7 +518,9 @@ function GroupedChecklist({
                         />
                       )}
                       {variant === 'orchestrion' && it.num !== undefined && (
-                        <span className="checklist-num">{String(it.num).padStart(3, '0')}</span>
+                        <span className="checklist-num">
+                          {/^\d+$/.test(String(it.num)) ? String(it.num).padStart(3, '0') : '—'}
+                        </span>
                       )}
                       <span
                         className="checklist-name"

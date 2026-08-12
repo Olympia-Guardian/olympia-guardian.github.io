@@ -124,6 +124,7 @@ const STR = {
   bindProfileLink: { fr: 'Ouvrir mes réglages Lodestone ↗', en: 'Open my Lodestone settings ↗' },
   bindVerify: { fr: 'Vérifier', en: 'Verify' },
   bindVerified: { fr: '✓ Personnage vérifié ! C\'est ton perso.', en: '✓ Character verified! It\'s yours.' },
+  bindVerifiedChip: { fr: 'Vérifié', en: 'Verified' },
   bindCodeMissing: {
     fr: 'Code introuvable dans ta présentation Lodestone — vérifie qu\'elle est bien enregistrée et publique, puis réessaie.',
     en: 'Code not found in your Lodestone bio — make sure it\'s saved and public, then retry.',

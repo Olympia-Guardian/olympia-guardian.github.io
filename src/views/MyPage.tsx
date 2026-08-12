@@ -12,6 +12,7 @@ import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
 import { typeLabel } from '../sources'
 import {
+  GiCheckMark,
   GiMagnifyingGlass,
   GiPadlock,
   GiPowerLightning,
@@ -96,21 +97,35 @@ function CardAlbum({
   const { lang, t } = useI18n()
   const [srcType, setSrcType] = useState<string | null>(null)
 
-  // Position d'album par NUMÉRO de carte (« No. 123 ») : page = ⌈n/30⌉,
-  // case = (n-1) mod 30 — les trous restent vides, comme en jeu.
+  // Position d'album par NUMÉRO de carte : page = ⌈n/30⌉, case = (n-1) mod 30,
+  // trous préservés. Les cartes « Ex. » (série crossover) ont leurs propres
+  // pages à la fin, comme la section Ex de l'album en jeu.
   const cardNo = (it: Item) => {
     const m = String(it.num ?? '').match(/\d+/)
     return m ? Number(m[0]) : it.order
   }
   const pages = useMemo(() => {
-    const map = new Map<number, (Item | null)[]>()
+    const normal = new Map<number, (Item | null)[]>()
+    const ex = new Map<number, (Item | null)[]>()
     for (const it of allItems) {
+      const isEx = /^ex/i.test(String(it.num ?? ''))
       const n = cardNo(it)
       const p = Math.floor((n - 1) / 30)
-      if (!map.has(p)) map.set(p, Array(30).fill(null))
-      map.get(p)![(n - 1) % 30] = it
+      const target = isEx ? ex : normal
+      if (!target.has(p)) target.set(p, Array(30).fill(null))
+      target.get(p)![(n - 1) % 30] = it
     }
-    return [...map.entries()].sort((a, b) => a[0] - b[0])
+    const out: { label: string; cells: (Item | null)[] }[] = [
+      ...[...normal.entries()].sort((a, b) => a[0] - b[0]).map(([p, cells]) => ({
+        label: String(p + 1),
+        cells,
+      })),
+      ...[...ex.entries()].sort((a, b) => a[0] - b[0]).map(([p, cells]) => ({
+        label: ex.size > 1 ? `Ex ${p + 1}` : 'Ex',
+        cells,
+      })),
+    ]
+    return out
   }, [allItems])
 
   // Filtres par type de source, façon Lala (Haut fait, Quête, Défi, PNJ…)
@@ -150,15 +165,15 @@ function CardAlbum({
         ))}
       </div>
       <div className="album">
-      {pages.map(([pageIdx, cells]) => {
+      {pages.map(({ label, cells }) => {
         const real = cells.filter((it): it is Item => it !== null)
         const shown = real.filter((it) => shows(it))
         if (shown.length === 0) return null
         const owned = real.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
         return (
-          <section key={pageIdx} className="album-page">
+          <section key={label} className="album-page">
             <header className="album-page-head">
-              <b>{pageIdx + 1}</b>
+              <b>{label}</b>
               <span className={`mypage-count ${owned === real.length ? 'relic-done' : ''}`}>
                 {owned}/{real.length}
               </span>
@@ -171,7 +186,7 @@ function CardAlbum({
                   <button
                     key={it.id}
                     className={`album-card ${has ? 'is-owned' : 'is-missing'}`}
-                    title={`${localName(it, lang)} · n°${cardNo(it)}${has ? ' ✓' : ''}`}
+                    title={`${localName(it, lang)} · ${it.num ?? `n°${cardNo(it)}`}${has ? ' ✓' : ''}`}
                     onClick={() => onItemClick(it)}
                   >
                     <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />
@@ -521,13 +536,15 @@ export function MyPage({
   return (
     <div className="view mypage">
       {toast && <div className="toast">{toast}</div>}
-      <div className="mypage-head">
-        {auth.user.avatar && <img className="mypage-avatar" src={auth.user.avatar} alt="" width={36} height={36} />}
-        <b>{auth.user.name}</b>
-        <button className="btn btn-ghost btn-mini" onClick={auth.logout}>
-          {t('logout')}
-        </button>
-      </div>
+      {!verified && (
+        <div className="mypage-head">
+          {auth.user.avatar && <img className="mypage-avatar" src={auth.user.avatar} alt="" width={36} height={36} />}
+          <b>{auth.user.name}</b>
+          <button className="btn btn-ghost btn-mini" onClick={auth.logout}>
+            {t('logout')}
+          </button>
+        </div>
+      )}
 
       {!verified && (
         <section className="relic-series mypage-bind">
@@ -594,12 +611,26 @@ export function MyPage({
       {verified && char && (
         <>
           <section className="relic-series mypage-char">
-            <div className="player-head">
-              <img className="player-avatar" src={char.avatar} alt="" width={38} height={38} />
+            <div className="player-head mypage-char-head">
+              <img className="player-avatar mypage-char-avatar" src={char.avatar} alt="" width={48} height={48} />
               <div className="player-id">
-                <span className="player-name">{char.name}</span>
-                <span className="player-server">{char.server} ✓</span>
+                <span className="player-name mypage-char-name">
+                  {char.name}
+                  <span className="chip chip-owned">
+                    <GiCheckMark /> {t('bindVerifiedChip')}
+                  </span>
+                </span>
+                <span className="player-server">{char.server}</span>
               </div>
+              <span className="mypage-user">
+                {auth.user.avatar && (
+                  <img className="mypage-avatar" src={auth.user.avatar} alt="" width={24} height={24} />
+                )}
+                {auth.user.name}
+                <button className="btn btn-ghost btn-mini" onClick={auth.logout}>
+                  {t('logout')}
+                </button>
+              </span>
             </div>
             <div className="meter-grid mypage-meters">
               {KINDS.map((k) => (
@@ -618,7 +649,9 @@ export function MyPage({
                 />
               )}
             </div>
-            <p className="modal-muted">{t('myPageAutoNote')}</p>
+            <p className="mypage-note">
+              <GiPadlock /> {t('myPageAutoNote')}
+            </p>
           </section>
 
           <div className="tabs mypage-tabs">

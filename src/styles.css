@@ -2412,3 +2412,105 @@ a.player-name:hover {
   content: '· ';
   color: var(--muted);
 }
+
+/* ===== Reliques : vue de groupe (avancement seul, dépliable) ===== */
+
+.relic-player-fold {
+  border-top: 1px solid var(--hairline);
+}
+
+.relic-player-fold:first-of-type {
+  border-top: none;
+}
+
+.relic-player-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 0;
+}
+
+.relic-player-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.relic-player-fold > summary::before {
+  content: '▸';
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.relic-player-fold[open] > summary::before {
+  content: '▾';
+  color: var(--gold);
+}
+
+.relic-player-fold > summary:hover {
+  background: var(--surface-2);
+}
+
+.relic-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 14px 26px;
+  padding: 6px 0 16px 22px;
+}
+
+.relic-exp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+
+.relic-exp-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.relic-exp-row {
+  display: grid;
+  grid-template-columns: 1fr 70px auto 46px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.relic-exp-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relic-exp-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.relic-exp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.relic-exp-bar i.is-done {
+  background: var(--good);
+}
+
+.relic-exp-count,
+.relic-exp-pct {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

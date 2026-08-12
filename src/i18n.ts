@@ -138,6 +138,10 @@ const STR = {
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
   collections: { fr: 'Collections', en: 'Collections' },
+  relicSummaryNote: {
+    fr: "Déplie un joueur pour voir son avancement par extension et par série. Le détail des paliers et des matériaux se trouve dans « Ma Page ».",
+    en: 'Expand a player to see progress per expansion and series. Step-by-step costs and materials live in “My Page”.',
+  },
   spellNo: { fr: 'N° {n}', en: 'No. {n}' },
   spellAspect: { fr: 'Aspect', en: 'Aspect' },
   spellDamage: { fr: 'Dégâts', en: 'Damage' },

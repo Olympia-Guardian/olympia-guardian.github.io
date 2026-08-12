@@ -23,6 +23,7 @@ import {
 import type { Db, Member } from '../store'
 import { Meter, TypeChip, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
+import { Relics } from './Relics'
 
 // Collections modifiables depuis « Ma Page » (le reste vient du Lodestone).
 const EDITABLE = HIDDEN_KINDS
@@ -683,7 +684,9 @@ export function MyPage({
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [char, setChar] = useState<Character | null>(null)
-  const [kind, setKind] = useState<Kind>('cards')
+  // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
+  // onglet ici : c'est la page où l'on suit sa propre progression.
+  const [kind, setKind] = useState<Kind | 'relics'>('cards')
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -896,17 +899,33 @@ export function MyPage({
                 })}
               </span>
             ))}
+            <span className="kind-family">
+              <button
+                className={`kind-btn ${kind === 'relics' ? 'is-active' : ''}`}
+                onClick={() => setKind('relics')}
+              >
+                {t('relicsTab')}
+              </button>
+            </span>
           </nav>
           {notice && <p className="notice">{notice}</p>}
-          <CollectionEditor
-            key={`${verified.charId}-${kind}`}
-            db={db}
-            kind={kind}
-            charId={verified.charId}
-            owned={char[kind].ids}
-            readOnly={!EDITABLE.includes(kind)}
-            onSave={save}
-          />
+          {kind === 'relics' ? (
+            relicDb ? (
+              <Relics db={relicDb} ready={[{ id: char.id, status: 'ok', data: char }]} detailed />
+            ) : (
+              <p className="muted">{t('relicsLoading')}</p>
+            )
+          ) : (
+            <CollectionEditor
+              key={`${verified.charId}-${kind}`}
+              db={db}
+              kind={kind}
+              charId={verified.charId}
+              owned={char[kind].ids}
+              readOnly={!EDITABLE.includes(kind)}
+              onSave={save}
+            />
+          )}
         </>
       )}
     </div>

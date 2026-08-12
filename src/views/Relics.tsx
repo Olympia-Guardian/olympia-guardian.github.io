@@ -281,7 +281,123 @@ function SeriesCard({
   )
 }
 
-export function Relics({ db, ready }: { db: RelicDb; ready: Ready[] }) {
+function pct(count: number, total: number, lang: string): string {
+  const v = total > 0 ? (count / total) * 100 : 0
+  return `${v.toFixed(v >= 10 ? 0 : 1).replace('.', lang === 'fr' ? ',' : '.')} %`
+}
+
+/** Vue de groupe : uniquement l'avancement. Le détail (paliers, matériaux,
+ *  icônes) vit dans « Ma Page », où l'on ne regarde que son propre perso. */
+function RelicSummary({
+  db,
+  ready,
+  ownedSets,
+  byExpansion,
+  bySeries,
+}: {
+  db: RelicDb
+  ready: Ready[]
+  ownedSets: Map<number, Set<number>>
+  byExpansion: Map<number, RelicSeriesInfo[]>
+  bySeries: Map<string, Relic[]>
+}) {
+  const { lang, t } = useI18n()
+  const totalAll = db.relics.length
+
+  return (
+    <div className="view">
+      <section className="relic-series relic-global">
+        <header className="relic-series-head">
+          <h4 className="relic-series-name">{t('relicGlobal')}</h4>
+          <span className="relic-shape">{fmt(totalAll, lang)}</span>
+        </header>
+        {ready.map((m) => {
+          const owned = ownedSets.get(m.id)!
+          const count = db.relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
+          return (
+            <details key={m.id} className="relic-player-fold" open={ready.length === 1}>
+              <summary className="relic-player">
+                <img
+                  src={m.data.avatar}
+                  alt=""
+                  width={26}
+                  height={26}
+                  title={m.data.name}
+                  onError={onAvatarImgError}
+                />
+                <div className="relic-meter">
+                  <Meter label={m.data.name.split(' ')[0]} count={count} total={totalAll} />
+                </div>
+                <span className="relic-remaining">{pct(count, totalAll, lang)}</span>
+              </summary>
+              <div className="relic-breakdown">
+                {EXPANSIONS.map(({ num, fr, en }) => {
+                  const series = byExpansion.get(num)
+                  if (!series || series.length === 0) return null
+                  const expTotal = series.reduce((sum, s) => sum + s.total, 0)
+                  const expCount = series.reduce(
+                    (sum, s) =>
+                      sum +
+                      (bySeries.get(s.key) ?? []).reduce((n, r) => n + (owned.has(r.id) ? 1 : 0), 0),
+                    0,
+                  )
+                  return (
+                    <div key={num} className="relic-exp-block">
+                      <header className="relic-exp-head">
+                        <b>{lang === 'fr' ? fr : en}</b>
+                        <span className={expCount >= expTotal ? 'relic-done' : 'relic-remaining'}>
+                          {pct(expCount, expTotal, lang)}
+                        </span>
+                      </header>
+                      <ul className="relic-exp-list">
+                        {series.map((s) => {
+                          const c = (bySeries.get(s.key) ?? []).reduce(
+                            (n, r) => n + (owned.has(r.id) ? 1 : 0),
+                            0,
+                          )
+                          const done = c >= s.total
+                          return (
+                            <li key={s.key} className="relic-exp-row">
+                              <span className="relic-exp-name">{lang === 'fr' ? s.name : s.key}</span>
+                              <span className="relic-exp-bar">
+                                <i
+                                  className={done ? 'is-done' : ''}
+                                  style={{ width: `${s.total > 0 ? (c / s.total) * 100 : 0}%` }}
+                                />
+                              </span>
+                              <span className="relic-exp-count">
+                                {c}/{s.total}
+                              </span>
+                              <span className={`relic-exp-pct ${done ? 'relic-done' : ''}`}>
+                                {pct(c, s.total, lang)}
+                              </span>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  )
+                })}
+              </div>
+            </details>
+          )
+        })}
+      </section>
+      <p className="relic-note">{t('relicSummaryNote')}</p>
+    </div>
+  )
+}
+
+export function Relics({
+  db,
+  ready,
+  detailed = false,
+}: {
+  db: RelicDb
+  ready: Ready[]
+  /** « Ma Page » : paliers, matériaux et icônes. Sinon : avancement seul. */
+  detailed?: boolean
+}) {
   const { lang, t } = useI18n()
 
   const ownedSets = useMemo(
@@ -345,6 +461,18 @@ export function Relics({ db, ready }: { db: RelicDb; ready: Ready[] }) {
     return perPlayer
   }, [ready, ownedSets, db, bySeries])
 
+  if (!detailed) {
+    return (
+      <RelicSummary
+        db={db}
+        ready={ready}
+        ownedSets={ownedSets}
+        byExpansion={byExpansion}
+        bySeries={bySeries}
+      />
+    )
+  }
+
   return (
     <div className="view">
       <section className="relic-series relic-global">
@@ -356,14 +484,13 @@ export function Relics({ db, ready }: { db: RelicDb; ready: Ready[] }) {
           {ready.map((m) => {
             const owned = ownedSets.get(m.id)!
             const count = db.relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
-            const pct = totalAll > 0 ? ((count / totalAll) * 100).toFixed(1) : '0'
             return (
               <div key={m.id} className="relic-player">
                 <img src={m.data.avatar} alt="" width={26} height={26} title={m.data.name} onError={onAvatarImgError} />
                 <div className="relic-meter">
                   <Meter label={m.data.name.split(' ')[0]} count={count} total={totalAll} />
                 </div>
-                <span className="relic-remaining">{pct.replace('.', lang === 'fr' ? ',' : '.')}&nbsp;%</span>
+                <span className="relic-remaining">{pct(count, totalAll, lang)}</span>
               </div>
             )
           })}

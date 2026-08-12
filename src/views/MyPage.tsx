@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fetchCharacter, invalidateCharacter, type Character, type Item, type Kind } from '../api'
+import {
+  KINDS,
+  fetchCharacter,
+  invalidateCharacter,
+  type Character,
+  type Item,
+  type Kind,
+  type RelicDb,
+} from '../api'
 import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
 import type { Db, Member } from '../store'
@@ -9,6 +17,123 @@ import { Meter, onItemImgError } from '../ui'
 const EDITABLE: Kind[] = ['cards', 'fashions', 'orchestrions', 'spells']
 
 type Auth = ReturnType<typeof useAuth>
+
+/** Album de cartes façon jeu : pages de 30, illustrations, clic pour cocher. */
+function CardAlbum({
+  items,
+  ids,
+  toggle,
+}: {
+  items: Item[]
+  ids: Set<number>
+  toggle: (id: number) => void
+}) {
+  const { lang, t } = useI18n()
+  const pages = useMemo(() => {
+    const sorted = [...items].sort((a, b) => a.order - b.order)
+    const out: Item[][] = []
+    for (let i = 0; i < sorted.length; i += 30) out.push(sorted.slice(i, i + 30))
+    return out
+  }, [items])
+
+  return (
+    <div className="album">
+      {pages.map((page, i) => {
+        const owned = page.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
+        if (page.length === 0) return null
+        return (
+          <section key={i} className="album-page">
+            <header className="album-page-head">
+              <b>{t('albumPage', { n: Math.floor((page[0].order - 1) / 30) + 1 })}</b>
+              <span className={`mypage-count ${owned === page.length ? 'relic-done' : ''}`}>
+                {owned}/{page.length}
+              </span>
+            </header>
+            <div className="album-grid">
+              {page.map((it) => {
+                const has = ids.has(it.id)
+                return (
+                  <button
+                    key={it.id}
+                    className={`album-card ${has ? 'is-owned' : 'is-missing'}`}
+                    title={`${localName(it, lang)} · n°${it.order}${has ? ' ✓' : ''}`}
+                    onClick={() => toggle(it.id)}
+                  >
+                    <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />
+                    {has && <span className="relic-badge">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Liste groupée par catégorie (orchestrion) : nom + obtention + coche. */
+function GroupedChecklist({
+  items,
+  ids,
+  toggle,
+}: {
+  items: Item[]
+  ids: Set<number>
+  toggle: (id: number) => void
+}) {
+  const { lang } = useI18n()
+  const groups = useMemo(() => {
+    const map = new Map<string, Item[]>()
+    for (const it of [...items].sort((a, b) => Number(a.num ?? a.order) - Number(b.num ?? b.order))) {
+      const g = (lang === 'fr' ? it.group : it.groupEn) ?? '—'
+      const arr = map.get(g)
+      if (arr) arr.push(it)
+      else map.set(g, [it])
+    }
+    return [...map.entries()]
+  }, [items, lang])
+
+  return (
+    <div className="checklist">
+      {groups.map(([group, list]) => {
+        const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
+        return (
+          <section key={group} className="checklist-group">
+            <header className="album-page-head">
+              <b>{group}</b>
+              <span className={`mypage-count ${owned === list.length ? 'relic-done' : ''}`}>
+                {owned}/{list.length}
+              </span>
+            </header>
+            <ul className="checklist-rows">
+              {list.map((it) => {
+                const has = ids.has(it.id)
+                return (
+                  <li key={it.id}>
+                    <button
+                      className={`checklist-row ${has ? 'is-owned' : ''}`}
+                      onClick={() => toggle(it.id)}
+                    >
+                      <span className={`checklist-box ${has ? 'is-owned' : ''}`}>
+                        {has ? '✓' : ''}
+                      </span>
+                      <span className="checklist-name">{localName(it, lang)}</span>
+                      {it.patch && <span className="chip chip-patch">{it.patch}</span>}
+                      <span className="checklist-src">
+                        {it.sources[0] ? (lang === 'fr' ? it.sources[0].text : it.sources[0].textEn) : ''}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
 
 function CollectionEditor({
   db,
@@ -72,37 +197,45 @@ function CollectionEditor({
           />
           {t('onlyMissing')}
         </label>
-        <span className="mypage-count">
-          {ids.size}/{db[kind].length}
-        </span>
+        <div className="mypage-progress">
+          <Meter label={kindLabel(lang, kind, 'short')} count={ids.size} total={db[kind].length} />
+        </div>
       </div>
-      <div className="relic-icons mypage-grid">
-        {items.map((it: Item) => {
-          const has = ids.has(it.id)
-          return (
-            <button
-              key={it.id}
-              className={`relic-icon mypage-tile ${has ? 'is-owned' : 'is-missing'}`}
-              title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
-              onClick={() => toggle(it.id)}
-            >
-              <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
-              {has && <span className="relic-badge">✓</span>}
-            </button>
-          )
-        })}
-      </div>
+      {kind === 'cards' ? (
+        <CardAlbum items={items} ids={ids} toggle={toggle} />
+      ) : kind === 'orchestrions' ? (
+        <GroupedChecklist items={items} ids={ids} toggle={toggle} />
+      ) : (
+        <div className="relic-icons mypage-grid">
+          {items.map((it: Item) => {
+            const has = ids.has(it.id)
+            return (
+              <button
+                key={it.id}
+                className={`relic-icon mypage-tile ${has ? 'is-owned' : 'is-missing'}`}
+                title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
+                onClick={() => toggle(it.id)}
+              >
+                <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
+                {has && <span className="relic-badge">✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
 export function MyPage({
   db,
+  relicDb,
   auth,
   members,
   onCharacterUpdated,
 }: {
   db: Db
+  relicDb: RelicDb | null
   auth: Auth
   members: Member[]
   onCharacterUpdated: (charId: number) => void
@@ -261,9 +394,22 @@ export function MyPage({
                 <span className="player-server">{char.server} ✓</span>
               </div>
             </div>
-            <div className="meter-grid">
-              <Meter label={kindLabel(lang, 'mounts', 'short')} count={char.mounts.count} total={char.mounts.total} />
-              <Meter label={kindLabel(lang, 'minions', 'short')} count={char.minions.count} total={char.minions.total} />
+            <div className="meter-grid mypage-meters">
+              {KINDS.map((k) => (
+                <Meter
+                  key={k}
+                  label={kindLabel(lang, k, 'short')}
+                  count={char[k].count}
+                  total={char[k].total}
+                />
+              ))}
+              {relicDb && (
+                <Meter
+                  label={t('relicsTab')}
+                  count={char.relicIds.length}
+                  total={relicDb.relics.length}
+                />
+              )}
             </div>
             <p className="modal-muted">{t('myPageAutoNote')}</p>
           </section>

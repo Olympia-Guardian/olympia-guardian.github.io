@@ -135,6 +135,7 @@ const STR = {
   bindError: { fr: 'Erreur — réessaie dans un instant.', en: 'Error — retry in a moment.' },
   saveError: { fr: 'Sauvegarde impossible — réessaie.', en: 'Could not save — retry.' },
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
+  albumPage: { fr: 'Page {n}', en: 'Page {n}' },
   myPageAutoNote: {
     fr: 'Montures et mascottes se synchronisent automatiquement depuis le Lodestone. Les onglets ci-dessous se cochent à la main — clique sur les icônes.',
     en: 'Mounts and minions sync automatically from the Lodestone. The tabs below are checked by hand — click the icons.',

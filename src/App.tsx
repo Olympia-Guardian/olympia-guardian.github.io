@@ -236,6 +236,7 @@ export default function App() {
         )}
 
         <div className="layout">
+          {tab !== 'mypage' && (
           <RosterBar
             members={members}
             controls={
@@ -310,6 +311,7 @@ export default function App() {
             onRemove={remove}
             onRefresh={refresh}
           />
+          )}
 
           <main className="main">
             {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
@@ -353,6 +355,7 @@ export default function App() {
             {db && tab === 'mypage' && (
               <MyPage
                 db={db}
+                relicDb={relicDb}
                 auth={auth}
                 members={members}
                 onCharacterUpdated={(charId) => {

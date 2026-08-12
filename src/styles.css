@@ -1564,6 +1564,137 @@ a.player-name:hover {
   filter: none;
 }
 
+.mypage-progress {
+  flex: 1 1 180px;
+  max-width: 260px;
+  margin-left: auto;
+}
+
+.mypage-meters {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  margin-top: 4px;
+}
+
+/* album de cartes (pages de 30, illustrations) */
+.album {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.album-page-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 4px;
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.album-card {
+  position: relative;
+  padding: 0;
+  border-radius: 6px;
+  line-height: 0;
+}
+
+.album-card img {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--ring);
+}
+
+.album-card.is-missing img {
+  filter: grayscale(0.85) brightness(0.55);
+}
+
+.album-card.is-owned img {
+  border-color: rgba(12, 163, 12, 0.5);
+}
+
+.album-card:hover img {
+  outline: 2px solid var(--accent);
+  filter: none;
+}
+
+.album-card .relic-badge {
+  bottom: 4px;
+  right: 4px;
+}
+
+/* liste à cocher groupée (orchestrion) */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.checklist-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.checklist-row:hover {
+  background: var(--surface-2);
+}
+
+.checklist-box {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.checklist-box.is-owned {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.checklist-name {
+  font-weight: 550;
+  min-width: 0;
+}
+
+.checklist-row.is-owned .checklist-name {
+  color: var(--ink-2);
+}
+
+.checklist-src {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 45%;
+}
+
 /* ----------------------------------------------------------------- footer */
 
 .footer {

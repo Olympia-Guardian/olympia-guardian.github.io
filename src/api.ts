@@ -39,6 +39,11 @@ export interface Item {
   order: number
   tradeable: boolean
   ownedPct: string
+  /** Catégorie d'album (orchestrion : « Lieux », « Donjons »…). */
+  group?: string
+  groupEn?: string
+  /** Numéro d'album (rouleaux, cartes). */
+  num?: number | string
   /** type = enum anglais stable de l'API (la logique de catégories s'appuie dessus) ; text = français. */
   sources: Source[]
 }

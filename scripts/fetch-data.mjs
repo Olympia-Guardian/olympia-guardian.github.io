@@ -39,9 +39,12 @@ function mergeDb(jsonEn, jsonFr) {
       description: fr?.description ?? r.description ?? '',
       descriptionEn: r.description ?? '',
       patch: r.patch,
-      order: r.order ?? 0,
+      order: r.order ?? r.number ?? 0,
       tradeable: !!r.tradeable,
       ownedPct: r.owned ?? '',
+      // Catégorie (orchestrion : Lieux, Donjons…) et numéro d'album quand présents
+      ...(r.category ? { group: fr?.category?.name ?? r.category.name, groupEn: r.category.name } : {}),
+      ...(r.number !== undefined ? { num: r.number } : {}),
       sources: sourcesEn.map((s, i) => ({
         type: s.type,
         text: sourcesFr[i]?.text ?? s.text,

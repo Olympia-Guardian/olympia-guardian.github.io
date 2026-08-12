@@ -409,8 +409,16 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
 
   // --------------------------------------------------------- Armures Bozja
   'Idealized Armor': {
-    url: `${WIKI}/The_Baldesion_Arsenal`,
-    perPiece: [m(1, "drop de l'Arsenal de Baldesion (coffres personnels)", 'Baldesion Arsenal drop (personal coffers)', undefined, 'drop')],
+    url: `${WIKI}/Idealized_Artifact_Armor`,
+    perPiece: [
+      m(
+        4,
+        'totems du grand général des armées impériales (Memoria Misera Extrême — 19 pour un set de 5 pièces)',
+        'High Legatus Idols (Memoria Misera Extreme — 19 for a 5-piece set)',
+        undefined,
+        'drop',
+      ),
+    ],
   },
   'Bozjan Armor': {
     url: `${WIKI}/Augmented_Bozjan_Armor`,

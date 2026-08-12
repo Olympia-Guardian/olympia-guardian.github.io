@@ -108,7 +108,8 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
   // cassait les catégories → on fusionne EN (types stables) + FR (noms).
   // v3 : ajout de sources[].textEn pour les heuristiques solo/groupe.
   // v4 : image + description pour la fiche objet.
-  const cacheKey = `ogs.db.${kind}.v4`
+  // v5 : group/groupEn (catégorie orchestrion) + num (numéro d'album des cartes).
+  const cacheKey = `ogs.db.${kind}.v5`
   if (!force) {
     const cached = readCache<Item[]>(cacheKey, DB_TTL)
     if (cached) return cached
@@ -158,6 +159,9 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
         text: sourcesFr[i]?.text ?? s.text,
         textEn: s.text,
       })),
+      // Mêmes champs que les catalogues statiques (scripts/fetch-data.mjs)
+      ...(r.category ? { group: fr?.category?.name ?? r.category.name, groupEn: r.category.name } : {}),
+      ...(r.number !== undefined ? { num: r.number } : {}),
     }
   })
   writeCache(cacheKey, items)

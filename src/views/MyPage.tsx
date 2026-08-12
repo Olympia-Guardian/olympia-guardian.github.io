@@ -405,9 +405,6 @@ function CollectionEditor({
             </button>
           </div>
         )}
-        <div className="mypage-progress">
-          <Meter label={kindLabel(lang, kind, 'short')} count={ids.size} total={db[kind].length} />
-        </div>
       </div>
       <div className="editor-layout">
         <div className="editor-body">

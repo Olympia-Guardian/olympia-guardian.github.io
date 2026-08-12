@@ -797,6 +797,24 @@ export function MyPage({
     }
   }
 
+  // Bascule groupée (« Tout ajouter » sur un palier) : une seule mise à jour
+  // d'état et une seule sauvegarde, même pour 35 pièces.
+  function setRelics(ids: number[], add: boolean) {
+    setChar((prev) => {
+      if (!prev) return prev
+      const set = new Set(prev.relicIds)
+      for (const id of ids) {
+        if (add) set.add(id)
+        else set.delete(id)
+      }
+      const relicIds = [...set]
+      relicIdsRef.current = relicIds
+      return { ...prev, relicIds }
+    })
+    if (relicSaveTimer.current) clearTimeout(relicSaveTimer.current)
+    relicSaveTimer.current = setTimeout(() => save('relics', relicIdsRef.current), 1200)
+  }
+
   async function save(k: Kind | 'relics', ids: number[]) {
     if (!verified) return
     try {
@@ -1000,6 +1018,7 @@ export function MyPage({
                 ready={[{ id: char.id, status: 'ok', data: char }]}
                 detailed
                 onToggleRelic={toggleRelic}
+                onSetRelics={setRelics}
               />
             ) : (
               <p className="muted">{t('relicsLoading')}</p>

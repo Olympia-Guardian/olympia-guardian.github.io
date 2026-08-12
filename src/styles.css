@@ -2616,3 +2616,15 @@ a.player-name:hover {
   margin-left: auto;
   align-self: flex-start;
 }
+
+/* « Tout ajouter » à droite du titre du palier */
+.relic-step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.relic-bulk {
+  font-size: 11px;
+  padding: 2px 9px;
+}

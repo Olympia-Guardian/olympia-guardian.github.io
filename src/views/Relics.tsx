@@ -135,12 +135,15 @@ function SeriesCard({
   ready,
   ownedSets,
   onRelicClick,
+  onSetRelics,
 }: {
   info: RelicSeriesInfo
   relics: Relic[]
   ready: Ready[]
   ownedSets: Map<number, Set<number>>
   onRelicClick?: (relic: Relic, step: number) => void
+  /** « Tout ajouter / retirer » sur un palier (Mon Journal). */
+  onSetRelics?: (ids: number[], add: boolean) => void
 }) {
   const { lang, t } = useI18n()
   const steps = Math.max(1, Math.round(info.total / info.jobs))
@@ -224,13 +227,30 @@ function SeriesCard({
                 return (
                   <div key={i} className="relic-icon-step">
                     <div className="relic-step-info">
-                      {steps > 1 && (
-                        <b>
-                          {t(stepKey, { n: i + 1 })} ·{' '}
-                          <span className={c >= list.length ? 'relic-done' : ''}>
-                            {c}/{list.length}
-                          </span>
-                        </b>
+                      {(steps > 1 || onSetRelics) && (
+                        <span className="relic-step-head">
+                          {steps > 1 && (
+                            <b>
+                              {t(stepKey, { n: i + 1 })} ·{' '}
+                              <span className={c >= list.length ? 'relic-done' : ''}>
+                                {c}/{list.length}
+                              </span>
+                            </b>
+                          )}
+                          {onSetRelics && (
+                            <button
+                              className="btn btn-ghost btn-mini relic-bulk"
+                              onClick={() =>
+                                onSetRelics(
+                                  list.map((r) => r.id),
+                                  c < list.length,
+                                )
+                              }
+                            >
+                              {c < list.length ? t('relicAddAll') : t('relicRemoveAll')}
+                            </button>
+                          )}
+                        </span>
                       )}
                       {stepCost && stepCost.materials.length > 0 && (
                         <span className="relic-step-mats">
@@ -502,6 +522,7 @@ export function Relics({
   ready,
   detailed = false,
   onToggleRelic,
+  onSetRelics,
 }: {
   db: RelicDb
   ready: Ready[]
@@ -509,6 +530,8 @@ export function Relics({
   detailed?: boolean
   /** Fourni dans « Mon Journal » : chaque relique devient cochable. */
   onToggleRelic?: (id: number) => void
+  /** Fourni dans « Mon Journal » : « Tout ajouter / retirer » par palier. */
+  onSetRelics?: (ids: number[], add: boolean) => void
 }) {
   const { lang, t } = useI18n()
   const [mode, setMode] = useState<'quick' | 'inspect'>('inspect')
@@ -700,6 +723,7 @@ export function Relics({
                   ready={ready}
                   ownedSets={ownedSets}
                   onRelicClick={handleRelic?.(info)}
+                  onSetRelics={onSetRelics}
                 />
               ))}
             </div>

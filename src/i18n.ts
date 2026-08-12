@@ -144,6 +144,8 @@ const STR = {
     fr: 'Délier {name} de ton compte ? Ses collections restent enregistrées : tu les retrouveras si tu le relies plus tard.',
     en: 'Unlink {name} from your account? Its collections stay saved — you get them back if you link it again later.',
   },
+  relicAddAll: { fr: 'Tout ajouter', en: 'Add all' },
+  relicRemoveAll: { fr: 'Tout retirer', en: 'Remove all' },
   relicCheck: { fr: 'clique pour marquer comme obtenue', en: 'click to mark as obtained' },
   relicUncheck: { fr: 'clique pour retirer', en: 'click to remove' },
   relicEditNote: {

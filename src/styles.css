@@ -2724,3 +2724,37 @@ a.player-name:hover {
   width: 22px;
   height: 22px;
 }
+
+/* chip d'objet requis : icône (si connue) + nom + quantité */
+.relic-mat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--ink-2);
+  cursor: help;
+  max-width: 100%;
+}
+
+.relic-mat-chip img {
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.relic-mat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.relic-mat-chip i {
+  font-style: normal;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}

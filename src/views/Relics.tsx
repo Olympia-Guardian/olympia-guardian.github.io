@@ -11,7 +11,7 @@ import {
   type StepCost,
 } from '../relicCosts'
 import type { Member } from '../store'
-import { ITEM_FALLBACK, Meter, onAvatarImgError, onItemImgError } from '../ui'
+import { Meter, onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -268,17 +268,19 @@ function SeriesCard({
   })()
   const shownMats = reqLeft && remainingMats ? remainingMats : totalMats
 
-  /** Icône d'objet + quantité (réutilisée dans l'en-tête et chaque étape). */
-  const matIcon = (mat: Material) => (
-    <span
-      key={mat.key ?? mat.en}
-      className="relic-req-item"
-      title={`${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`}
-    >
-      <img src={mat.icon ?? ITEM_FALLBACK} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
-      <i>×{compactQty(mat.qty)}</i>
-    </span>
-  )
+  /** Chip d'objet : icône (si elle existe), nom court et quantité — le nom
+   *  complet avec ses précisions entre parenthèses reste au survol. */
+  const matIcon = (mat: Material) => {
+    const full = lang === 'fr' ? mat.fr : mat.en
+    const short = full.replace(/\s*\(.*$/, '')
+    return (
+      <span key={mat.key ?? mat.en} className="relic-mat-chip" title={`${fmt(mat.qty, lang)} ${full}`}>
+        {mat.icon && <img src={mat.icon} alt="" width={18} height={18} loading="lazy" onError={onItemImgError} />}
+        <span className="relic-mat-name">{short}</span>
+        <i>×{compactQty(mat.qty)}</i>
+      </span>
+    )
+  }
 
   return (
     <article className="relic-series">

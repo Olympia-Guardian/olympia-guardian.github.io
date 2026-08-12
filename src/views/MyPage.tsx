@@ -95,11 +95,22 @@ function CardAlbum({
 }) {
   const { lang, t } = useI18n()
   const [srcType, setSrcType] = useState<string | null>(null)
+
+  // Position d'album par NUMÉRO de carte (« No. 123 ») : page = ⌈n/30⌉,
+  // case = (n-1) mod 30 — les trous restent vides, comme en jeu.
+  const cardNo = (it: Item) => {
+    const m = String(it.num ?? '').match(/\d+/)
+    return m ? Number(m[0]) : it.order
+  }
   const pages = useMemo(() => {
-    const sorted = [...allItems].sort((a, b) => a.order - b.order)
-    const out: Item[][] = []
-    for (let i = 0; i < sorted.length; i += 30) out.push(sorted.slice(i, i + 30))
-    return out
+    const map = new Map<number, (Item | null)[]>()
+    for (const it of allItems) {
+      const n = cardNo(it)
+      const p = Math.floor((n - 1) / 30)
+      if (!map.has(p)) map.set(p, Array(30).fill(null))
+      map.get(p)![(n - 1) % 30] = it
+    }
+    return [...map.entries()].sort((a, b) => a[0] - b[0])
   }, [allItems])
 
   // Filtres par type de source, façon Lala (Haut fait, Quête, Défi, PNJ…)
@@ -139,27 +150,28 @@ function CardAlbum({
         ))}
       </div>
       <div className="album">
-      {pages.map((page, i) => {
-        const shown = page.filter((it) => shows(it))
+      {pages.map(([pageIdx, cells]) => {
+        const real = cells.filter((it): it is Item => it !== null)
+        const shown = real.filter((it) => shows(it))
         if (shown.length === 0) return null
-        const owned = page.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
+        const owned = real.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
         return (
-          <section key={i} className="album-page">
+          <section key={pageIdx} className="album-page">
             <header className="album-page-head">
-              <b>{i + 1}</b>
-              <span className={`mypage-count ${owned === page.length ? 'relic-done' : ''}`}>
-                {owned}/{page.length}
+              <b>{pageIdx + 1}</b>
+              <span className={`mypage-count ${owned === real.length ? 'relic-done' : ''}`}>
+                {owned}/{real.length}
               </span>
             </header>
             <div className="album-grid">
-              {page.map((it) => {
-                if (!shows(it)) return <span key={it.id} className="album-slot" />
+              {cells.map((it, slot) => {
+                if (!it || !shows(it)) return <span key={slot} className="album-slot" />
                 const has = ids.has(it.id)
                 return (
                   <button
                     key={it.id}
                     className={`album-card ${has ? 'is-owned' : 'is-missing'}`}
-                    title={`${localName(it, lang)} · n°${it.order}${has ? ' ✓' : ''}`}
+                    title={`${localName(it, lang)} · n°${cardNo(it)}${has ? ' ✓' : ''}`}
                     onClick={() => onItemClick(it)}
                   >
                     <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />

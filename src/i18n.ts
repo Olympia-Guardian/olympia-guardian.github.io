@@ -101,6 +101,44 @@ const STR = {
   dataBy: { fr: 'Données', en: 'Data by' },
   feedback: { fr: 'un souci, une idée ?', en: 'issues & ideas' },
 
+  // Comptes & Ma Page
+  myPage: { fr: 'Ma Page', en: 'My Page' },
+  loginDiscord: { fr: 'Se connecter avec Discord', en: 'Sign in with Discord' },
+  loginIntro: {
+    fr: 'Connecte-toi pour lier ton personnage et renseigner directement tes collections (cartes, orchestrion, magie bleue, accessoires) — sans compte FFXIV Collect.',
+    en: 'Sign in to link your character and fill in your collections directly (cards, orchestrion, blue magic, accessories) — no FFXIV Collect account needed.',
+  },
+  logout: { fr: 'Se déconnecter', en: 'Sign out' },
+  bindTitle: { fr: 'Lier mon personnage', en: 'Link my character' },
+  bindIntro: {
+    fr: 'Choisis ton perso dans le groupe ou colle son ID Lodestone. Une vérification par le Lodestone prouve qu\'il est à toi.',
+    en: 'Pick your character from the group or paste its Lodestone ID. A Lodestone check proves it\'s yours.',
+  },
+  bindStart: { fr: 'Lier', en: 'Link' },
+  bindStep1: { fr: '1. Copie ce code :', en: '1. Copy this code:' },
+  bindStep2: {
+    fr: '2. Colle-le dans la présentation de ton perso sur le Lodestone (Profil → Modifier la présentation), enregistre, puis clique Vérifier. Tu pourras le retirer ensuite.',
+    en: '2. Paste it into your character profile bio on the Lodestone (Profile → Edit), save, then click Verify. You can remove it afterwards.',
+  },
+  bindProfileLink: { fr: 'Ouvrir mes réglages Lodestone ↗', en: 'Open my Lodestone settings ↗' },
+  bindVerify: { fr: 'Vérifier', en: 'Verify' },
+  bindVerified: { fr: '✓ Personnage vérifié ! C\'est ton perso.', en: '✓ Character verified! It\'s yours.' },
+  bindCodeMissing: {
+    fr: 'Code introuvable dans ta présentation Lodestone — vérifie qu\'elle est bien enregistrée et publique, puis réessaie.',
+    en: 'Code not found in your Lodestone bio — make sure it\'s saved and public, then retry.',
+  },
+  bindConflict: {
+    fr: 'Ce personnage est déjà lié à un autre compte.',
+    en: 'This character is already linked to another account.',
+  },
+  bindError: { fr: 'Erreur — réessaie dans un instant.', en: 'Error — retry in a moment.' },
+  saveError: { fr: 'Sauvegarde impossible — réessaie.', en: 'Could not save — retry.' },
+  saved: { fr: '✓ Enregistré', en: '✓ Saved' },
+  myPageAutoNote: {
+    fr: 'Montures et mascottes se synchronisent automatiquement depuis le Lodestone. Les onglets ci-dessous se cochent à la main — clique sur les icônes.',
+    en: 'Mounts and minions sync automatically from the Lodestone. The tabs below are checked by hand — click the icons.',
+  },
+
   // Multi-groupes
   groupUnsaved: { fr: 'Groupe actuel', en: 'Current group' },
   groupSave: { fr: '💾 Enregistrer ce groupe…', en: '💾 Save this group…' },

@@ -5,6 +5,11 @@ main = "index.js"
 compatibility_date = "2026-08-01"
 workers_dev = true
 
+[vars]
+DISCORD_CLIENT_ID = "1537099783573995522"
+APP_URL = "https://olympia-guardian.github.io"
+# DISCORD_CLIENT_SECRET : secret wrangler (npx wrangler secret put DISCORD_CLIENT_SECRET)
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ogs-rooms"

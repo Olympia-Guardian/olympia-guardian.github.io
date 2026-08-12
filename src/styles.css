@@ -1475,6 +1475,67 @@ a.player-name:hover {
   color: var(--muted);
 }
 
+/* ---------------------------------------------------------------- ma page */
+
+.mypage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mypage-avatar {
+  border-radius: 50%;
+  border: 1px solid var(--ring);
+}
+
+.mypage-bind h3 {
+  margin: 0;
+}
+
+.bind-code {
+  background: var(--surface-2);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  user-select: all;
+}
+
+.mypage-tabs {
+  align-self: flex-start;
+}
+
+.mypage-count {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mypage-saved {
+  margin: 0;
+  font-size: 12px;
+  color: var(--good);
+}
+
+.mypage-grid {
+  gap: 6px;
+}
+
+.mypage-tile {
+  padding: 0;
+  border-radius: 6px;
+}
+
+.mypage-tile:hover img {
+  outline: 2px solid var(--accent);
+  opacity: 1;
+  filter: none;
+}
+
 /* ----------------------------------------------------------------- footer */
 
 .footer {

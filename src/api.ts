@@ -355,6 +355,15 @@ export async function fetchRelicDb(force = false): Promise<RelicDb> {
   return db
 }
 
+/** Invalide le cache local d'un perso (après édition dans « Ma Page »). */
+export function invalidateCharacter(lodestoneId: number): void {
+  try {
+    localStorage.removeItem(`ogs.char.${lodestoneId}.v5`)
+  } catch {
+    // rien
+  }
+}
+
 /** Accepte un ID brut, une URL Lodestone ou une URL FFXIV Collect. */
 export function parseLodestoneId(input: string): number | null {
   const trimmed = input.trim()

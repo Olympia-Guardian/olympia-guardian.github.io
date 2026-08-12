@@ -9,8 +9,8 @@
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 }
 
 const LODESTONE = 'https://eu.finalfantasyxiv.com/lodestone'
@@ -249,6 +249,248 @@ async function getCharacter(env, id, force) {
   }
 }
 
+// ------------------------------------------------------------------- comptes
+
+const DISCORD_AUTH = 'https://discord.com/oauth2/authorize'
+const DISCORD_TOKEN = 'https://discord.com/api/oauth2/token'
+const DISCORD_ME = 'https://discord.com/api/users/@me'
+const TOKEN_TTL = 90 * 24 * 3_600_000 // 90 jours
+
+function b64url(bytes) {
+  return btoa(String.fromCharCode(...new Uint8Array(bytes)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+async function hmac(env, data) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(env.DISCORD_CLIENT_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  return b64url(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data)))
+}
+
+async function signState(env, payload) {
+  const body = b64url(new TextEncoder().encode(JSON.stringify(payload)))
+  return `${body}.${await hmac(env, body)}`
+}
+
+async function verifyState(env, state) {
+  const [body, sig] = String(state).split('.')
+  if (!body || !sig || (await hmac(env, body)) !== sig) return null
+  try {
+    const payload = JSON.parse(atob(body.replace(/-/g, '+').replace(/_/g, '/')))
+    if (payload.x < Date.now()) return null
+    return payload
+  } catch {
+    return null
+  }
+}
+
+function randomToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(24))
+  return b64url(bytes)
+}
+
+const CALLBACK = 'https://ogs-room.olympia-guardian.workers.dev/auth/discord/callback'
+
+async function authDiscordStart(env, url) {
+  const ret = url.searchParams.get('return') ?? env.APP_URL
+  if (!ret.startsWith(env.APP_URL) && !ret.startsWith('http://localhost')) {
+    return response('{"error":"invalid return"}', 400)
+  }
+  const state = await signState(env, { r: ret, x: Date.now() + 600_000 })
+  const auth = new URL(DISCORD_AUTH)
+  auth.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
+  auth.searchParams.set('response_type', 'code')
+  auth.searchParams.set('redirect_uri', CALLBACK)
+  auth.searchParams.set('scope', 'identify')
+  auth.searchParams.set('state', state)
+  return Response.redirect(auth.toString(), 302)
+}
+
+async function authDiscordCallback(env, url) {
+  const payload = await verifyState(env, url.searchParams.get('state'))
+  const code = url.searchParams.get('code')
+  if (!payload || !code) return response('{"error":"invalid state"}', 400)
+
+  const tokenRes = await fetch(DISCORD_TOKEN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: env.DISCORD_CLIENT_ID,
+      client_secret: env.DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: CALLBACK,
+    }),
+  })
+  if (!tokenRes.ok) return response('{"error":"token exchange failed"}', 502)
+  const { access_token } = await tokenRes.json()
+
+  const meRes = await fetch(DISCORD_ME, { headers: { Authorization: `Bearer ${access_token}` } })
+  if (!meRes.ok) return response('{"error":"profile fetch failed"}', 502)
+  const me = await meRes.json()
+  const avatar = me.avatar
+    ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64`
+    : ''
+  const displayName = me.global_name || me.username || 'Aventurier'
+
+  const userId = `discord:${me.id}`
+  await env.DB.prepare(
+    'INSERT INTO users (id, provider, provider_id, name, avatar, created) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ' +
+      'ON CONFLICT(id) DO UPDATE SET name = ?4, avatar = ?5',
+  )
+    .bind(userId, 'discord', me.id, displayName, avatar, Date.now())
+    .run()
+
+  const token = randomToken()
+  await env.DB.prepare(
+    'INSERT INTO tokens (token, user_id, created, expires) VALUES (?1, ?2, ?3, ?4)',
+  )
+    .bind(token, userId, Date.now(), Date.now() + TOKEN_TTL)
+    .run()
+
+  const dest = new URL(payload.r)
+  dest.hash = `login=${token}`
+  return Response.redirect(dest.toString(), 302)
+}
+
+async function authenticate(env, req) {
+  const header = req.headers.get('Authorization') ?? ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null
+  if (!token) return null
+  const row = await env.DB.prepare(
+    'SELECT u.id, u.name, u.avatar FROM tokens t JOIN users u ON u.id = t.user_id ' +
+      'WHERE t.token = ?1 AND t.expires > ?2',
+  )
+    .bind(token, Date.now())
+    .first()
+  return row ?? null
+}
+
+async function getMe(env, user) {
+  const rows = await env.DB.prepare(
+    'SELECT char_id, verified, code FROM bindings WHERE user_id = ?1',
+  )
+    .bind(user.id)
+    .all()
+  return {
+    user: { id: user.id, name: user.name, avatar: user.avatar },
+    bindings: rows.results.map((r) => ({
+      charId: r.char_id,
+      verified: !!r.verified,
+      code: r.verified ? undefined : r.code,
+    })),
+  }
+}
+
+async function bindCharacter(env, user, raw) {
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const charId = doc?.charId
+  if (!Number.isInteger(charId) || charId <= 0 || charId >= 1e12) {
+    return response('{"error":"invalid charId"}', 422)
+  }
+  const owner = await env.DB.prepare(
+    'SELECT user_id FROM bindings WHERE char_id = ?1 AND verified = 1',
+  )
+    .bind(charId)
+    .first()
+  if (owner && owner.user_id !== user.id) {
+    return response('{"error":"character already claimed"}', 409)
+  }
+  const code = 'OGS-' + b64url(crypto.getRandomValues(new Uint8Array(6))).slice(0, 8)
+  await env.DB.prepare(
+    'INSERT INTO bindings (user_id, char_id, verified, code, created) VALUES (?1, ?2, 0, ?3, ?4) ' +
+      'ON CONFLICT(user_id, char_id) DO UPDATE SET code = CASE WHEN bindings.verified = 1 THEN bindings.code ELSE ?3 END',
+  )
+    .bind(user.id, charId, code, Date.now())
+    .run()
+  const row = await env.DB.prepare(
+    'SELECT verified, code FROM bindings WHERE user_id = ?1 AND char_id = ?2',
+  )
+    .bind(user.id, charId)
+    .first()
+  return response(JSON.stringify({ charId, verified: !!row.verified, code: row.code }))
+}
+
+async function verifyBinding(env, user, raw) {
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const charId = doc?.charId
+  const row = await env.DB.prepare(
+    'SELECT code, verified FROM bindings WHERE user_id = ?1 AND char_id = ?2',
+  )
+    .bind(user.id, charId)
+    .first()
+  if (!row) return response('{"error":"no binding"}', 404)
+  if (row.verified) return response('{"charId":' + charId + ',"verified":true}')
+
+  const profile = await lodestoneGet(`/character/${charId}/`)
+  if (profile === null) return response('{"error":"character not found"}', 404)
+  if (!profile.includes(row.code)) {
+    return response('{"error":"code not found in profile"}', 422)
+  }
+  const claimed = await env.DB.prepare(
+    'SELECT user_id FROM bindings WHERE char_id = ?1 AND verified = 1',
+  )
+    .bind(charId)
+    .first()
+  if (claimed && claimed.user_id !== user.id) {
+    return response('{"error":"character already claimed"}', 409)
+  }
+  await env.DB.prepare(
+    'UPDATE bindings SET verified = 1 WHERE user_id = ?1 AND char_id = ?2',
+  )
+    .bind(user.id, charId)
+    .run()
+  return response(JSON.stringify({ charId, verified: true }))
+}
+
+async function putCollections(env, user, charId, raw) {
+  const binding = await env.DB.prepare(
+    'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
+  )
+    .bind(user.id, charId)
+    .first()
+  if (!binding) return response('{"error":"not the verified owner"}', 403)
+
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const rows = []
+  const now = Date.now()
+  for (const kind of [...HIDDEN_KINDS, 'relics']) {
+    const ids = doc?.[kind]
+    if (ids === undefined) continue
+    if (!validIds(ids, 4000)) return response('{"error":"invalid ids"}', 422)
+    rows.push([charId, kind, JSON.stringify([...new Set(ids)]), now])
+  }
+  if (rows.length === 0) return response('{"error":"nothing to update"}', 422)
+  const stmt = env.DB.prepare(
+    'INSERT INTO collections (char_id, kind, ids, updated, source) VALUES (?1, ?2, ?3, ?4, ?5) ' +
+      'ON CONFLICT(char_id, kind) DO UPDATE SET ids=?3, updated=?4, source=?5',
+  )
+  await env.DB.batch(rows.map((r) => stmt.bind(...r, 'user')))
+  return response('{"ok":true}')
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -278,8 +520,32 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
     const url = new URL(req.url)
 
+    // --- comptes : OAuth Discord + session + liaison de perso
+    if (url.pathname === '/auth/discord' && req.method === 'GET') {
+      return authDiscordStart(env, url)
+    }
+    if (url.pathname === '/auth/discord/callback' && req.method === 'GET') {
+      return authDiscordCallback(env, url)
+    }
+    if (url.pathname === '/me' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return response(JSON.stringify(await getMe(env, user)))
+    }
+    if (url.pathname === '/bind' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return bindCharacter(env, user, await req.text())
+    }
+    if (url.pathname === '/bind/verify' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return verifyBinding(env, user, await req.text())
+    }
+
     // --- personnages : GET /character/:id[?force=1] · POST /character/:id/seed
-    const charMatch = url.pathname.match(/^\/character\/(\d{1,12})(\/seed)?$/)
+    //                   PUT /character/:id/collections (propriétaire vérifié)
+    const charMatch = url.pathname.match(/^\/character\/(\d{1,12})(\/seed|\/collections)?$/)
     if (charMatch) {
       const id = Number(charMatch[1])
       if (charMatch[2] === '/seed' && req.method === 'POST') {
@@ -287,6 +553,13 @@ export default {
         if (raw.length > 131_072) return response('{"error":"too large"}', 413)
         const ok = await applySeed(env, id, raw)
         return ok ? response('{"ok":true}') : response('{"error":"invalid seed"}', 422)
+      }
+      if (charMatch[2] === '/collections' && req.method === 'PUT') {
+        const user = await authenticate(env, req)
+        if (!user) return response('{"error":"unauthorized"}', 401)
+        const raw = await req.text()
+        if (raw.length > 131_072) return response('{"error":"too large"}', 413)
+        return putCollections(env, user, id, raw)
       }
       if (!charMatch[2] && req.method === 'GET') {
         try {

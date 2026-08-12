@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, type Kind } from './api'
+import { useAuth } from './auth'
 import { useDigest } from './digest'
 import { currentGroupHash, loadGroups, saveGroups, switchToGroup, type SavedGroup } from './groups'
+import { MyPage } from './views/MyPage'
 import { detectLang, kindLabel, persistLang, translate, LangContext, type Lang } from './i18n'
 import { ItemModal, type ShownItem } from './ItemModal'
 import { useRoom, type LocalState } from './room'
@@ -19,7 +21,7 @@ import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
 
-type Tab = 'planning' | Kind | 'relics'
+type Tab = 'planning' | Kind | 'relics' | 'mypage'
 
 export default function App() {
   // Langue (FR/EN) — détectée puis mémorisée par navigateur
@@ -39,6 +41,9 @@ export default function App() {
 
   const { db, error: dbError } = useDb()
   const relicDb = useRelicDb()
+
+  // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
+  const auth = useAuth()
 
   // Salon de synchro (lu depuis le lien avant tout le reste : il pilote le hash)
   const [roomId, setRoomId] = useState<string | null>(() => readHashRoomId())
@@ -164,6 +169,7 @@ export default function App() {
     { id: 'planning', label: t('planning') },
     ...KINDS.map((k) => ({ id: k as Tab, label: kindLabel(lang, k, 'short') })),
     { id: 'relics', label: t('relicsTab') },
+    ...(auth.user ? [{ id: 'mypage' as Tab, label: `👤 ${t('myPage')}` }] : []),
   ]
 
   return (
@@ -242,6 +248,11 @@ export default function App() {
                 {copied ? t('copied') : t(members.length > 1 ? 'copyLink' : 'copyLinkSolo')}
               </button>
             )}
+            {!auth.user && (
+              <button className="btn btn-ghost" onClick={auth.login} title={t('loginIntro')}>
+                {t('loginDiscord')}
+              </button>
+            )}
             <div className="lang-switch" role="group" aria-label="Language">
               {(['fr', 'en'] as Lang[]).map((l) => (
                 <button
@@ -313,7 +324,7 @@ export default function App() {
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
               />
             )}
-            {db && activeReady.length > 0 && tab !== 'planning' && tab !== 'relics' && (
+            {db && activeReady.length > 0 && tab !== 'planning' && tab !== 'relics' && tab !== 'mypage' && (
               <Matrix
                 kind={tab}
                 items={db[tab]}
@@ -328,6 +339,16 @@ export default function App() {
               ) : (
                 <p className="empty">{t('relicsLoading')}</p>
               ))}
+            {db && tab === 'mypage' && (
+              <MyPage
+                db={db}
+                auth={auth}
+                members={members}
+                onCharacterUpdated={(charId) => {
+                  if (members.some((m) => m.id === charId)) refresh(charId)
+                }}
+              />
+            )}
           </main>
         </div>
 

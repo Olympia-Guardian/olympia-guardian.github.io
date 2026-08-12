@@ -89,6 +89,14 @@ button:focus-visible {
   padding: 0 20px 40px;
 }
 
+/* Grands écrans : on laisse l'album respirer (4 pages de cartes par ligne)
+   au lieu de laisser un tiers de l'écran vide. */
+@media (min-width: 1700px) {
+  .app {
+    max-width: 1800px;
+  }
+}
+
 /* ------------------------------------------------- layout avec sidepanel */
 
 .layout {

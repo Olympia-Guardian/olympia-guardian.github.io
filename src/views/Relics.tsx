@@ -91,7 +91,11 @@ function RelicPanel({
       <p className="modal-chips">
         <span className="chip chip-type">{t(catKey)}</span>
         <span className="chip chip-patch">{lang === 'fr' ? info.name : info.key}</span>
-        {steps > 1 && <span className="chip chip-patch">{t('relicStep', { n: step + 1 })}</span>}
+        {steps > 1 && (
+          <span className="chip chip-patch">
+            {t(info.category === 'armor' ? 'relicTier' : 'relicStep', { n: step + 1 })}
+          </span>
+        )}
         <span className={`chip ${owned ? 'chip-owned' : 'chip-type'}`}>
           {owned ? t('panelOwned') : t('panelMissing')}
         </span>
@@ -143,6 +147,9 @@ function SeriesCard({
   const costs = RELIC_COSTS[info.key]
   const costSteps: StepCost[] | null = costs ? effectiveSteps(costs, steps) : null
   const name = lang === 'fr' ? info.name : info.key
+  // Pour une armure l'unité est la pièce, et une étape est un palier.
+  const isArmor = info.category === 'armor'
+  const stepKey = isArmor ? 'relicTier' : 'relicStep'
   const catKey =
     info.category === 'weapons'
       ? 'relCatWeapons'
@@ -182,7 +189,9 @@ function SeriesCard({
         <h4 className="relic-series-name">{name}</h4>
         <span className="chip chip-type">{t(catKey)}</span>
         <span className="relic-shape">
-          {steps > 1 ? t('relicShapeN', { steps, jobs: info.jobs }) : t('relicShape1', { jobs: info.jobs })}
+          {steps > 1
+            ? t(isArmor ? 'relicShapeNArmor' : 'relicShapeN', { steps, jobs: info.jobs })
+            : t(isArmor ? 'relicShape1Armor' : 'relicShape1', { jobs: info.jobs })}
         </span>
       </header>
 
@@ -217,7 +226,7 @@ function SeriesCard({
                     <div className="relic-step-info">
                       {steps > 1 && (
                         <b>
-                          {t('relicStep', { n: i + 1 })} ·{' '}
+                          {t(stepKey, { n: i + 1 })} ·{' '}
                           <span className={c >= list.length ? 'relic-done' : ''}>
                             {c}/{list.length}
                           </span>
@@ -301,7 +310,7 @@ function SeriesCard({
                 return (
                   <tr key={i}>
                     <td className="relic-step-info">
-                      <b>{t('relicStep', { n: i + 1 })}</b>
+                      <b>{t(stepKey, { n: i + 1 })}</b>
                       {stepCost && stepCost.materials.length > 0 && (
                         <span className="relic-step-mats">
                           {' '}

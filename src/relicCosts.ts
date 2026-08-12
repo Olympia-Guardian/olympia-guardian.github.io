@@ -362,18 +362,30 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
 
   // -------------------------------------------------------- Armures Eurêka
-  'Eureka Job Armor': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(50, 'cristaux instables', 'Protean Crystals')] },
-  'Eureka Job Armor +1': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(150, 'cristaux instables', 'Protean Crystals')] },
-  'Eureka Job Armor +2': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(400, 'cristaux instables', 'Protean Crystals')] },
-  'Eureka Anemos Armor': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(150, 'cristaux Anémos', 'Anemos Crystals')] },
-  'Elemental Armor': { url: `${WIKI}/Elemental_Armor`, perPiece: [m(40, 'cristaux Pyros', 'Pyros Crystals')] },
-  'Elemental Armor +1': {
-    url: `${WIKI}/Elemental_Armor`,
-    perPiece: [m(38, 'cristaux Hydatos (moyenne — 30 à 50 selon la pièce)', 'Hydatos Crystals (avg — 30–50 per piece)', 'hydatos-cr')],
+  'Eureka Job Armor': {
+    url: `${WIKI}/Anemos_Gear`,
+    steps: [
+      { materials: [m(50, 'cristaux instables', 'Protean Crystals')] },
+      { materials: [m(150, 'cristaux instables', 'Protean Crystals')] },
+      { materials: [m(400, 'cristaux instables', 'Protean Crystals')] },
+    ],
   },
-  'Elemental Armor +2': {
+  'Eureka Anemos Armor': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(150, 'cristaux Anémos', 'Anemos Crystals')] },
+  'Elemental Armor': {
     url: `${WIKI}/Elemental_Armor`,
-    perPiece: [m(27, "fragments d'Eurêka (moyenne — 21 à 35 selon la pièce)", 'Eureka Fragments (avg — 21–35 per piece)', 'eureka-frag')],
+    steps: [
+      { materials: [m(40, 'cristaux Pyros', 'Pyros Crystals')] },
+      {
+        materials: [
+          m(38, 'cristaux Hydatos (moyenne — 30 à 50 selon la pièce)', 'Hydatos Crystals (avg — 30–50 per piece)', 'hydatos-cr'),
+        ],
+      },
+      {
+        materials: [
+          m(27, "fragments d'Eurêka (moyenne — 21 à 35 selon la pièce)", 'Eureka Fragments (avg — 21–35 per piece)', 'eureka-frag'),
+        ],
+      },
+    ],
   },
 
   // --------------------------------------------------------- Armures Bozja
@@ -383,21 +395,29 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
   'Bozjan Armor': {
     url: `${WIKI}/Augmented_Bozjan_Armor`,
-    perPiece: [m(1, 'drop du Front sud de Bozja (engagements/coffres)', 'Bozjan Southern Front drop (engagements/coffers)', undefined, 'drop')],
-  },
-  'Augmented Bozjan Armor': {
-    url: `${WIKI}/Augmented_Bozjan_Armor`,
-    perPiece: [m(1, 'secret du coureur bozjien (500–999 pièces bozjiennes)', "Bozjan Runner's Secrets (500–999 Bozjan Coins)")],
+    steps: [
+      {
+        materials: [
+          m(1, 'drop du Front sud de Bozja (engagements/coffres)', 'Bozjan Southern Front drop (engagements/coffers)', undefined, 'drop'),
+        ],
+      },
+      {
+        materials: [
+          m(1, 'secret du coureur bozjien (500–999 pièces bozjiennes)', "Bozjan Runner's Secrets (500–999 Bozjan Coins)"),
+        ],
+      },
+    ],
   },
   "Law's Order": {
     url: `${WIKI}/Augmented_Law's_Order_Armor`,
-    perPiece: [m(1, 'drop de Delubrum Reginae', 'Delubrum Reginae drop', undefined, 'drop')],
-  },
-  "Augmented Law's Order": {
-    url: `${WIKI}/Augmented_Law's_Order_Armor`,
-    perPiece: [
-      m(1, 'secret du coureur ordonné (Delubrum sauvage, ou 10 plaques)', "Orderly Runner's Secrets (DR Savage, or 10 platings)"),
-      m(1, 'pièce bozjienne augmentée correspondante', 'matching Augmented Bozjan piece'),
+    steps: [
+      { materials: [m(1, 'drop de Delubrum Reginae', 'Delubrum Reginae drop', undefined, 'drop')] },
+      {
+        materials: [
+          m(1, 'secret du coureur ordonné (Delubrum sauvage, ou 10 plaques)', "Orderly Runner's Secrets (DR Savage, or 10 platings)"),
+          m(1, 'pièce bozjienne augmentée correspondante', 'matching Augmented Bozjan piece'),
+        ],
+      },
     ],
   },
   "Blade's Armor": {
@@ -406,39 +426,48 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
 
   // --------------------------------------------------- Armures du Croissant
+  // Les paliers « +1 / +2 » et « améliorée » sont fusionnés dans la série de
+  // base (scripts/fetch-data.mjs) : ils deviennent des étapes, comme les armes.
   "Arcanaut's Armor": {
     url: `${WIKI}/Phantom_Armor`,
-    perPiece: [m(4000, "pièces d'argent des douze cités", 'Enlightenment Silver Pieces', 'twelve-silver', 'currency')],
-  },
-  "Arcanaut's Armor +1": {
-    url: `${WIKI}/Phantom_Armor`,
-    perPiece: [
-      m(3, 'argents éthérés (1 200 argent pièce)', 'Aetherspun Silver (1,200 silver each)'),
-      m(3, 'fixatifs éthérés (1 600 or pièce)', 'Aetherial Fixative (1,600 gold each)'),
-    ],
-  },
-  "Arcanaut's Armor +2": {
-    url: `${WIKI}/Phantom_Armor`,
-    perPiece: [
-      m(3, 'ors éthérés', 'Aetherspun Gold'),
-      m(6, 'fixatifs X (60 sanguinites pièce)', 'X-Fixative (60 Sanguinite each)'),
+    steps: [
+      {
+        materials: [
+          m(4000, "pièces d'argent des douze cités", 'Enlightenment Silver Pieces', 'twelve-silver', 'currency'),
+        ],
+      },
+      {
+        materials: [
+          m(3, 'argents éthérés (1 200 argent pièce)', 'Aetherspun Silver (1,200 silver each)'),
+          m(3, 'fixatifs éthérés (1 600 or pièce)', 'Aetherial Fixative (1,600 gold each)'),
+        ],
+      },
+      {
+        materials: [
+          m(3, 'ors éthérés', 'Aetherspun Gold'),
+          m(6, 'fixatifs X (60 sanguinites pièce)', 'X-Fixative (60 Sanguinite each)'),
+        ],
+      },
     ],
   },
   'Phantom Vision': {
     url: `${WIKI}/Phantom_Armor`,
-    perPiece: [m(4000, "oboles d'argent (North Horn)", 'Silver Obols (North Horn)', 'obols', 'currency')],
-  },
-  'Phantom Vision +1': {
-    url: `${WIKI}/Phantom_Armor`,
-    perPiece: [m(3, 'fixatifs ultimes (ou échange Arcanaut +1)', "Final Fixatives (or Arcanaut's +1 trade-in)", 'final-fixative')],
-  },
-  'Phantom Vision +2': {
-    url: `${WIKI}/Phantom_Armor`,
-    perPiece: [m(4, 'fixatifs ultimes (ou échange Arcanaut +2)', "Final Fixatives (or Arcanaut's +2 trade-in)", 'final-fixative')],
-  },
-  'Phantom Vision +3': {
-    url: `${WIKI}/Phantom_Armor`,
-    perPiece: [m(8, 'fixatifs ultimes (Tour fourchue)', 'Final Fixatives (Forked Tower)', 'final-fixative')],
+    steps: [
+      { materials: [m(4000, "oboles d'argent (North Horn)", 'Silver Obols (North Horn)', 'obols', 'currency')] },
+      {
+        materials: [
+          m(3, 'fixatifs ultimes (ou échange Arcanaut +1)', "Final Fixatives (or Arcanaut's +1 trade-in)", 'final-fixative'),
+        ],
+      },
+      {
+        materials: [
+          m(4, 'fixatifs ultimes (ou échange Arcanaut +2)', "Final Fixatives (or Arcanaut's +2 trade-in)", 'final-fixative'),
+        ],
+      },
+      {
+        materials: [m(8, 'fixatifs ultimes (Tour fourchue)', 'Final Fixatives (Forked Tower)', 'final-fixative')],
+      },
+    ],
   },
 }
 

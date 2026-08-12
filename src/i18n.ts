@@ -316,6 +316,11 @@ const STR = {
   relicGlobal: { fr: 'Avancement global — toutes les reliques', en: 'Overall progress — all relics' },
   relicShapeN: { fr: '{steps} étapes × {jobs} jobs', en: '{steps} steps × {jobs} jobs' },
   relicShape1: { fr: '{jobs} jobs', en: '{jobs} jobs' },
+  // Armures : l'unité est la pièce d'équipement, et une étape est un palier
+  // d'amélioration (base, +1, +2…), pas un emplacement.
+  relicShapeNArmor: { fr: '{steps} paliers × {jobs} pièces', en: '{steps} tiers × {jobs} pieces' },
+  relicShape1Armor: { fr: '{jobs} pièces', en: '{jobs} pieces' },
+  relicTier: { fr: 'Palier {n}', en: 'Tier {n}' },
   relicRemaining: { fr: 'Reste :', en: 'To farm:' },
   relicDone: { fr: 'Terminé ✓', en: 'Done ✓' },
   relCatWeapons: { fr: 'Armes', en: 'Weapons' },

@@ -111,7 +111,66 @@ function mergeRelics(jsonEn, jsonFr) {
       series: key,
     }
   })
-  return { series: [...seriesMap.values()], relics }
+  return mergeUpgradeTiers([...seriesMap.values()], relics)
+}
+
+/** Rang d'amélioration d'une série : « X » → 0, « X augmentée » → 1, « X +N » → N.
+ *  FFXIV Collect en fait des séries distinctes alors que ce sont les paliers
+ *  d'une même armure : on les recolle pour retrouver le modèle des armes. */
+function upgradeTier(key) {
+  const plus = key.match(/^(.*?) \+(\d+)$/)
+  if (plus) return { base: plus[1], tier: Number(plus[2]) }
+  const augmented = key.match(/^Augmented (.+)$/)
+  if (augmented) return { base: augmented[1], tier: 1 }
+  return null
+}
+
+/** Recolle les paliers : une série par armure, un palier par niveau. Les pièces
+ *  sont renumérotées pour que « étape » = palier (et non emplacement). */
+function mergeUpgradeTiers(series, relics) {
+  const byKey = new Map(series.map((s) => [s.key, s]))
+  // base → paliers, dans l'ordre croissant
+  const families = new Map()
+  for (const s of series) {
+    const up = upgradeTier(s.key)
+    if (!up || !byKey.has(up.base)) continue
+    const base = byKey.get(up.base)
+    if (base.category !== s.category) continue
+    if (!families.has(up.base)) families.set(up.base, [])
+    families.get(up.base).push({ tier: up.tier, series: s })
+  }
+  for (const list of families.values()) list.sort((a, b) => a.tier - b.tier)
+
+  const tierOf = new Map() // clé de série → index de palier (0 = base)
+  const baseOf = new Map() // clé de série → clé de base
+  for (const [baseKey, list] of families) {
+    baseOf.set(baseKey, baseKey)
+    tierOf.set(baseKey, 0)
+    list.forEach((entry, i) => {
+      baseOf.set(entry.series.key, baseKey)
+      tierOf.set(entry.series.key, i + 1)
+    })
+  }
+
+  const outRelics = relics.map((r) => {
+    const baseKey = baseOf.get(r.series)
+    if (!baseKey) return r
+    const size = byKey.get(baseKey).total
+    return { ...r, series: baseKey, order: tierOf.get(r.series) * size + r.order }
+  })
+
+  const outSeries = series
+    .filter((s) => !baseOf.has(s.key) || baseOf.get(s.key) === s.key)
+    .map((s) => {
+      const list = families.get(s.key)
+      // Pour une armure, un « job » du modèle = une pièce, et une étape = un
+      // palier : sans palier, la série tient donc en une seule étape.
+      if (s.category !== 'armor') return s
+      const tiers = 1 + (list?.length ?? 0)
+      return { ...s, jobs: s.total, total: s.total * tiers }
+    })
+
+  return { series: outSeries, relics: outRelics }
 }
 
 await mkdir(OUT, { recursive: true })

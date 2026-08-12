@@ -360,6 +360,7 @@ function SeriesCard({
                               </span>
                             </b>
                           )}
+                          {guideLink(stepCost)}
                           {onSetRelics && (
                             <button
                               className="btn btn-ghost btn-mini relic-bulk"
@@ -386,20 +387,21 @@ function SeriesCard({
                                   : ''
                                 : t(perKey)}
                             </span>
-                            {reqLeft && remainingMats && list.length - c === 0 ? (
-                              <span className="relic-done">{t('relicDone')}</span>
-                            ) : (
-                              (reqLeft && remainingMats
-                                ? stepTotal(stepCost, list.length - c)
-                                : stepCost.materials
-                              ).map(matIcon)
-                            )}
-                            {guideLink(stepCost)}
+                            <span className="relic-req-items">
+                              {reqLeft && remainingMats && list.length - c === 0 ? (
+                                <span className="relic-done">{t('relicDone')}</span>
+                              ) : (
+                                (reqLeft && remainingMats
+                                  ? stepTotal(stepCost, list.length - c)
+                                  : stepCost.materials
+                                ).map(matIcon)
+                              )}
+                            </span>
                           </span>
                           {stepCost.once && (!reqLeft || list.length - c > 0) && (
                             <span className="relic-step-mats relic-once relic-step-iconrow">
                               <span className="relic-remaining-label">{t('relicOnce')}</span>
-                              {stepCost.once.map(matIcon)}
+                              <span className="relic-req-items">{stepCost.once.map(matIcon)}</span>
                             </span>
                           )}
                         </>
@@ -409,7 +411,7 @@ function SeriesCard({
                         <>
                           <span className="relic-step-mats">
                             <span className="relic-remaining-label">{t(perKey)}</span>{' '}
-                            {matsText(stepCost.materials, lang)} {guideLink(stepCost)}
+                            {matsText(stepCost.materials, lang)}
                           </span>
                           {list.length - c > 0 && (
                             <span className="relic-step-mats relic-step-total">

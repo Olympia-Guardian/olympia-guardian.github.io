@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { GiCharacter } from 'react-icons/gi'
 import { KINDS, type Kind } from './api'
 import { useAuth } from './auth'
 import { useDigest } from './digest'
@@ -169,7 +170,7 @@ export default function App() {
     { id: 'planning', label: t('planning') },
     ...KINDS.map((k) => ({ id: k as Tab, label: kindLabel(lang, k, 'short') })),
     { id: 'relics', label: t('relicsTab') },
-    ...(auth.user ? [{ id: 'mypage' as Tab, label: `👤 ${t('myPage')}` }] : []),
+    ...(auth.user ? [{ id: 'mypage' as Tab, label: t('myPage') }] : []),
   ]
 
   return (
@@ -193,8 +194,8 @@ export default function App() {
           </nav>
           <div className="topbar-actions">
             {!auth.user ? (
-              <button className="btn btn-ghost" onClick={auth.login} title={t('loginIntro')}>
-                👤 {t('loginShort')}
+              <button className="btn btn-ghost account-btn" onClick={auth.login} title={t('loginIntro')}>
+                <GiCharacter /> {t('loginShort')}
               </button>
             ) : (
               <button className="btn btn-ghost account-btn" onClick={() => setTab('mypage')} title={t('myPage')}>

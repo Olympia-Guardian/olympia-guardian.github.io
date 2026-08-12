@@ -10,6 +10,11 @@ import {
 } from '../api'
 import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
+import {
+  GiMagnifyingGlass,
+  GiPadlock,
+  GiPowerLightning,
+} from 'react-icons/gi'
 import type { Db, Member } from '../store'
 import { Meter, TypeChip, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
@@ -295,7 +300,7 @@ function CollectionEditor({
 
   return (
     <div className="mypage-editor">
-      <div className="controls">
+      <div className="controls editor-controls">
         <input
           className="search"
           value={search}
@@ -303,29 +308,27 @@ function CollectionEditor({
           placeholder={t('searchIn', { what: kindLabel(lang, kind) })}
           spellCheck={false}
         />
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={onlyMissing}
-            onChange={(e) => setOnlyMissing(e.target.checked)}
-          />
+        <button
+          className={`cat-chip ${onlyMissing ? 'is-active' : ''}`}
+          onClick={() => setOnlyMissing((v) => !v)}
+        >
           {t('onlyMissing')}
-        </label>
+        </button>
         {!readOnly && (
-          <div className="lang-switch">
+          <div className="mode-switch">
             <button
-              className={`lang-btn ${mode === 'quick' ? 'is-active' : ''}`}
+              className={`mode-btn ${mode === 'quick' ? 'is-active' : ''}`}
               title={t('modeQuickTitle')}
               onClick={() => setMode('quick')}
             >
-              {t('modeQuick')}
+              <GiPowerLightning /> {t('modeQuick')}
             </button>
             <button
-              className={`lang-btn ${mode === 'inspect' ? 'is-active' : ''}`}
+              className={`mode-btn ${mode === 'inspect' ? 'is-active' : ''}`}
               title={t('modeInspectTitle')}
               onClick={() => setMode('inspect')}
             >
-              {t('modeInspect')}
+              <GiMagnifyingGlass /> {t('modeInspect')}
             </button>
           </div>
         )}
@@ -577,8 +580,7 @@ export function MyPage({
                   title={locked ? t('myPageReadOnly') : undefined}
                   onClick={() => setKind(k)}
                 >
-                  {locked ? '🔒 ' : ''}
-                  {kindLabel(lang, k, 'short')}
+                  {locked && <GiPadlock className="tab-lock" />} {kindLabel(lang, k, 'short')}
                 </button>
               )
             })}

@@ -1593,6 +1593,67 @@ a.player-name:hover {
   margin-left: auto;
 }
 
+/* ligne de contrôles de l'éditeur : hauteurs uniformes, icônes alignées */
+.editor-controls {
+  align-items: center;
+}
+
+.editor-controls .search {
+  height: 36px;
+}
+
+.editor-controls .cat-chip {
+  height: 36px;
+  padding: 0 14px;
+}
+
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  height: 36px;
+}
+
+.mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.mode-btn + .mode-btn {
+  border-left: 1px solid var(--hairline);
+}
+
+.mode-btn:hover {
+  color: var(--ink);
+}
+
+.mode-btn.is-active {
+  color: var(--gold);
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.mode-btn svg {
+  font-size: 15px;
+}
+
+.tab-lock {
+  vertical-align: -2px;
+  opacity: 0.7;
+}
+
+.account-btn svg {
+  font-size: 16px;
+  vertical-align: -3px;
+}
+
 .mypage-meters {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px 24px;

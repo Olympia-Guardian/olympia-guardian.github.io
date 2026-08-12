@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { KIND_INFO, type Character, type Item, type Kind } from './api'
 import { localName, localSource, useI18n } from './i18n'
 import type { Member } from './store'
-import { AvatarStack, KindChip, TypeChip } from './ui'
+import { AvatarStack, KindChip, TypeChip, onItemImgError } from './ui'
 
 type Ready = Member & { data: Character }
 
@@ -46,7 +46,7 @@ export function ItemModal({
           ×
         </button>
         <div className="modal-head">
-          <img className="modal-image" src={item.image} alt="" loading="lazy" />
+          <img className="modal-image" src={item.image} alt="" loading="lazy" onError={onItemImgError} />
           <div className="modal-id">
             <h2 className="modal-title">{name}</h2>
             {otherName !== name && <p className="modal-en">{otherName}</p>}

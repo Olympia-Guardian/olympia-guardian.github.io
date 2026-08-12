@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { KINDS, parseLodestoneId, type Kind } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
-import { Meter } from './ui'
+import { Meter, onAvatarImgError } from './ui'
 
 type OwnedSets = Map<number, Record<Kind, Set<number>>>
 
@@ -62,7 +62,7 @@ function PlayerCard({
   return (
     <div className={`player-card ${focus ? 'is-focus' : ''} ${present ? '' : 'is-absent'}`}>
       <div className="player-head">
-        <img className="player-avatar" src={c.avatar} alt="" width={38} height={38} />
+        <img className="player-avatar" src={c.avatar} alt="" width={38} height={38} onError={onAvatarImgError} />
         <div className="player-id">
           <a
             className="player-name"
@@ -178,6 +178,7 @@ export function RosterBar({
               className={`rail-face ${m.id === focusId ? 'is-focus' : ''} ${
                 absent.includes(m.id) ? 'is-absent' : ''
               }`}
+              onError={onAvatarImgError}
             />
           ) : (
             <span key={m.id} className="rail-face rail-pending" title={`ID ${m.id}`}>

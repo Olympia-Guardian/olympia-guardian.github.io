@@ -3,7 +3,7 @@ import { type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
 import { UNAVAILABLE_TYPES, typeLabel } from '../sources'
 import { MANUAL_KINDS, type Member, type Overrides } from '../store'
-import { TypeChip } from '../ui'
+import { TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -184,7 +184,7 @@ export function Matrix({
               </th>
               {activeMembers.map((m) => (
                 <th key={m.id} className="col-player" title={m.data.name}>
-                  <img src={m.data.avatar} alt={m.data.name} width={28} height={28} />
+                  <img src={m.data.avatar} alt={m.data.name} width={28} height={28} onError={onAvatarImgError} />
                   <span className="col-player-name">{m.data.name.split(' ')[0]}</span>
                 </th>
               ))}
@@ -207,7 +207,7 @@ export function Matrix({
                       onClick={() => onShowItem(item, kind)}
                       onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(item, kind)}
                     >
-                      <img className="item-icon" src={item.icon} alt="" loading="lazy" />
+                      <img className="item-icon" src={item.icon} alt="" loading="lazy" onError={onItemImgError} />
                       <div className="item-text">
                         <span className="item-name">
                           {name}

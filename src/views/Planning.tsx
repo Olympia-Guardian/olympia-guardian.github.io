@@ -14,7 +14,7 @@ import {
   type Scope,
 } from '../sources'
 import type { Db, Member } from '../store'
-import { AvatarStack, KindChip, StatTile, TypeChip } from '../ui'
+import { AvatarStack, KindChip, StatTile, TypeChip, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -100,7 +100,7 @@ function RunCard({
               onClick={() => onShowItem(e.item, e.kind)}
               onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(e.item, e.kind)}
             >
-              <img className="item-icon" src={e.item.icon} alt="" loading="lazy" />
+              <img className="item-icon" src={e.item.icon} alt="" loading="lazy" onError={onItemImgError} />
               <span className="item-name">{localName(e.item, lang)}</span>
             </span>
             <KindChip kind={e.kind} />

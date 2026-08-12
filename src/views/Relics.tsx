@@ -10,7 +10,7 @@ import {
   type StepCost,
 } from '../relicCosts'
 import type { Member } from '../store'
-import { Meter } from '../ui'
+import { Meter, onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -108,7 +108,7 @@ function SeriesCard({
           const count = relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
           return (
             <div key={member.id} className="relic-player">
-              <img src={member.data.avatar} alt="" width={26} height={26} title={member.data.name} />
+              <img src={member.data.avatar} alt="" width={26} height={26} title={member.data.name} onError={onAvatarImgError} />
               <div className="relic-meter">
                 <Meter label={member.data.name.split(' ')[0]} count={count} total={info.total} />
               </div>
@@ -168,7 +168,7 @@ function SeriesCard({
                             className={`relic-icon ${has ? 'is-owned' : 'is-missing'}`}
                             title={`${lang === 'fr' ? r.name : r.nameEn}${has ? ' ✓' : ''}`}
                           >
-                            <img src={r.icon} alt="" width={36} height={36} loading="lazy" />
+                            <img src={r.icon} alt="" width={36} height={36} loading="lazy" onError={onItemImgError} />
                             {has && <span className="relic-badge">✓</span>}
                           </span>
                         )
@@ -190,7 +190,7 @@ function SeriesCard({
                 <th className="relic-step-info" />
                 {ready.map((member) => (
                   <th key={member.id} title={member.data.name}>
-                    <img src={member.data.avatar} alt={member.data.name} width={24} height={24} />
+                    <img src={member.data.avatar} alt={member.data.name} width={24} height={24} onError={onAvatarImgError} />
                   </th>
                 ))}
               </tr>
@@ -359,7 +359,7 @@ export function Relics({ db, ready }: { db: RelicDb; ready: Ready[] }) {
             const pct = totalAll > 0 ? ((count / totalAll) * 100).toFixed(1) : '0'
             return (
               <div key={m.id} className="relic-player">
-                <img src={m.data.avatar} alt="" width={26} height={26} title={m.data.name} />
+                <img src={m.data.avatar} alt="" width={26} height={26} title={m.data.name} onError={onAvatarImgError} />
                 <div className="relic-meter">
                   <Meter label={m.data.name.split(' ')[0]} count={count} total={totalAll} />
                 </div>

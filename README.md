@@ -1,6 +1,6 @@
 # OGS Collect
 
-**🌐 App en ligne : https://vincent-leostic.github.io/ogs-collect/**
+**🌐 App en ligne : https://olympia-guardian.github.io/**
 
 Appli web pour compléter vos collections FFXIV **en groupe** : elle croise les
 collections de tout le monde — montures, mascottes, cartes Triple Triad,

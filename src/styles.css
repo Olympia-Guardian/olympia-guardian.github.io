@@ -2712,8 +2712,8 @@ a.player-name:hover {
 
 /* icônes d'objets dans les étapes (plus petites que l'en-tête) */
 .relic-step-iconrow {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: flex;
+  width: 100%;
   align-items: center;
   gap: 5px 10px;
 }

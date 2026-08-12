@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { GiMagnifyingGlass, GiPowerLightning } from 'react-icons/gi'
 import type { Character, Relic, RelicDb, RelicSeriesInfo } from '../api'
 import { useI18n } from '../i18n'
 import {
@@ -42,18 +43,100 @@ function stepTotal(
   return step.materials.map((mat) => ({ ...mat, qty: mat.qty * missing }))
 }
 
+/** Relique sélectionnée : la fiche a besoin de sa série et de son palier. */
+type RelicPick = { relic: Relic; info: RelicSeriesInfo; step: number }
+
+/** Fiche latérale d'une relique, jumelle de celle des collections. */
+function RelicPanel({
+  pick,
+  owned,
+  onToggle,
+  onClose,
+}: {
+  pick: RelicPick
+  owned: boolean
+  onToggle: () => void
+  onClose: () => void
+}) {
+  const { lang, t } = useI18n()
+  const { relic, info, step } = pick
+  const steps = Math.max(1, Math.round(info.total / info.jobs))
+  const costs = RELIC_COSTS[info.key]
+  const stepCost = costs ? effectiveSteps(costs, steps)[step] : null
+  const catKey =
+    info.category === 'weapons'
+      ? 'relCatWeapons'
+      : info.category === 'ultimate'
+        ? 'relCatUltimate'
+        : info.category === 'tools'
+          ? 'relCatTools'
+          : info.category === 'armor'
+            ? 'relCatArmor'
+            : 'relCatGaro'
+  const perKey =
+    info.category === 'weapons' || info.category === 'ultimate'
+      ? 'relicPerWeapon'
+      : info.category === 'tools'
+        ? 'relicPerTool'
+        : 'relicPerPiece'
+
+  return (
+    <aside className="item-panel">
+      <button className="icon-btn item-panel-close" title={t('close')} onClick={onClose}>
+        ×
+      </button>
+      <img className="item-panel-image" src={relic.icon} alt="" loading="lazy" onError={onItemImgError} />
+      <h3 className="item-panel-name">{lang === 'fr' ? relic.name : relic.nameEn}</h3>
+      {lang === 'fr' && relic.nameEn !== relic.name && <p className="modal-en">{relic.nameEn}</p>}
+      <p className="modal-chips">
+        <span className="chip chip-type">{t(catKey)}</span>
+        <span className="chip chip-patch">{lang === 'fr' ? info.name : info.key}</span>
+        {steps > 1 && <span className="chip chip-patch">{t('relicStep', { n: step + 1 })}</span>}
+        <span className={`chip ${owned ? 'chip-owned' : 'chip-type'}`}>
+          {owned ? t('panelOwned') : t('panelMissing')}
+        </span>
+      </p>
+      {stepCost && stepCost.materials.length > 0 && (
+        <p className="modal-desc">
+          <span className="relic-remaining-label">{t(perKey)}</span>{' '}
+          {matsText(stepCost.materials, lang)}
+        </p>
+      )}
+      {stepCost?.once && (
+        <p className="modal-desc relic-once">
+          <span className="relic-remaining-label">{t('relicOnce')}</span>{' '}
+          {matsText(stepCost.once, lang)}
+        </p>
+      )}
+      {stepCost?.url && (
+        <p className="modal-desc">
+          <a className="relic-guide" href={stepCost.url} target="_blank" rel="noreferrer">
+            {t('relicGuide')}
+          </a>
+        </p>
+      )}
+      <button
+        className={`btn ${owned ? 'btn-ghost' : 'btn-primary'} item-panel-action`}
+        onClick={onToggle}
+      >
+        {owned ? t('panelRemove') : t('panelAdd')}
+      </button>
+    </aside>
+  )
+}
+
 function SeriesCard({
   info,
   relics,
   ready,
   ownedSets,
-  onToggleRelic,
+  onRelicClick,
 }: {
   info: RelicSeriesInfo
   relics: Relic[]
   ready: Ready[]
   ownedSets: Map<number, Set<number>>
-  onToggleRelic?: (id: number) => void
+  onRelicClick?: (relic: Relic, step: number) => void
 }) {
   const { lang, t } = useI18n()
   const steps = Math.max(1, Math.round(info.total / info.jobs))
@@ -171,12 +254,12 @@ function SeriesCard({
                             {has && <span className="relic-badge">✓</span>}
                           </>
                         )
-                        return onToggleRelic ? (
+                        return onRelicClick ? (
                           <button
                             key={r.id}
                             className={`relic-icon is-editable ${has ? 'is-owned' : 'is-missing'}`}
                             title={`${label} — ${t(has ? 'relicUncheck' : 'relicCheck')}`}
-                            onClick={() => onToggleRelic(r.id)}
+                            onClick={() => onRelicClick(r, i)}
                           >
                             {content}
                           </button>
@@ -419,6 +502,8 @@ export function Relics({
   onToggleRelic?: (id: number) => void
 }) {
   const { lang, t } = useI18n()
+  const [mode, setMode] = useState<'quick' | 'inspect'>('inspect')
+  const [pick, setPick] = useState<RelicPick | null>(null)
 
   const ownedSets = useMemo(
     () => new Map(ready.map((m) => [m.id, new Set(m.data.relicIds)])),
@@ -493,8 +578,44 @@ export function Relics({
     )
   }
 
+  // Clic sur une relique : coche directe en « ajout rapide », fiche sinon.
+  const handleRelic = onToggleRelic
+    ? (info: RelicSeriesInfo) => (relic: Relic, step: number) => {
+        if (mode === 'quick') onToggleRelic(relic.id)
+        else setPick({ relic, info, step })
+      }
+    : undefined
+
   return (
     <div className="view">
+      {onToggleRelic && (
+        <div className="controls editor-controls">
+          <div className="mode-switch">
+            <button
+              className={`mode-btn ${mode === 'quick' ? 'is-active' : ''}`}
+              title={t('modeQuickTitle')}
+              onClick={() => setMode('quick')}
+            >
+              <GiPowerLightning /> {t('modeQuick')}
+            </button>
+            <button
+              className={`mode-btn ${mode === 'inspect' ? 'is-active' : ''}`}
+              title={t('modeInspectTitle')}
+              onClick={() => setMode('inspect')}
+            >
+              <GiMagnifyingGlass /> {t('modeInspect')}
+            </button>
+          </div>
+        </div>
+      )}
+      {pick && onToggleRelic && (
+        <RelicPanel
+          pick={pick}
+          owned={(ownedSets.get(ready[0]?.id ?? 0) ?? new Set()).has(pick.relic.id)}
+          onToggle={() => onToggleRelic(pick.relic.id)}
+          onClose={() => setPick(null)}
+        />
+      )}
       <section className="relic-series relic-global">
         <header className="relic-series-head">
           <h4 className="relic-series-name">{t('relicGlobal')}</h4>
@@ -566,7 +687,7 @@ export function Relics({
                   relics={bySeries.get(info.key) ?? []}
                   ready={ready}
                   ownedSets={ownedSets}
-                  onToggleRelic={onToggleRelic}
+                  onRelicClick={handleRelic?.(info)}
                 />
               ))}
             </div>

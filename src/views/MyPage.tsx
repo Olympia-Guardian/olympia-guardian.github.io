@@ -30,6 +30,11 @@ const EDITABLE = HIDDEN_KINDS
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.
 const LIST_KINDS: Kind[] = ['emotes', 'frames']
 
+/** Portraits : nom complet du kit d'encadrement (« L'Art du portrait : … »). */
+function localItemName(it: Item, lang: string): string {
+  return (lang === 'fr' ? it.itemName : (it.itemNameEn ?? it.itemName)) ?? it.name
+}
+
 type Auth = ReturnType<typeof useAuth>
 
 /** Panneau latéral : fiche de l'objet sélectionné + ajout/retrait. */
@@ -55,6 +60,7 @@ function ItemPanel({
       </button>
       <img className="item-panel-image" src={item.image} alt="" loading="lazy" onError={onItemImgError} />
       <h3 className="item-panel-name">{localName(item, lang)}</h3>
+      {item.itemName && <p className="modal-en">{localItemName(item, lang)}</p>}
       {item.nameEn !== localName(item, lang) && <p className="modal-en">{item.nameEn}</p>}
       <p className="modal-chips">
         {item.patch && <span className="chip chip-patch">{t('patch', { n: item.patch })}</span>}
@@ -68,6 +74,13 @@ function ItemPanel({
         </span>
       </p>
       {description && <p className="modal-desc">{description}</p>}
+      {item.pieces && item.pieces.length > 0 && (
+        <ul className="panel-pieces">
+          {item.pieces.map((p, i) => (
+            <li key={i}>{p}</li>
+          ))}
+        </ul>
+      )}
       {item.sources.length > 0 && (
         <ul className="modal-sources">
           {item.sources.map((s, i) => (
@@ -491,10 +504,11 @@ function GroupedChecklist({
                       {variant === 'orchestrion' && it.num !== undefined && (
                         <span className="checklist-num">{String(it.num).padStart(3, '0')}</span>
                       )}
-                      <span className="checklist-name">
-                        {variant === 'icon' && it.itemName
-                          ? (lang === 'fr' ? it.itemName : (it.itemNameEn ?? it.itemName))
-                          : localName(it, lang)}
+                      <span
+                        className="checklist-name"
+                        title={it.itemName ? localItemName(it, lang) : undefined}
+                      >
+                        {localName(it, lang)}
                       </span>
                       {it.command && <span className="chip chip-cmd">{it.command}</span>}
                       {it.patch && <span className="chip chip-patch">{it.patch}</span>}

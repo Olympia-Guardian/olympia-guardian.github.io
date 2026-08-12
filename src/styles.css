@@ -2395,3 +2395,20 @@ a.player-name:hover {
 .mypage-tabs {
   padding-top: 0;
 }
+
+/* pièces composant une tenue, dans la fiche */
+.panel-pieces {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.panel-pieces li::before {
+  content: '· ';
+  color: var(--muted);
+}

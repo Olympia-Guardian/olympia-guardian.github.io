@@ -1800,6 +1800,35 @@ a.player-name:hover {
   pointer-events: none;
 }
 
+/* section Ex : mise à part avec un séparateur doré */
+.album-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.album-divider::before,
+.album-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(214, 178, 107, 0.4), transparent);
+}
+
+.album-page-ex {
+  border-color: rgba(214, 178, 107, 0.45);
+}
+
+.album-page-ex .album-page-head b {
+  color: var(--gold);
+}
+
 /* case vide (carte masquée par le filtre) : la grille reste en place */
 .album-slot {
   border-radius: 6px;

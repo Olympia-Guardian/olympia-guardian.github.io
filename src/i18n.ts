@@ -137,6 +137,7 @@ const STR = {
   saveError: { fr: 'Sauvegarde impossible — réessaie.', en: 'Could not save — retry.' },
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
+  albumExTitle: { fr: 'Cartes Ex — série spéciale', en: 'Ex cards — special series' },
   modeQuick: { fr: 'Ajout rapide', en: 'Quick add' },
   modeQuickTitle: {
     fr: 'Un clic sur une icône coche/décoche directement',

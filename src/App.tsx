@@ -176,7 +176,6 @@ export default function App() {
     { id: 'planning', label: t('planning') },
     { id: collectionTab, label: t('collections') },
     { id: 'relics', label: t('relicsTab') },
-    ...(auth.user ? [{ id: 'mypage' as Tab, label: t('myPage') }] : []),
   ]
 
   return (
@@ -204,10 +203,22 @@ export default function App() {
                 <GiCharacter /> {t('loginShort')}
               </button>
             ) : (
-              <button className="btn btn-ghost account-btn" onClick={() => setTab('mypage')} title={t('myPage')}>
-                {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
-                {auth.user.name}
-              </button>
+              <>
+                <button
+                  className={`btn btn-ghost account-btn ${tab === 'mypage' ? 'is-active' : ''}`}
+                  onClick={() => setTab('mypage')}
+                >
+                  <GiCharacter /> {t('myPage')}
+                </button>
+                {/* Le compte n'est affiché qu'ici : plus de doublon dans Ma Page. */}
+                <span className="account-chip" title={auth.user.name}>
+                  {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
+                  <span className="account-name">{auth.user.name}</span>
+                  <button className="icon-btn" title={t('logout')} onClick={auth.logout}>
+                    ⏻
+                  </button>
+                </span>
+              </>
             )}
             <div className="lang-switch" role="group" aria-label="Language">
               {(['fr', 'en'] as Lang[]).map((l) => (

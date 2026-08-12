@@ -2530,3 +2530,33 @@ a.player-name:hover {
   outline: 2px solid var(--accent);
   border-radius: 8px;
 }
+
+/* compte Discord : affiché une seule fois, en haut à droite */
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.account-chip img {
+  border-radius: 50%;
+}
+
+.account-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-btn.is-active {
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}

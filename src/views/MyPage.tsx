@@ -782,16 +782,6 @@ export function MyPage({
     <div className="view mypage">
       {toast && <div className="toast">{toast}</div>}
       {!verified && (
-        <div className="mypage-head">
-          {auth.user.avatar && <img className="mypage-avatar" src={auth.user.avatar} alt="" width={36} height={36} />}
-          <b>{auth.user.name}</b>
-          <button className="btn btn-ghost btn-mini" onClick={auth.logout}>
-            {t('logout')}
-          </button>
-        </div>
-      )}
-
-      {!verified && (
         <section className="relic-series mypage-bind">
           <h3 className="relic-series-name">{t('bindTitle')}</h3>
           {!pending && (
@@ -867,15 +857,6 @@ export function MyPage({
                 </span>
                 <span className="player-server">{char.server}</span>
               </div>
-              <span className="mypage-user">
-                {auth.user.avatar && (
-                  <img className="mypage-avatar" src={auth.user.avatar} alt="" width={24} height={24} />
-                )}
-                {auth.user.name}
-                <button className="btn btn-ghost btn-mini" onClick={auth.logout}>
-                  {t('logout')}
-                </button>
-              </span>
             </div>
             <div className="meter-grid mypage-meters">
               {KINDS.map((k) => (

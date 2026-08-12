@@ -351,7 +351,14 @@ export function MyPage({
   const [notice, setNotice] = useState<string | null>(null)
   const [char, setChar] = useState<Character | null>(null)
   const [kind, setKind] = useState<Kind>('cards')
-  const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function showToast(msg: string) {
+    setToast(msg)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 2000)
+  }
 
   const verified = auth.bindings.find((b) => b.verified)
   const pending = auth.bindings.find((b) => !b.verified)
@@ -411,7 +418,7 @@ export function MyPage({
       await auth.saveCollections(verified.charId, { [k]: ids })
       invalidateCharacter(verified.charId)
       onCharacterUpdated(verified.charId)
-      setSavedAt(Date.now())
+      showToast(t('saved'))
     } catch {
       setNotice(t('saveError'))
     }
@@ -419,6 +426,7 @@ export function MyPage({
 
   return (
     <div className="view mypage">
+      {toast && <div className="toast">{toast}</div>}
       <div className="mypage-head">
         {auth.user.avatar && <img className="mypage-avatar" src={auth.user.avatar} alt="" width={36} height={36} />}
         <b>{auth.user.name}</b>
@@ -535,7 +543,6 @@ export function MyPage({
               )
             })}
           </div>
-          {savedAt && <p className="mypage-saved">{t('saved')}</p>}
           {notice && <p className="notice">{notice}</p>}
           <CollectionEditor
             key={`${verified.charId}-${kind}`}

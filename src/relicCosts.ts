@@ -160,31 +160,31 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       {
         url: ANI1,
         materials: [
-          m(1, 'cristal astral (ALÉA de Heavensward)', 'Astral Crystal (HW FATEs)'),
-          m(1, 'cristal ombral (ALÉA de Heavensward)', 'Umbral Crystal (HW FATEs)'),
+          m(1, 'cristal astral (ALÉA de Heavensward)', 'Astral Nodule (HW FATEs)', undefined, undefined, XIV('ui/icon/026000/026052_hr1.tex')),
+          m(1, 'cristal ombral (ALÉA de Heavensward)', 'Umbral Nodule (HW FATEs)', undefined, undefined, XIV('ui/icon/026000/026053_hr1.tex')),
         ],
       },
       { url: ANI1, materials: [m(10, "donjons à compléter (pas d'objet)", 'dungeons to clear (no items)', undefined, 'drop')] },
       {
         url: ANI2,
         materials: [
-          m(1, 'caoutchouc enchanté', 'Enchanted Rubber'),
-          m(1, "fiole d'agent solidifiant allagois supérieur", 'Fast-drying Carboncoat'),
-          m(1, 'eaux divines', 'Divine Water catalyst'),
-          m(1, "bouteille d'eau divine", 'Divine Water'),
+          m(1, 'caoutchouc enchanté (10 os non identifiables)', 'Enchanted Rubber (10 Unidentifiable Bone)', undefined, undefined, XIV('ui/icon/022000/022658_hr1.tex')),
+          m(1, 'agent solidifiant allagois supérieur (10 carapaces non identifiables)', 'Fast-drying Carboncoat (10 Unidentifiable Shell)', undefined, undefined, XIV('ui/icon/027000/027615_hr1.tex')),
+          m(1, 'eau divine (10 minerais non identifiables)', 'Divine Water (10 Unidentifiable Ore)', undefined, undefined, XIV('ui/icon/022000/022659_hr1.tex')),
+          m(1, 'sable de halonite (10 graines non identifiables)', 'Furite Sand (10 Unidentifiable Seeds)', undefined, undefined, XIV('ui/icon/021000/021204_hr1.tex')),
         ],
       },
-      { url: ANI2, materials: [m(5, "pots d'huile isolante (350 poétiques pièce)", 'Aether Oil (350 poetics each)')] },
+      { url: ANI2, materials: [m(5, 'huiles isolantes (350 poétiques pièce)', 'Aether Oil (350 poetics each)', undefined, undefined, XIV('ui/icon/027000/027617_hr1.tex'))] },
       {
         url: ANI3,
         materials: [
-          m(50, 'roches ombrales dures (75 poétiques pièce)', 'Umbrite (75 poetics each)'),
-          m(50, 'sables de cristal', 'Crystal Sand'),
+          m(50, 'roches ombrales dures (75 poétiques pièce)', 'Umbrite (75 poetics each)', undefined, undefined, XIV('ui/icon/021000/021228_hr1.tex')),
+          m(50, 'sables de cristal', 'Crystal Sand', undefined, undefined, XIV('ui/icon/021000/021229_hr1.tex')),
         ],
       },
-      { url: ANI3, materials: [m(50, 'agrégats résonnants (40 poétiques pièce)', 'Singing Clusters (40 poetics each)')] },
-      { url: ANI4, materials: [m(15, 'agrégats obscurs (100 poétiques pièce)', 'Pneumite (100 poetics each)')] },
-      { url: ANI4, materials: [m(1, 'encre enchantée ancienne (500 poétiques)', 'Archaic Enchanted Ink (500 poetics)')] },
+      { url: ANI3, materials: [m(50, 'agrégats résonnants (40 poétiques pièce)', 'Singing Clusters (40 poetics each)', undefined, undefined, XIV('ui/icon/020000/020027_hr1.tex'))] },
+      { url: ANI4, materials: [m(15, 'agrégats obscurs (100 poétiques pièce)', 'Pneumite (100 poetics each)', undefined, undefined, XIV('ui/icon/021000/021230_hr1.tex'))] },
+      { url: ANI4, materials: [m(1, 'encre enchantée ancienne (500 poétiques)', 'Archaic Enchanted Ink (500 poetics)', undefined, undefined, XIV('ui/icon/025000/025920_hr1.tex'))] },
     ],
   },
 
@@ -354,10 +354,32 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
   'Lucis Tools': {
     url: `${WIKI}/Lucis_Tools`,
+    stepLabels: [
+      { fr: 'Maîtrise', en: 'Mastercraft' },
+      { fr: 'Supra', en: 'Supra' },
+      { fr: 'Lucis', en: 'Lucis' },
+    ],
     steps: [
-      { url: `${WIKI}/Lucis_Tools`, materials: [m(1, "lot d'objets de quête spécifiques au métier", 'job-specific quest item set', undefined, 'drop')] },
-      { url: `${WIKI}/Lucis_Tools`, materials: [m(1, "lot d'objets spécifiques au métier (craft/récolte)", 'job-specific item set (craft/gather)', undefined, 'drop')] },
-      { url: `${WIKI}/Lucis_Tools`, materials: [m(1, "lot d'objets HQ spécifiques au métier", 'job-specific HQ item set', undefined, 'drop')] },
+      {
+        url: `${WIKI}/Mastercraft_Tools`,
+        materials: [
+          m(1, 'quête de classe niv. 50 « Just Tooling Around » (Mor Dhona)', 'level 50 class quest "Just Tooling Around" (Mor Dhona)', undefined, 'drop'),
+        ],
+      },
+      {
+        url: `${WIKI}/Supra_Tools`,
+        materials: [
+          m(3, 'demi-matérias de la maîtrise divine', 'Mastercraft Demimateria', undefined, undefined, XIV('ui/icon/021000/021285_hr1.tex')),
+          m(10, "demi-matérias de l'artifice III", 'Fieldcraft Demimateria III', undefined, undefined, XIV('ui/icon/020000/020243_hr1.tex')),
+          m(1, "lot d'objets spécifiques au métier (Talan, Mor Dhona — varie selon le métier)", 'job-specific item set (Talan, Mor Dhona — varies per job)', undefined, 'drop'),
+        ],
+      },
+      {
+        url: `${WIKI}/Lucis_Tools`,
+        materials: [
+          m(1, "lot d'objets HQ spécifiques au métier (Talan, Mor Dhona)", 'job-specific HQ item set (Talan, Mor Dhona)', undefined, 'drop'),
+        ],
+      },
     ],
   },
   'Skysteel Tools': {
@@ -396,11 +418,15 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   // ------------------------------------------------------------------ GARO
   'GARO Armor': {
     url: `${WIKI}/GARO`,
-    perPiece: [m(2800, 'marques de loup (moyenne — 2 000 à 4 000 selon la pièce)', 'Wolf Marks (avg — 2,000–4,000 per piece)', 'wolf-marks', 'currency')],
+    perPiece: [
+      m(2800, 'marques de loup (moyenne — 2 000 à 4 000 selon la pièce)', 'Wolf Marks (avg — 2,000–4,000 per piece)', 'wolf-marks', 'currency', XIV('ui/icon/065000/065014_hr1.tex')),
+    ],
   },
   'GARO Weapons': {
     url: `${WIKI}/GARO`,
-    perPiece: [m(4000, 'marques de loup', 'Wolf Marks', 'wolf-marks', 'currency')],
+    perPiece: [
+      m(4000, 'marques de loup', 'Wolf Marks', 'wolf-marks', 'currency', XIV('ui/icon/065000/065014_hr1.tex')),
+    ],
   },
 
   // -------------------------------------------------------- Armures Eurêka

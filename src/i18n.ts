@@ -154,6 +154,7 @@ const STR = {
   roleHealing: { fr: 'Soigneur', en: 'Healing' },
   relicReqWeapon: { fr: 'total pour une arme :', en: 'total for one weapon:' },
   relicReqPiece: { fr: 'total pour une pièce :', en: 'total for one piece:' },
+  relicShapeGaro: { fr: '{sets} sets × 5 pièces', en: '{sets} sets × 5 pieces' },
   relicReqOneWeapon: { fr: '1 arme', en: '1 weapon' },
   relicReqOnePiece: { fr: '1 pièce', en: '1 piece' },
   relicReqLeft: { fr: 'Restant', en: 'Remaining' },

@@ -88,7 +88,7 @@ function RelicPanel({
       <p className="modal-chips">
         <span className="chip chip-type">{t(catKey)}</span>
         <span className="chip chip-patch">{lang === 'fr' ? info.name : info.key}</span>
-        {steps > 1 && (
+        {steps > 1 && info.category !== 'garo' && (
           <span className="chip chip-patch">
             {costs?.stepLabels?.[step]
               ? lang === 'fr'
@@ -150,7 +150,10 @@ function SeriesCard({
   onSetRelics?: (ids: number[], add: boolean) => void
 }) {
   const { lang, t } = useI18n()
-  const steps = Math.max(1, Math.round(info.total / info.jobs))
+  // GARO : pas d'étapes — 17 sets contigus de 5 pièces (Visage/Corps/Bras/
+  // Jambes/Pieds), un par job. Le découpage total/jobs n'a aucun sens ici.
+  const garoSets = info.category === 'garo' && relics.some((r) => /^The \w+ of /.test(r.nameEn))
+  const steps = garoSets ? 1 : Math.max(1, Math.round(info.total / info.jobs))
   const costs = RELIC_COSTS[info.key]
   const costSteps: StepCost[] | null = costs ? effectiveSteps(costs, steps) : null
   const name = lang === 'fr' ? info.name : info.key
@@ -204,6 +207,25 @@ function SeriesCard({
   /** Blocs affichés dans la grille : un par rôle (libellé), ou un par set de
    *  job (5 pièces, sans libellé) pour les armures spécifiques à un job. */
   const armorGroups = (list: Relic[]): { label: string | null; items: Relic[] }[] => {
+    if (garoSets) {
+      // Un bloc par set de 5 pièces contiguës, étiqueté du nom du set —
+      // personnages GARO (« Loup doré ») comme sets Makai (« Lutteur Makai »).
+      const label = (r: Relic) => {
+        const raw =
+          lang === 'fr'
+            ? r.name.replace(/^.*?\s(?:du |de la |de l'|des |de )/i, '')
+            : (r.nameEn.match(/^The \w+ of (?:the )?(.+)$/i)?.[1] ??
+              r.nameEn.match(/^(Makai .+?)'s /i)?.[1] ??
+              r.nameEn)
+        return raw.charAt(0).toUpperCase() + raw.slice(1)
+      }
+      const out: { label: string | null; items: Relic[] }[] = []
+      for (let j = 0; j < list.length; j += 5) {
+        const items = list.slice(j, j + 5)
+        out.push({ label: label(items[0]), items })
+      }
+      return out
+    }
     if (!isArmor) return [{ label: null, items: list }]
     if (list.some((r) => roleOf(r) >= 0)) {
       return ROLE_ORDER.map((role, ri) => ({
@@ -216,10 +238,14 @@ function SeriesCard({
     return out
   }
 
-  // relics de chaque étape (l'ordre API est trié étape par étape)
-  const stepRelics = Array.from({ length: steps }, (_, i) =>
-    sortArmor(relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)),
-  )
+  // relics de chaque étape (l'ordre API est trié étape par étape).
+  // GARO : une seule « étape » = toute la série, triée par ordre (les sets
+  // de 5 pièces sont contigus).
+  const stepRelics = garoSets
+    ? [[...relics].sort((a, b) => a.order - b.order)]
+    : Array.from({ length: steps }, (_, i) =>
+        sortArmor(relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)),
+      )
   const ownedInStep = (memberId: number, i: number) => {
     const owned = ownedSets.get(memberId)!
     return stepRelics[i].reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
@@ -258,8 +284,10 @@ function SeriesCard({
   const [reqLeft, setReqLeft] = useState(false)
   const remainingMats = (() => {
     if (!costs || ready.length !== 1) return null
+    // Manquant par étape = pièces réellement listées dans l'étape (85 pour
+    // GARO en bloc unique), pas la colonne « jobs » de l'API.
     const missingPerStep = stepRelics.map((list, i) =>
-      list.length > 0 ? info.jobs - ownedInStep(ready[0].id, i) : 0,
+      list.length > 0 ? list.length - ownedInStep(ready[0].id, i) : 0,
     )
     const rem = remainingMaterials(costs, missingPerStep, info.jobs)
     const acc = new Map<string, Material>()
@@ -290,7 +318,9 @@ function SeriesCard({
         <span className="relic-shape">
           {steps > 1
             ? t(isArmor ? 'relicShapeNArmor' : 'relicShapeN', { steps, jobs: info.jobs })
-            : t(isArmor ? 'relicShape1Armor' : 'relicShape1', { jobs: info.jobs })}
+            : garoSets
+              ? t('relicShapeGaro', { sets: Math.round(info.total / 5) })
+              : t(isArmor ? 'relicShape1Armor' : 'relicShape1', { jobs: info.jobs })}
         </span>
       </header>
 
@@ -422,9 +452,9 @@ function SeriesCard({
                         </>
                       )}
                     </div>
-                    <div className={isArmor ? 'relic-icon-groups' : undefined}>
+                    <div className={isArmor || garoSets ? 'relic-icon-groups' : undefined}>
                       {armorGroups(list).map((g, gi) => (
-                        <div key={gi} className={isArmor ? 'relic-icon-group' : undefined}>
+                        <div key={gi} className={isArmor || garoSets ? 'relic-icon-group' : undefined}>
                           {g.label && <span className="relic-role-label">{g.label}</span>}
                           <div className="relic-icons">
                             {g.items.map((r) => {
@@ -532,36 +562,6 @@ function SeriesCard({
         </p>
       )}
 
-      {/* Grand total des objets restants, replié */}
-      {costs && (
-        <details className="relic-totals">
-          <summary>{t('relicTotals')}</summary>
-          {ready.map((member) => {
-            const missingPerStep = stepRelics.map(
-              (list, i) => list.length / info.jobs > 0 ? info.jobs - ownedInStep(member.id, i) : 0,
-            )
-            const rem = remainingMaterials(costs, missingPerStep, info.jobs)
-            if (rem.perWeapon.length === 0 && rem.once.length === 0) {
-              return (
-                <p key={member.id} className="relic-total-line">
-                  <b>{member.data.name.split(' ')[0]}</b> — <span className="relic-done">{t('relicDone')}</span>
-                </p>
-              )
-            }
-            return (
-              <p key={member.id} className="relic-total-line">
-                <b>{member.data.name.split(' ')[0]}</b> — {matsText(rem.perWeapon, lang)}
-                {rem.once.length > 0 && (
-                  <span className="relic-once">
-                    <span className="relic-remaining-label">{t('relicOnce')}</span>{' '}
-                    {matsText(rem.once, lang)}
-                  </span>
-                )}
-              </p>
-            )
-          })}
-        </details>
-      )}
     </article>
   )
 }

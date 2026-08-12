@@ -349,8 +349,8 @@ const STR = {
   relicMatDrops: { fr: '🎲 Drops & divers', en: '🎲 Drops & misc' },
   relicTotals: { fr: 'Total des objets restants par joueur', en: 'Total remaining items per player' },
   relicCostNote: {
-    fr: 'Objets nécessaires par étape d\'après les guides ffxiv-eorzea.com (armes zodiacales, animas, Eurêka, résistance, Manderville, fantômes). Progression synchronisée depuis FFXIV Collect — coche tes reliques sur ton profil là-bas.',
-    en: 'Required items per step based on the ffxiv-eorzea.com guides (Zodiac, Anima, Eureka, Resistance, Manderville, Phantom weapons). Progress syncs from FFXIV Collect — check your relics on your profile there.',
+    fr: "Objets nécessaires par étape d'après les guides ffxiv-eorzea.com et le wiki consolegameswiki, avec les noms d'objets officiels du jeu.",
+    en: 'Required items per step based on the ffxiv-eorzea.com guides and the consolegameswiki wiki, using official in-game item names.',
   },
   relicsLoading: { fr: 'Chargement des reliques…', en: 'Loading relics…' },
 } as const

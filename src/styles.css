@@ -2645,3 +2645,24 @@ a.player-name:hover {
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
+
+/* armures : un bloc par rôle (ou par set de job), libellé au-dessus */
+.relic-icon-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 26px;
+}
+
+.relic-icon-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.relic-role-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}

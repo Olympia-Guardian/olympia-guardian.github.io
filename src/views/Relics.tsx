@@ -184,20 +184,36 @@ function SeriesCard({
   // emplacement. Les sets propres à un job (Eurêka, Idéalistes) n'ont pas de
   // rôle dans leur nom : on les regroupe par set via le nom anglais, qui
   // commence toujours par le nom du set.
-  const ROLE_ORDER = ['Fending', 'Maiming', 'Striking', 'Scouting', 'Aiming', 'Casting', 'Healing']
+  const ROLE_ORDER = ['Fending', 'Maiming', 'Striking', 'Scouting', 'Aiming', 'Casting', 'Healing'] as const
+  const roleOf = (r: Relic) =>
+    ROLE_ORDER.indexOf(
+      (r.nameEn.match(/ of (Fending|Maiming|Striking|Scouting|Aiming|Casting|Healing)\b/)?.[1] ??
+        '') as (typeof ROLE_ORDER)[number],
+    )
   const sortArmor = (list: Relic[]): Relic[] => {
     if (!isArmor) return list
-    const role = (r: Relic) =>
-      ROLE_ORDER.indexOf(
-        r.nameEn.match(/ of (Fending|Maiming|Striking|Scouting|Aiming|Casting|Healing)\b/)?.[1] ?? '',
-      )
     return [...list].sort((a, b) => {
-      const ra = role(a)
-      const rb = role(b)
+      const ra = roleOf(a)
+      const rb = roleOf(b)
       if (ra !== rb) return ra - rb
       if (ra === -1) return a.nameEn.localeCompare(b.nameEn) || a.order - b.order
       return a.order - b.order
     })
+  }
+
+  /** Blocs affichés dans la grille : un par rôle (libellé), ou un par set de
+   *  job (5 pièces, sans libellé) pour les armures spécifiques à un job. */
+  const armorGroups = (list: Relic[]): { label: string | null; items: Relic[] }[] => {
+    if (!isArmor) return [{ label: null, items: list }]
+    if (list.some((r) => roleOf(r) >= 0)) {
+      return ROLE_ORDER.map((role, ri) => ({
+        label: t(`role${role}` as 'roleFending'),
+        items: list.filter((r) => roleOf(r) === ri),
+      })).filter((g) => g.items.length > 0)
+    }
+    const out: { label: string | null; items: Relic[] }[] = []
+    for (let j = 0; j < list.length; j += 5) out.push({ label: null, items: list.slice(j, j + 5) })
+    return out
   }
 
   // relics de chaque étape (l'ordre API est trié étape par étape)
@@ -303,35 +319,42 @@ function SeriesCard({
                         </span>
                       )}
                     </div>
-                    <div className="relic-icons">
-                      {list.map((r) => {
-                        const has = owned.has(r.id)
-                        const label = `${lang === 'fr' ? r.name : r.nameEn}${has ? ' ✓' : ''}`
-                        const content = (
-                          <>
-                            <img src={r.icon} alt="" width={36} height={36} loading="lazy" onError={onItemImgError} />
-                            {has && <span className="relic-badge">✓</span>}
-                          </>
-                        )
-                        return onRelicClick ? (
-                          <button
-                            key={r.id}
-                            className={`relic-icon is-editable ${has ? 'is-owned' : 'is-missing'}`}
-                            title={`${label} — ${t(has ? 'relicUncheck' : 'relicCheck')}`}
-                            onClick={() => onRelicClick(r, i)}
-                          >
-                            {content}
-                          </button>
-                        ) : (
-                          <span
-                            key={r.id}
-                            className={`relic-icon ${has ? 'is-owned' : 'is-missing'}`}
-                            title={label}
-                          >
-                            {content}
-                          </span>
-                        )
-                      })}
+                    <div className={isArmor ? 'relic-icon-groups' : undefined}>
+                      {armorGroups(list).map((g, gi) => (
+                        <div key={gi} className={isArmor ? 'relic-icon-group' : undefined}>
+                          {g.label && <span className="relic-role-label">{g.label}</span>}
+                          <div className="relic-icons">
+                            {g.items.map((r) => {
+                              const has = owned.has(r.id)
+                              const label = `${lang === 'fr' ? r.name : r.nameEn}${has ? ' ✓' : ''}`
+                              const content = (
+                                <>
+                                  <img src={r.icon} alt="" width={36} height={36} loading="lazy" onError={onItemImgError} />
+                                  {has && <span className="relic-badge">✓</span>}
+                                </>
+                              )
+                              return onRelicClick ? (
+                                <button
+                                  key={r.id}
+                                  className={`relic-icon is-editable ${has ? 'is-owned' : 'is-missing'}`}
+                                  title={`${label} — ${t(has ? 'relicUncheck' : 'relicCheck')}`}
+                                  onClick={() => onRelicClick(r, i)}
+                                >
+                                  {content}
+                                </button>
+                              ) : (
+                                <span
+                                  key={r.id}
+                                  className={`relic-icon ${has ? 'is-owned' : 'is-missing'}`}
+                                  title={label}
+                                >
+                                  {content}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )

@@ -1,0 +1,5 @@
+# Binaires : jamais de normalisation de fins de ligne
+*.webp binary
+*.png binary
+*.jpg binary
+*.ico binary

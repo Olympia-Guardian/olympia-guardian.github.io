@@ -1,16 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
-import {
-  mergeOverridesLWW,
-  mergeRosterLWW,
-  setHashParam,
-  type Overrides,
-  type RoomDoc,
-  type RosterState,
-} from './store'
+import { mergeRosterLWW, setHashParam, type RoomDoc, type RosterState } from './store'
 
 // ---------------------------------------------------------------------------
 // Salon de synchro : un document JSON partagé sur textdb.dev, adressé par un
-// ID que NOUS choisissons. Propriétés clés vérifiées :
+// ID que NOUS choisissons. Il ne transporte que le roster (les possessions
+// viennent toutes de FFXIV Collect). Propriétés clés vérifiées :
 //  - POST crée OU écrase à l'ID choisi → si le service purge le document,
 //    n'importe quel membre le re-crée à l'identique avec sa copie locale :
 //    le lien du groupe ne meurt jamais ;
@@ -53,7 +47,6 @@ export type RoomStatus = 'off' | 'sync' | 'ok' | 'error'
 
 export interface LocalState {
   roster: RosterState
-  overrides: Overrides
 }
 
 export function useRoom(
@@ -61,13 +54,12 @@ export function useRoom(
   setRoomId: (id: string | null) => void,
   stateRef: MutableRefObject<LocalState>,
   applyRoster: (r: RosterState) => void,
-  applyOverrides: (o: Overrides) => void,
 ) {
   const [status, setStatus] = useState<RoomStatus>(roomId ? 'sync' : 'off')
   const [lastSync, setLastSync] = useState<number | null>(null)
   const syncing = useRef(false)
 
-  // Le hash reflète le salon ; g= et o= sont retirés par leurs hooks (hasRoom).
+  // Le hash reflète le salon ; g= est retiré par le hook roster (hasRoom).
   useEffect(() => {
     setHashParam('r', roomId)
     if (!roomId) setStatus('off')
@@ -82,17 +74,11 @@ export function useRoom(
       const remote = await fetchRoom(id)
       const local = stateRef.current
       const mergedRoster = mergeRosterLWW(local.roster, remote?.roster)
-      const mergedOverrides = mergeOverridesLWW(local.overrides, remote?.overrides)
       if (JSON.stringify(mergedRoster) !== JSON.stringify(local.roster)) {
         applyRoster(mergedRoster)
       }
-      if (JSON.stringify(mergedOverrides) !== JSON.stringify(local.overrides)) {
-        applyOverrides(mergedOverrides)
-      }
-      const doc: RoomDoc = { v: 1, roster: mergedRoster, overrides: mergedOverrides }
-      const remoteStr = remote
-        ? JSON.stringify({ v: 1, roster: remote.roster, overrides: remote.overrides ?? {} })
-        : ''
+      const doc: RoomDoc = { v: 1, roster: mergedRoster }
+      const remoteStr = remote ? JSON.stringify({ v: 1, roster: remote.roster }) : ''
       if (JSON.stringify(doc) !== remoteStr) {
         await pushRoom(id, doc)
       }
@@ -103,7 +89,7 @@ export function useRoom(
     } finally {
       syncing.current = false
     }
-  }, [roomId, stateRef, applyRoster, applyOverrides])
+  }, [roomId, stateRef, applyRoster])
 
   // Synchro : à l'ouverture, au retour sur l'onglet, et à intervalle régulier.
   useEffect(() => {

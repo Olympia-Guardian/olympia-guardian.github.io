@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, type Kind } from './api'
-import { MANUAL_KINDS } from './store'
 import { useDigest } from './digest'
 import { detectLang, kindLabel, persistLang, translate, LangContext, type Lang } from './i18n'
 import { ItemModal, type ShownItem } from './ItemModal'
@@ -8,8 +7,8 @@ import { useRoom, type LocalState } from './room'
 import { RosterBar } from './RosterBar'
 import {
   readHashRoomId,
+  setHashParam,
   useDb,
-  useOverrides,
   useOwnedSets,
   useReadyMembers,
   useRelicDb,
@@ -46,27 +45,19 @@ export default function App() {
 
   const { members, roster, add, remove, refresh, applyRemoteRoster } = useRoster(hasRoom)
   const ready = useReadyMembers(members)
-  const rosterIds = useMemo(() => members.map((m) => m.id), [members])
-  const { overrides, toggle, prune, applyRemoteOverrides } = useOverrides(rosterIds, hasRoom)
-  const ownedSets = useOwnedSets(ready, overrides)
+  const ownedSets = useOwnedSets(ready)
 
-  const stateRef = useRef<LocalState>({ roster, overrides })
-  stateRef.current = { roster, overrides }
-  const room = useRoom(roomId, setRoomId, stateRef, applyRemoteRoster, applyRemoteOverrides)
+  const stateRef = useRef<LocalState>({ roster })
+  stateRef.current = { roster }
+  const room = useRoom(roomId, setRoomId, stateRef, applyRemoteRoster)
 
-  // Toute évolution locale (roster ou coches) part vers le salon après un court délai.
-  const changeStamp = useMemo(
-    () =>
-      JSON.stringify({
-        t: roster.t,
-        o: Object.entries(overrides).map(([id, kinds]) => [
-          id,
-          ...MANUAL_KINDS.map((k) => kinds[k]?.t ?? 0),
-        ]),
-      }),
-    [roster, overrides],
-  )
-  useEffect(() => room.schedulePush(), [changeStamp, room.schedulePush]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Toute évolution locale du roster part vers le salon après un court délai.
+  useEffect(() => room.schedulePush(), [roster.t, room.schedulePush]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Nettoyage des anciens liens : le paramètre o= (coches manuelles) n'existe plus.
+  useEffect(() => {
+    setHashParam('o', null)
+  }, [])
 
   const [tab, setTab] = useState<Tab>('planning')
   const [copied, setCopied] = useState(false)
@@ -128,11 +119,6 @@ export default function App() {
   // Sidepanel replié ? (par défaut : rail pour les gros groupes)
   const [rosterOpen, setRosterOpen] = useState<boolean | null>(null)
   const rosterCollapsed = !(rosterOpen ?? members.length <= 8)
-
-  // Une coche manuelle devient inutile dès que FFXIV Collect synchronise l'objet.
-  useEffect(() => {
-    if (ready.length > 0) prune(ready)
-  }, [ready, prune])
 
   async function copyLink() {
     try {
@@ -244,7 +230,6 @@ export default function App() {
         <div className="layout">
           <RosterBar
             members={members}
-            ownedSets={ownedSets}
             focusId={focusId}
             absent={absent}
             collapsed={rosterCollapsed}
@@ -286,8 +271,6 @@ export default function App() {
                 items={db[tab]}
                 ready={activeReady}
                 ownedSets={ownedSets}
-                overrides={overrides}
-                onToggle={toggle}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
               />
             )}

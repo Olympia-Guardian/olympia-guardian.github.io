@@ -131,10 +131,10 @@ const STR = {
   today: { fr: "aujourd'hui", en: 'today' },
   yesterday: { fr: 'hier', en: 'yesterday' },
   daysAgo: { fr: 'il y a {n} j', en: '{n} d ago' },
-  playerNote: { fr: 'Cartes/accessoires : à cocher (profil ou ici)', en: 'Cards/accessories: check them (profile or here)' },
+  playerNote: { fr: 'Cartes/accessoires : à cocher sur ffxivcollect.com', en: 'Cards/accessories: check them on ffxivcollect.com' },
   playerNoteTitle: {
-    fr: "Le Lodestone n'expose pas les cartes Triple Triad ni les accessoires de mode : coche-les sur ton profil ffxivcollect.com ou clique les cases dans les onglets Cartes / Access.",
-    en: 'The Lodestone does not expose Triple Triad cards or fashion accessories: check them on your ffxivcollect.com profile, or click the cells in the Cards / Fashion tabs.',
+    fr: "Le Lodestone n'expose pas les cartes, accessoires, orchestrion et magie bleue : coche-les sur ton profil ffxivcollect.com (connexion Discord) pour qu'ils comptent ici.",
+    en: 'The Lodestone does not expose cards, accessories, orchestrion or blue magic: check them on your ffxivcollect.com profile (Discord login) so they count here.',
   },
   privateCollection: { fr: '⚠ Collection privée', en: '⚠ Private collection' },
   privateTitle: {
@@ -184,19 +184,14 @@ const STR = {
   sortGame: { fr: 'Ordre du jeu', en: 'Game order' },
   onlyMissing: { fr: 'Seulement les manquants', en: 'Missing only' },
   matrixNotice: {
-    fr: "Le Lodestone n'expose pas cette collection. Clique sur les cases ✗ pour cocher ce que vous possédez — les coches se synchronisent (salon) ou voyagent dans le lien. Elles se marient avec ce qui est coché sur ffxivcollect.com et disparaissent d'elles-mêmes dès que la synchro les confirme.",
-    en: 'The Lodestone does not expose this collection. Click ✗ cells to check what you own — checks sync via the room (or travel in the link). They merge with what is checked on ffxivcollect.com and clean themselves up once the sync confirms them.',
+    fr: "Le Lodestone n'expose pas cette collection : chacun la coche sur son profil FFXIV Collect (connexion Discord), et elle apparaît ici à la synchro suivante →",
+    en: 'The Lodestone does not expose this collection: check it on your FFXIV Collect profile (Discord login) and it shows up here on the next sync →',
   },
   itemsCount1: { fr: '{n} objet', en: '{n} item' },
   itemsCountN: { fr: '{n} objets', en: '{n} items' },
   missingCol: { fr: 'Manque à', en: 'Missing' },
   owns: { fr: '{who} possède {what}', en: '{who} owns {what}' },
   ownsNot: { fr: '{who} ne possède pas {what}', en: '{who} does not own {what}' },
-  manualCheckTitle: {
-    fr: '{what} — coché à la main pour {who} (cliquer pour décocher)',
-    en: '{what} — manually checked for {who} (click to uncheck)',
-  },
-  markOwned: { fr: 'Marquer {what} comme possédé par {who}', en: 'Mark {what} as owned by {who}' },
   matrixEmpty: { fr: 'Aucun objet ne correspond à ces filtres.', en: 'No item matches these filters.' },
 
   // Fiche objet

@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react'
 import { type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
 import { UNAVAILABLE_TYPES, typeLabel } from '../sources'
-import { MANUAL_KINDS, type Member, type Overrides } from '../store'
+import type { Member } from '../store'
 import { TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
 type SortMode = 'missing' | 'recent' | 'game'
+
+// Collections absentes du Lodestone : à cocher sur son profil ffxivcollect.com.
+const LODESTONE_HIDDEN: Kind[] = ['cards', 'fashions', 'orchestrions', 'spells']
 
 /** Pastille « +N » : au survol, panneau listant TOUTES les voies d'obtention.
  *  Position fixe pour échapper au rognage du conteneur défilant de la table. */
@@ -52,16 +55,12 @@ export function Matrix({
   items,
   ready,
   ownedSets,
-  overrides,
-  onToggle,
   onShowItem,
 }: {
   kind: Kind
   items: Item[]
   ready: Ready[]
   ownedSets: Map<number, Record<Kind, Set<number>>>
-  overrides: Overrides
-  onToggle: (charId: number, kind: Kind, itemId: number) => void
   onShowItem: (item: Item, kind: Kind) => void
 }) {
   const { lang, t } = useI18n()
@@ -78,13 +77,6 @@ export function Matrix({
   )
   // Seul dans la vue : la colonne « Manque à x/1 » est redondante.
   const solo = activeMembers.length === 1
-
-  const editable = MANUAL_KINDS.includes(kind)
-  const manualSets = useMemo(() => {
-    const map = new Map<number, Set<number>>()
-    for (const m of ready) map.set(m.id, new Set(overrides[m.id]?.[kind]?.ids ?? []))
-    return map
-  }, [ready, overrides, kind])
 
   const presentTypes = useMemo(() => {
     const types = new Set<string>()
@@ -166,7 +158,7 @@ export function Matrix({
         </label>
       </div>
 
-      {editable && (
+      {LODESTONE_HIDDEN.includes(kind) && (
         <p className="notice">
           {t('matrixNotice')}{' '}
           <a href="https://ffxivcollect.com" target="_blank" rel="noreferrer">
@@ -229,24 +221,6 @@ export function Matrix({
                   </td>
                   {activeMembers.map((m) => {
                     const has = !missingIds.has(m.id)
-                    const manual = editable && manualSets.get(m.id)?.has(item.id)
-                    if (editable && (manual || !has)) {
-                      return (
-                        <td key={m.id} className={`cell ${has ? 'cell-owned cell-manual' : 'cell-missing'}`}>
-                          <button
-                            className="cell-btn"
-                            onClick={() => onToggle(m.id, kind, item.id)}
-                            title={
-                              manual
-                                ? t('manualCheckTitle', { what: name, who: m.data.name })
-                                : t('markOwned', { what: name, who: m.data.name })
-                            }
-                          >
-                            {has ? '✓' : '✗'}
-                          </button>
-                        </td>
-                      )
-                    }
                     return (
                       <td
                         key={m.id}

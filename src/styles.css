@@ -1454,30 +1454,6 @@ a.player-name:hover {
   background: rgba(208, 59, 59, 0.08);
 }
 
-/* case cliquable (cartes / accessoires) */
-.cell-btn {
-  display: block;
-  width: 100%;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  border-radius: 6px;
-}
-
-.cell-btn:hover {
-  outline: 1px solid var(--ring);
-  background: var(--surface-2);
-}
-
-/* coche manuelle : même vert + liseré pointillé bleu pour la distinguer de la synchro */
-.cell-manual {
-  opacity: 1;
-}
-
-.cell-manual .cell-btn {
-  outline: 1px dashed var(--accent);
-  outline-offset: -3px;
-}
 
 /* ------------------------------------------------------------------- hero */
 

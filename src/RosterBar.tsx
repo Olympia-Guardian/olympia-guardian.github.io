@@ -1,10 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { KINDS, parseLodestoneId, type Kind } from './api'
+import { KINDS, parseLodestoneId } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
 import { Meter, onAvatarImgError } from './ui'
-
-type OwnedSets = Map<number, Record<Kind, Set<number>>>
 
 function relativeDate(iso: string, t: I18n['t']): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
@@ -15,7 +13,6 @@ function relativeDate(iso: string, t: I18n['t']): string {
 
 function PlayerCard({
   member,
-  owned,
   focus,
   present,
   onTogglePresence,
@@ -23,7 +20,6 @@ function PlayerCard({
   onRefresh,
 }: {
   member: Member
-  owned?: Record<Kind, Set<number>>
   focus?: boolean
   present: boolean
   onTogglePresence?: () => void
@@ -95,12 +91,7 @@ function PlayerCard({
       </div>
       <div className="meter-grid">
         {KINDS.map((k) => (
-          <Meter
-            key={k}
-            label={kindLabel(lang, k, 'short')}
-            count={Math.max(c[k].count, owned?.[k].size ?? 0)}
-            total={c[k].total}
-          />
+          <Meter key={k} label={kindLabel(lang, k, 'short')} count={c[k].count} total={c[k].total} />
         ))}
       </div>
       {(c.cards.count === 0 || c.fashions.count === 0) && (
@@ -119,7 +110,6 @@ function PlayerCard({
 
 export function RosterBar({
   members,
-  ownedSets,
   focusId,
   absent,
   collapsed,
@@ -131,7 +121,6 @@ export function RosterBar({
   onRefresh,
 }: {
   members: Member[]
-  ownedSets: OwnedSets
   focusId: number | null
   absent: number[]
   collapsed: boolean
@@ -221,7 +210,6 @@ export function RosterBar({
         <PlayerCard
           key={m.id}
           member={m}
-          owned={ownedSets.get(m.id)}
           focus={m.id === focusId}
           present={!absent.includes(m.id)}
           onTogglePresence={members.length > 1 ? () => onTogglePresence(m.id) : undefined}

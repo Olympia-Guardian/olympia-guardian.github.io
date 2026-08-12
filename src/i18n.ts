@@ -58,6 +58,10 @@ const STR = {
     fr: 'Désactiver la synchro sur ce navigateur (les données restent en local)',
     en: 'Disable sync on this browser (data stays local)',
   },
+  syncOffConfirm: {
+    fr: 'Désactiver la synchro automatique ?\n\nTu quitteras le salon du groupe sur ce navigateur (ton roster reste en local). Tu pourras le rejoindre à nouveau en rouvrant le lien du groupe.',
+    en: 'Disable auto sync?\n\nThis browser will leave the group room (your roster stays local). You can rejoin anytime by opening the group link again.',
+  },
   copyLink: { fr: 'Copier le lien du groupe', en: 'Copy group link' },
   copyLinkSolo: { fr: 'Copier le lien', en: 'Copy link' },
   soloChar: { fr: 'Mon perso', en: 'My character' },

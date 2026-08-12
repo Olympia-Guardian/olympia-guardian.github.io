@@ -184,7 +184,13 @@ export default function App() {
             {hasRoom && (
               <span className={`sync-badge sync-${room.status}`} title={syncTitle}>
                 ● {room.status === 'error' ? t('syncKo') : t('syncOn')}
-                <button className="icon-btn" title={t('syncOffTitle')} onClick={room.disable}>
+                <button
+                  className="icon-btn"
+                  title={t('syncOffTitle')}
+                  onClick={() => {
+                    if (confirm(t('syncOffConfirm'))) room.disable()
+                  }}
+                >
                   ×
                 </button>
               </span>

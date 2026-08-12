@@ -123,6 +123,31 @@ function CatRail({
 
 /** Grimoire de magie bleue : n°, aspect/dégâts, rang en étoiles et obtention,
  *  comme le carnet en jeu. */
+// L'API FFXIV Collect renvoie « / » comme aspect FR des sorts physiques → on
+// traduit nous-mêmes depuis l'anglais (y compris les combos « Blunt/Earth »).
+const ASPECT_FR: Record<string, string> = {
+  blunt: 'Contondant',
+  piercing: 'Perforant',
+  slashing: 'Tranchant',
+  fire: 'Feu',
+  water: 'Eau',
+  wind: 'Vent',
+  earth: 'Terre',
+  lightning: 'Foudre',
+  ice: 'Glace',
+  none: 'Aucun',
+}
+
+function localAspect(it: Item, lang: string): string {
+  const en = it.aspectEn ?? ''
+  if (lang !== 'fr') return en
+  if (it.aspect && it.aspect !== '/') return it.aspect
+  return en
+    .split('/')
+    .map((part) => ASPECT_FR[part.trim().toLowerCase()] ?? part)
+    .join('/')
+}
+
 function SpellBook({
   items,
   ids,
@@ -139,7 +164,9 @@ function SpellBook({
       {sorted.map((it) => {
         const has = ids.has(it.id)
         const physical = it.spellTypeEn === 'Physical'
-        const aspect = (lang === 'fr' ? it.aspect : it.aspectEn) ?? ''
+        const aspect = localAspect(it, lang)
+        // Pour les combos (« Perforant/Feu »), la pastille prend la couleur de l'élément
+        const dotKey = (it.aspectEn ?? 'none').split('/').pop()!.trim().toLowerCase()
         return (
           <button
             key={it.id}
@@ -157,7 +184,7 @@ function SpellBook({
               </span>
               <span className="spell-mid">
                 <span className="spell-aspect">
-                  <i className={`spell-dot aspect-${(it.aspectEn ?? 'none').toLowerCase()}`} />
+                  <i className={`spell-dot aspect-${dotKey}`} />
                   {physical ? t('spellDamage') : t('spellAspect')} : {aspect}
                 </span>
                 <span className="spell-stars" title={`${it.rank ?? 0}/5`}>
@@ -169,7 +196,7 @@ function SpellBook({
               <span className="spell-src">
                 {it.sources[0] && (
                   <>
-                    <TypeChip type={it.sources[0].type} />
+                    {it.sources[0].type !== 'Other' && <TypeChip type={it.sources[0].type} />}
                     <span className="spell-src-text">{localSource(it.sources[0], lang)}</span>
                   </>
                 )}

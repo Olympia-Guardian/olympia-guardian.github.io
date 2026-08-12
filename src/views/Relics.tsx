@@ -594,7 +594,10 @@ export function Relics({
             <button
               className={`mode-btn ${mode === 'quick' ? 'is-active' : ''}`}
               title={t('modeQuickTitle')}
-              onClick={() => setMode('quick')}
+              onClick={() => {
+                setMode('quick')
+                setPick(null)
+              }}
             >
               <GiPowerLightning /> {t('modeQuick')}
             </button>

@@ -689,6 +689,8 @@ export function MyPage({
   const [kind, setKind] = useState<Kind | 'relics'>('cards')
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const relicSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const relicIdsRef = useRef<number[]>([])
 
   function showToast(msg: string) {
     setToast(msg)
@@ -748,7 +750,7 @@ export function MyPage({
     }
   }
 
-  async function save(k: Kind, ids: number[]) {
+  async function save(k: Kind | 'relics', ids: number[]) {
     if (!verified) return
     try {
       await auth.saveCollections(verified.charId, { [k]: ids })
@@ -758,6 +760,22 @@ export function MyPage({
     } catch {
       setNotice(t('saveError'))
     }
+  }
+
+  // Les reliques se cochent une par une ; les totaux de matériaux se recalculent
+  // à chaque clic, l'envoi au serveur est groupé après une courte pause.
+  function toggleRelic(id: number) {
+    setChar((prev) => {
+      if (!prev) return prev
+      const has = prev.relicIds.includes(id)
+      const relicIds = has ? prev.relicIds.filter((x) => x !== id) : [...prev.relicIds, id]
+      // Le ref garde la dernière liste : plusieurs clics rapides n'envoient
+      // qu'une seule requête, avec l'état final.
+      relicIdsRef.current = relicIds
+      return { ...prev, relicIds }
+    })
+    if (relicSaveTimer.current) clearTimeout(relicSaveTimer.current)
+    relicSaveTimer.current = setTimeout(() => save('relics', relicIdsRef.current), 1200)
   }
 
   return (
@@ -911,7 +929,12 @@ export function MyPage({
           {notice && <p className="notice">{notice}</p>}
           {kind === 'relics' ? (
             relicDb ? (
-              <Relics db={relicDb} ready={[{ id: char.id, status: 'ok', data: char }]} detailed />
+              <Relics
+                db={relicDb}
+                ready={[{ id: char.id, status: 'ok', data: char }]}
+                detailed
+                onToggleRelic={toggleRelic}
+              />
             ) : (
               <p className="muted">{t('relicsLoading')}</p>
             )

@@ -47,11 +47,13 @@ function SeriesCard({
   relics,
   ready,
   ownedSets,
+  onToggleRelic,
 }: {
   info: RelicSeriesInfo
   relics: Relic[]
   ready: Ready[]
   ownedSets: Map<number, Set<number>>
+  onToggleRelic?: (id: number) => void
 }) {
   const { lang, t } = useI18n()
   const steps = Math.max(1, Math.round(info.total / info.jobs))
@@ -162,14 +164,29 @@ function SeriesCard({
                     <div className="relic-icons">
                       {list.map((r) => {
                         const has = owned.has(r.id)
-                        return (
+                        const label = `${lang === 'fr' ? r.name : r.nameEn}${has ? ' ✓' : ''}`
+                        const content = (
+                          <>
+                            <img src={r.icon} alt="" width={36} height={36} loading="lazy" onError={onItemImgError} />
+                            {has && <span className="relic-badge">✓</span>}
+                          </>
+                        )
+                        return onToggleRelic ? (
+                          <button
+                            key={r.id}
+                            className={`relic-icon is-editable ${has ? 'is-owned' : 'is-missing'}`}
+                            title={`${label} — ${t(has ? 'relicUncheck' : 'relicCheck')}`}
+                            onClick={() => onToggleRelic(r.id)}
+                          >
+                            {content}
+                          </button>
+                        ) : (
                           <span
                             key={r.id}
                             className={`relic-icon ${has ? 'is-owned' : 'is-missing'}`}
-                            title={`${lang === 'fr' ? r.name : r.nameEn}${has ? ' ✓' : ''}`}
+                            title={label}
                           >
-                            <img src={r.icon} alt="" width={36} height={36} loading="lazy" onError={onItemImgError} />
-                            {has && <span className="relic-badge">✓</span>}
+                            {content}
                           </span>
                         )
                       })}
@@ -392,11 +409,14 @@ export function Relics({
   db,
   ready,
   detailed = false,
+  onToggleRelic,
 }: {
   db: RelicDb
   ready: Ready[]
   /** « Ma Page » : paliers, matériaux et icônes. Sinon : avancement seul. */
   detailed?: boolean
+  /** Fourni dans « Ma Page » : chaque relique devient cochable. */
+  onToggleRelic?: (id: number) => void
 }) {
   const { lang, t } = useI18n()
 
@@ -546,6 +566,7 @@ export function Relics({
                   relics={bySeries.get(info.key) ?? []}
                   ready={ready}
                   ownedSets={ownedSets}
+                  onToggleRelic={onToggleRelic}
                 />
               ))}
             </div>
@@ -553,6 +574,7 @@ export function Relics({
         )
       })}
 
+      {onToggleRelic && <p className="relic-note">{t('relicEditNote')}</p>}
       <p className="relic-note">{t('relicCostNote')}</p>
     </div>
   )

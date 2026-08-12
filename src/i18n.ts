@@ -138,6 +138,12 @@ const STR = {
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
   collections: { fr: 'Collections', en: 'Collections' },
+  relicCheck: { fr: 'clique pour marquer comme obtenue', en: 'click to mark as obtained' },
+  relicUncheck: { fr: 'clique pour retirer', en: 'click to remove' },
+  relicEditNote: {
+    fr: 'Clique sur une relique pour la marquer comme obtenue : les matériaux restants se recalculent aussitôt.',
+    en: 'Click a relic to mark it obtained — remaining materials update instantly.',
+  },
   relicSummaryNote: {
     fr: "Déplie un joueur pour voir son avancement par extension et par série. Le détail des paliers et des matériaux se trouve dans « Ma Page ».",
     en: 'Expand a player to see progress per expansion and series. Step-by-step costs and materials live in “My Page”.',

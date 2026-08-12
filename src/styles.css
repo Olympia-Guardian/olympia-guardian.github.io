@@ -1659,23 +1659,15 @@ a.player-name:hover {
   right: 4px;
 }
 
-/* disposition éditeur + panneau latéral de fiche */
-.editor-layout {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.editor-body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
+/* panneau de fiche : tiroir flottant par-dessus l'interface, zéro reflow */
 .item-panel {
-  position: sticky;
-  top: 12px;
-  width: 290px;
-  flex-shrink: 0;
+  position: fixed;
+  top: 76px;
+  right: 20px;
+  bottom: 20px;
+  width: 300px;
+  z-index: 150;
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--ring);
   border-radius: var(--radius);
@@ -1683,6 +1675,19 @@ a.player-name:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45);
+  animation: panel-in 0.16s ease-out;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .item-panel-close {
@@ -1720,13 +1725,13 @@ a.player-name:hover {
 }
 
 @media (max-width: 900px) {
-  .editor-layout {
-    flex-direction: column-reverse;
-  }
-
   .item-panel {
-    position: static;
-    width: 100%;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 60vh;
   }
 }
 

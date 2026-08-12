@@ -44,7 +44,7 @@ function CardAlbum({
         return (
           <section key={i} className="album-page">
             <header className="album-page-head">
-              <b>{t('albumPage', { n: Math.floor((page[0].order - 1) / 30) + 1 })}</b>
+              <b>{t('albumPage', { n: i + 1 })}</b>
               <span className={`mypage-count ${owned === page.length ? 'relic-done' : ''}`}>
                 {owned}/{page.length}
               </span>

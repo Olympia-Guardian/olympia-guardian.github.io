@@ -317,7 +317,7 @@ export default function App() {
             {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
             {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}
 
-            {db && members.length === 0 && (
+            {db && members.length === 0 && tab !== 'mypage' && (
               <div className="hero">
                 <h1>{t('heroTitle')}</h1>
                 <p>{t('heroBody')}</p>

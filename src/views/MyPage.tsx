@@ -21,7 +21,7 @@ import {
   GiRoundStar,
 } from 'react-icons/gi'
 import type { Db, Member } from '../store'
-import { Meter, TypeChip, onItemImgError } from '../ui'
+import { Meter, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
@@ -30,6 +30,8 @@ const EDITABLE = HIDDEN_KINDS
 
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.
 const LIST_KINDS: Kind[] = ['emotes', 'frames']
+
+const ACTIVE_CHAR_KEY = 'ogs.activeChar.v1'
 
 /** Portraits : nom complet du kit d'encadrement (« L'Art du portrait : … »). */
 function localItemName(it: Item, lang: string): string {
@@ -698,8 +700,21 @@ export function MyPage({
     toastTimer.current = setTimeout(() => setToast(null), 2000)
   }
 
-  const verified = auth.bindings.find((b) => b.verified)
+  // Plusieurs persos par compte : celui qu'on regarde est mémorisé localement.
+  const verifiedList = auth.bindings.filter((b) => b.verified)
+  const [activeId, setActiveId] = useState<number | null>(() => {
+    const n = Number(localStorage.getItem(ACTIVE_CHAR_KEY))
+    return Number.isInteger(n) && n > 0 ? n : null
+  })
+  const verified = verifiedList.find((b) => b.charId === activeId) ?? verifiedList[0]
   const pending = auth.bindings.find((b) => !b.verified)
+  const [adding, setAdding] = useState(false)
+  // Fiches des persos vérifiés : sert au sélecteur (nom + portrait).
+  const [chars, setChars] = useState<Record<number, Character>>({})
+
+  useEffect(() => {
+    if (verified) localStorage.setItem(ACTIVE_CHAR_KEY, String(verified.charId))
+  }, [verified?.charId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (verified) {
@@ -710,6 +725,18 @@ export function MyPage({
       setChar(null)
     }
   }, [verified?.charId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const verifiedIds = verifiedList.map((b) => b.charId).join(',')
+  useEffect(() => {
+    if (!verifiedIds) return
+    for (const id of verifiedIds.split(',').map(Number)) {
+      fetchCharacter(id)
+        .then((c) => setChars((prev) => ({ ...prev, [id]: c })))
+        .catch(() => {
+          // perso injoignable : le sélecteur se rabat sur son identifiant
+        })
+    }
+  }, [verifiedIds])
 
   if (!auth.user) {
     return (
@@ -743,8 +770,28 @@ export function MyPage({
     try {
       const ok = await auth.verifyBind(charId)
       setNotice(ok ? t('bindVerified') : t('bindCodeMissing'))
+      if (ok) {
+        // On bascule directement sur le perso qu'on vient de lier.
+        setActiveId(charId)
+        setAdding(false)
+      }
     } catch (e) {
       setNotice((e as Error).message === 'conflict' ? t('bindConflict') : t('bindError'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function doUnbind(charId: number, name: string) {
+    if (!confirm(t('unbindConfirm', { name }))) return
+    setBusy(true)
+    setNotice(null)
+    try {
+      await auth.unbind(charId)
+      setActiveId(null)
+      localStorage.removeItem(ACTIVE_CHAR_KEY)
+    } catch {
+      setNotice(t('saveError'))
     } finally {
       setBusy(false)
     }
@@ -781,9 +828,41 @@ export function MyPage({
   return (
     <div className="view mypage">
       {toast && <div className="toast">{toast}</div>}
-      {!verified && (
+
+      {verifiedList.length > 0 && (
+        <nav className="char-switch">
+          {verifiedList.map((b) => {
+            const c = chars[b.charId]
+            return (
+              <button
+                key={b.charId}
+                className={`char-tab ${b.charId === verified?.charId ? 'is-active' : ''}`}
+                onClick={() => {
+                  setActiveId(b.charId)
+                  setAdding(false)
+                }}
+              >
+                {c && <img src={c.avatar} alt="" width={26} height={26} onError={onAvatarImgError} />}
+                <span className="char-tab-id">
+                  <b>{c ? c.name : `#${b.charId}`}</b>
+                  {c && <span className="player-server">{c.server}</span>}
+                </span>
+              </button>
+            )
+          })}
+          <button
+            className={`char-tab char-add ${adding ? 'is-active' : ''}`}
+            title={t('bindAdd')}
+            onClick={() => setAdding((v) => !v)}
+          >
+            + {t('bindAdd')}
+          </button>
+        </nav>
+      )}
+
+      {(!verified || adding) && (
         <section className="relic-series mypage-bind">
-          <h3 className="relic-series-name">{t('bindTitle')}</h3>
+          <h3 className="relic-series-name">{verified ? t('bindAdd') : t('bindTitle')}</h3>
           {!pending && (
             <>
               <p className="modal-muted">{t('bindIntro')}</p>
@@ -857,6 +936,12 @@ export function MyPage({
                 </span>
                 <span className="player-server">{char.server}</span>
               </div>
+              <button
+                className="btn btn-ghost btn-mini mypage-unbind"
+                onClick={() => doUnbind(char.id, char.name)}
+              >
+                {t('unbindChar')}
+              </button>
             </div>
             <div className="meter-grid mypage-meters">
               {KINDS.map((k) => (

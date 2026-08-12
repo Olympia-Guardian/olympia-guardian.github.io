@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { HIDDEN_KINDS, KIND_INFO, type Character, type Item, type Kind, type Source } from '../api'
+import { HIDDEN_KINDS, type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
 import { UNAVAILABLE_TYPES, typeLabel } from '../sources'
 import type { Member } from '../store'
@@ -8,9 +8,6 @@ import { TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 type Ready = Member & { data: Character }
 
 type SortMode = 'missing' | 'recent' | 'game'
-
-// Collections absentes du Lodestone : à cocher sur son profil ffxivcollect.com.
-
 
 /** Pastille « +N » : au survol, panneau listant TOUTES les voies d'obtention.
  *  Position fixe pour échapper au rognage du conteneur défilant de la table. */
@@ -158,18 +155,7 @@ export function Matrix({
         </label>
       </div>
 
-      {HIDDEN_KINDS.includes(kind) && (
-        <p className="notice">
-          {t('matrixNotice')}{' '}
-          <a
-            href={`https://ffxivcollect.com/${KIND_INFO[kind].path}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t('openOnCollect', { what: kindLabel(lang, kind) })}
-          </a>
-        </p>
-      )}
+      {HIDDEN_KINDS.includes(kind) && <p className="notice">{t('matrixNotice')}</p>}
 
       <div className="matrix-wrap">
         <table className="matrix">

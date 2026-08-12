@@ -95,10 +95,10 @@ const STR = {
     en: 'Tip: once the group is set up, hit "⚡ Enable sync" and share the link once — the roster and checks then sync on their own.',
   },
   footer: {
-    fr: 'mets à jour ton perso là-bas si tes derniers loots n\'apparaissent pas',
-    en: 'update your character there if your latest loot is missing',
+    fr: 'catalogues rafraîchis chaque nuit',
+    en: 'catalogues refreshed nightly',
   },
-  dataBy: { fr: 'Données', en: 'Data by' },
+  dataBy: { fr: 'Catalogues', en: 'Catalogues by' },
   feedback: { fr: 'un souci, une idée ?', en: 'issues & ideas' },
 
   // Comptes & Ma Page
@@ -138,6 +138,12 @@ const STR = {
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
   collections: { fr: 'Collections', en: 'Collections' },
+  bindAdd: { fr: 'Ajouter un personnage', en: 'Add a character' },
+  unbindChar: { fr: 'Délier', en: 'Unlink' },
+  unbindConfirm: {
+    fr: 'Délier {name} de ton compte ? Ses collections restent enregistrées : tu les retrouveras si tu le relies plus tard.',
+    en: 'Unlink {name} from your account? Its collections stay saved — you get them back if you link it again later.',
+  },
   relicCheck: { fr: 'clique pour marquer comme obtenue', en: 'click to mark as obtained' },
   relicUncheck: { fr: 'clique pour retirer', en: 'click to remove' },
   relicEditNote: {
@@ -219,10 +225,10 @@ const STR = {
   today: { fr: "aujourd'hui", en: 'today' },
   yesterday: { fr: 'hier', en: 'yesterday' },
   daysAgo: { fr: 'il y a {n} j', en: '{n} d ago' },
-  playerNote: { fr: 'Cartes/accessoires : à cocher sur ffxivcollect.com', en: 'Cards/accessories: check them on ffxivcollect.com' },
+  playerNote: { fr: 'Collections à renseigner dans « Ma Page »', en: 'Collections to fill in from “My Page”' },
   playerNoteTitle: {
-    fr: "Le Lodestone n'expose pas les cartes, accessoires, orchestrion et magie bleue : coche-les sur ton profil ffxivcollect.com (connexion Discord) pour qu'ils comptent ici.",
-    en: 'The Lodestone does not expose cards, accessories, orchestrion or blue magic: check them on your ffxivcollect.com profile (Discord login) so they count here.',
+    fr: "Le Lodestone n'expose que les montures et les mascottes. Les onze autres collections (cartes, mode, tenues, armoire, bardes, émotes, portraits, orchestrion, magie bleue) se cochent directement dans « Ma Page », après avoir lié son personnage.",
+    en: 'The Lodestone only exposes mounts and minions. The other eleven collections (cards, fashion, outfits, armoire, bardings, emotes, portraits, orchestrion, blue magic) are checked directly in “My Page”, once your character is linked.',
   },
   privateCollection: { fr: '⚠ Collection privée', en: '⚠ Private collection' },
   privateTitle: {
@@ -279,8 +285,8 @@ const STR = {
   sortGame: { fr: 'Ordre du jeu', en: 'Game order' },
   onlyMissing: { fr: 'Seulement les manquants', en: 'Missing only' },
   matrixNotice: {
-    fr: "Le Lodestone n'expose pas cette collection : chacun la coche sur FFXIV Collect (connexion Discord), et elle apparaît ici à la synchro suivante →",
-    en: 'The Lodestone does not expose this collection: check it on FFXIV Collect (Discord login) and it shows up here on the next sync →',
+    fr: "Le Lodestone n'expose pas cette collection : chacun la coche dans « Ma Page », après avoir lié son personnage.",
+    en: 'The Lodestone does not expose this collection: everyone checks it in “My Page”, once their character is linked.',
   },
   openOnCollect: { fr: 'ouvrir « {what} » sur FFXIV Collect ↗', en: 'open "{what}" on FFXIV Collect ↗' },
   itemsCount1: { fr: '{n} objet', en: '{n} item' },

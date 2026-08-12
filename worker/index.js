@@ -9,7 +9,7 @@
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 }
 
@@ -480,6 +480,15 @@ async function verifyBinding(env, user, raw) {
   return response(JSON.stringify({ charId, verified: true }))
 }
 
+/** Délie un personnage. Ses collections restent en base : si le joueur le
+ *  relie plus tard, il retrouve tout. */
+async function unbindCharacter(env, user, charId) {
+  await env.DB.prepare('DELETE FROM bindings WHERE user_id = ?1 AND char_id = ?2')
+    .bind(user.id, charId)
+    .run()
+  return response(JSON.stringify({ charId, unbound: true }))
+}
+
 async function putCollections(env, user, charId, raw) {
   const binding = await env.DB.prepare(
     'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
@@ -561,6 +570,18 @@ export default {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return verifyBinding(env, user, await req.text())
+    }
+    if (url.pathname === '/bind' && req.method === 'DELETE') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      let charId
+      try {
+        charId = JSON.parse(await req.text())?.charId
+      } catch {
+        return response('{"error":"invalid body"}', 422)
+      }
+      if (!Number.isInteger(charId) || charId <= 0) return response('{"error":"invalid charId"}', 422)
+      return unbindCharacter(env, user, charId)
     }
 
     // --- personnages : GET /character/:id[?force=1] · POST /character/:id/seed

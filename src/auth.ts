@@ -136,6 +136,20 @@ export function useAuth() {
     [token, refresh],
   )
 
+  const unbind = useCallback(
+    async (charId: number): Promise<void> => {
+      if (!token) throw new Error('non connecté')
+      const res = await fetch(`${WORKER_API}/bind`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+        body: JSON.stringify({ charId }),
+      })
+      if (!res.ok) throw new Error(`unbind ${res.status}`)
+      await refresh()
+    },
+    [token, refresh],
+  )
+
   const saveCollections = useCallback(
     async (charId: number, partial: Record<string, number[]>): Promise<void> => {
       if (!token) throw new Error('non connecté')
@@ -149,5 +163,5 @@ export function useAuth() {
     [token],
   )
 
-  return { token, user, bindings, login, logout, refresh, bind, verifyBind, saveCollections }
+  return { token, user, bindings, login, logout, refresh, bind, verifyBind, unbind, saveCollections }
 }

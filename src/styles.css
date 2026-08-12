@@ -1800,27 +1800,7 @@ a.player-name:hover {
   pointer-events: none;
 }
 
-/* section Ex : mise à part avec un séparateur doré */
-.album-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 22px 0 14px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--gold);
-}
-
-.album-divider::before,
-.album-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(214, 178, 107, 0.4), transparent);
-}
-
+/* page Ex (série crossover) : à la fin de l'album, discrètement dorée */
 .album-page-ex {
   border-color: rgba(214, 178, 107, 0.45);
 }

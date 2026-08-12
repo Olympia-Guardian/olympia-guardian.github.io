@@ -115,14 +115,14 @@ function CardAlbum({
       if (!target.has(p)) target.set(p, Array(30).fill(null))
       target.get(p)![(n - 1) % 30] = it
     }
-    return {
-      normal: [...normal.entries()]
+    return [
+      ...[...normal.entries()]
         .sort((a, b) => a[0] - b[0])
-        .map(([p, cells]) => ({ label: String(p + 1), cells })),
-      ex: [...ex.entries()]
+        .map(([p, cells]) => ({ label: String(p + 1), cells, isEx: false })),
+      ...[...ex.entries()]
         .sort((a, b) => a[0] - b[0])
-        .map(([p, cells]) => ({ label: ex.size > 1 ? `Ex ${p + 1}` : 'Ex', cells })),
-    }
+        .map(([p, cells]) => ({ label: ex.size > 1 ? `Ex ${p + 1}` : 'Ex', cells, isEx: true })),
+    ]
   }, [allItems])
 
   // Filtres par type de source, façon Lala (Haut fait, Quête, Défi, PNJ…)
@@ -161,51 +161,41 @@ function CardAlbum({
           </button>
         ))}
       </div>
-      {(['normal', 'ex'] as const).map((series) => {
-        const list = pages[series]
-        const visiblePages = list.filter(({ cells }) =>
-          cells.some((it) => it !== null && shows(it)),
-        )
-        if (visiblePages.length === 0) return null
-        return (
-          <div key={series}>
-            {series === 'ex' && <div className="album-divider">{t('albumExTitle')}</div>}
-            <div className="album">
-              {visiblePages.map(({ label, cells }) => {
-                const real = cells.filter((it): it is Item => it !== null)
-                const owned = real.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
-                return (
-                  <section key={label} className={`album-page ${series === 'ex' ? 'album-page-ex' : ''}`}>
-                    <header className="album-page-head">
-                      <b>{label}</b>
-                      <span className={`mypage-count ${owned === real.length ? 'relic-done' : ''}`}>
-                        {owned}/{real.length}
-                      </span>
-                    </header>
-                    <div className="album-grid">
-                      {cells.map((it, slot) => {
-                        if (!it || !shows(it)) return <span key={slot} className="album-slot" />
-                        const has = ids.has(it.id)
-                        return (
-                          <button
-                            key={it.id}
-                            className={`album-card ${has ? 'is-owned' : 'is-missing'}`}
-                            title={`${localName(it, lang)} · ${it.num ?? `n°${cardNo(it)}`}${has ? ' ✓' : ''}`}
-                            onClick={() => onItemClick(it)}
-                          >
-                            <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />
-                            {has && <span className="album-check">✓</span>}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </section>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+      <div className="album">
+        {pages.map(({ label, cells, isEx }) => {
+          const real = cells.filter((it): it is Item => it !== null)
+          const shown = real.filter((it) => shows(it))
+          if (shown.length === 0) return null
+          const owned = real.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
+          return (
+            <section key={label} className={`album-page ${isEx ? 'album-page-ex' : ''}`}>
+              <header className="album-page-head">
+                <b>{label}</b>
+                <span className={`mypage-count ${owned === real.length ? 'relic-done' : ''}`}>
+                  {owned}/{real.length}
+                </span>
+              </header>
+              <div className="album-grid">
+                {cells.map((it, slot) => {
+                  if (!it || !shows(it)) return <span key={slot} className="album-slot" />
+                  const has = ids.has(it.id)
+                  return (
+                    <button
+                      key={it.id}
+                      className={`album-card ${has ? 'is-owned' : 'is-missing'}`}
+                      title={`${localName(it, lang)} · ${it.num ?? `n°${cardNo(it)}`}${has ? ' ✓' : ''}`}
+                      onClick={() => onItemClick(it)}
+                    >
+                      <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />
+                      {has && <span className="album-check">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }

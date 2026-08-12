@@ -98,6 +98,12 @@ export function setHashParam(key: string, value: string | null): void {
   history.replaceState(null, '', location.pathname + location.search + (s ? '#' + s : ''))
 }
 
+/** Valeur d'un paramètre du hash (#r=…&tab=…). */
+export function readHashParam(key: string): string | null {
+  const m = location.hash.match(new RegExp(`(?:^#|[#&])${key}=([^&]*)`))
+  return m ? m[1] : null
+}
+
 export function readHashRoomId(): string | null {
   const match = location.hash.match(/r=([\w-]+)/)
   return match ? match[1] : null

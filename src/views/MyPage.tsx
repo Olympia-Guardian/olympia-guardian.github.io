@@ -20,7 +20,7 @@ import {
   GiPowerLightning,
   GiRoundStar,
 } from 'react-icons/gi'
-import type { Db, Member } from '../store'
+import { readHashParam, setHashParam, type Db, type Member } from '../store'
 import { Meter, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
@@ -688,7 +688,15 @@ export function MyPage({
   const [char, setChar] = useState<Character | null>(null)
   // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
   // onglet ici : c'est la page où l'on suit sa propre progression.
-  const [kind, setKind] = useState<Kind | 'relics'>('cards')
+  // L'onglet vit dans le hash (#jtab=…) pour survivre aux rechargements.
+  const [kind, setKind] = useState<Kind | 'relics'>(() => {
+    const k = readHashParam('jtab')
+    if (k === 'relics' || (KINDS as string[]).includes(k ?? '')) return k as Kind | 'relics'
+    return 'cards'
+  })
+  useEffect(() => {
+    setHashParam('jtab', kind === 'cards' ? null : kind)
+  }, [kind])
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const relicSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)

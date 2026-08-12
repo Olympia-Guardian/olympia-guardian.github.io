@@ -10,6 +10,7 @@ import { ItemModal, type ShownItem } from './ItemModal'
 import { useRoom, type LocalState } from './room'
 import { RosterBar } from './RosterBar'
 import {
+  readHashParam,
   readHashRoomId,
   setHashParam,
   useDb,
@@ -66,9 +67,21 @@ export default function App() {
     setHashParam('o', null)
   }, [])
 
-  const [tab, setTab] = useState<Tab>('planning')
+  // L'onglet vit dans le hash (#tab=…) : un rechargement — manuel ou par le
+  // rafraîchissement auto — ramène exactement où on était.
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = readHashParam('tab')
+    if (t === 'relics' || t === 'mypage' || (KINDS as string[]).includes(t ?? '')) return t as Tab
+    return 'planning'
+  })
+  useEffect(() => {
+    setHashParam('tab', tab === 'planning' ? null : tab)
+  }, [tab])
   // Dernière collection consultée : cliquer sur « Collections » y revient.
-  const [collectionTab, setCollectionTab] = useState<Kind>('mounts')
+  const [collectionTab, setCollectionTab] = useState<Kind>(() => {
+    const t = readHashParam('tab')
+    return (KINDS as string[]).includes(t ?? '') ? (t as Kind) : 'mounts'
+  })
   const [copied, setCopied] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
 

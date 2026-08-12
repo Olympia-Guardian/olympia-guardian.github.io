@@ -132,7 +132,10 @@ function CardAlbum({
   )
 }
 
-/** Liste groupée par catégorie (orchestrion) : nom + obtention + coche. */
+/** Liste groupée par catégorie (orchestrion) : filtres façon Lodestone,
+ *  numéro + nom + obtention + rouleau. */
+const ROLL_ICON = `${import.meta.env.BASE_URL}assets/roll.webp`
+
 function GroupedChecklist({
   items,
   ids,
@@ -142,8 +145,9 @@ function GroupedChecklist({
   ids: Set<number>
   onItemClick: (it: Item) => void
 }) {
-  const { lang } = useI18n()
-  const groups = useMemo(() => {
+  const { lang, t } = useI18n()
+  const [cat, setCat] = useState<string | null>(null)
+  const allGroups = useMemo(() => {
     const map = new Map<string, Item[]>()
     for (const it of [...items].sort((a, b) => Number(a.num ?? a.order) - Number(b.num ?? b.order))) {
       const g = (lang === 'fr' ? it.group : it.groupEn) ?? '—'
@@ -154,8 +158,33 @@ function GroupedChecklist({
     return [...map.entries()]
   }, [items, lang])
 
+  const groups = cat ? allGroups.filter(([g]) => g === cat) : allGroups
+
   return (
     <div className="checklist">
+      <div className="cat-filter">
+        <button
+          className={`cat-chip ${cat === null ? 'is-active' : ''}`}
+          onClick={() => setCat(null)}
+        >
+          {t('scopeAll')}
+        </button>
+        {allGroups.map(([g, list]) => {
+          const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
+          return (
+            <button
+              key={g}
+              className={`cat-chip ${cat === g ? 'is-active' : ''} ${owned === list.length ? 'is-done' : ''}`}
+              onClick={() => setCat(cat === g ? null : g)}
+            >
+              {g}
+              <span className="cat-chip-count">
+                {owned}/{list.length}
+              </span>
+            </button>
+          )
+        })}
+      </div>
       {groups.map(([group, list]) => {
         const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
         return (
@@ -178,11 +207,22 @@ function GroupedChecklist({
                       <span className={`checklist-box ${has ? 'is-owned' : ''}`}>
                         {has ? '✓' : ''}
                       </span>
+                      {it.num !== undefined && (
+                        <span className="checklist-num">{String(it.num).padStart(3, '0')}</span>
+                      )}
                       <span className="checklist-name">{localName(it, lang)}</span>
                       {it.patch && <span className="chip chip-patch">{it.patch}</span>}
                       <span className="checklist-src">
                         {it.sources[0] ? (lang === 'fr' ? it.sources[0].text : it.sources[0].textEn) : ''}
                       </span>
+                      <img
+                        className={`checklist-roll ${has ? '' : 'is-missing'}`}
+                        src={ROLL_ICON}
+                        alt=""
+                        width={26}
+                        height={26}
+                        loading="lazy"
+                      />
                     </button>
                   </li>
                 )

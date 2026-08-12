@@ -374,19 +374,9 @@ function SeriesCard({
                               {c < list.length ? t('relicAddAll') : t('relicRemoveAll')}
                             </button>
                           )}
-                        </span>
-                      )}
-                      {/* Séries avec icônes : les étapes suivent le switch d'en haut. */}
-                      {stepCost && stepCost.materials.length > 0 && showReq && (
-                        <>
-                          <span className="relic-step-mats relic-step-iconrow">
-                            <span className="relic-remaining-label">
-                              {reqLeft && remainingMats
-                                ? list.length - c > 0
-                                  ? t('relicStepTotal', { n: list.length - c })
-                                  : ''
-                                : t(perKey)}
-                            </span>
+                          {/* Objets requis sur la même ligne, poussés à droite ;
+                              les quantités suivent le switch d'en haut. */}
+                          {stepCost && stepCost.materials.length > 0 && showReq && (
                             <span className="relic-req-items">
                               {reqLeft && remainingMats && list.length - c === 0 ? (
                                 <span className="relic-done">{t('relicDone')}</span>
@@ -397,14 +387,14 @@ function SeriesCard({
                                 ).map(matIcon)
                               )}
                             </span>
-                          </span>
-                          {stepCost.once && (!reqLeft || list.length - c > 0) && (
-                            <span className="relic-step-mats relic-once relic-step-iconrow">
-                              <span className="relic-remaining-label">{t('relicOnce')}</span>
-                              <span className="relic-req-items">{stepCost.once.map(matIcon)}</span>
-                            </span>
                           )}
-                        </>
+                        </span>
+                      )}
+                      {stepCost && stepCost.materials.length > 0 && showReq && stepCost.once && (!reqLeft || list.length - c > 0) && (
+                        <span className="relic-step-mats relic-once relic-step-iconrow">
+                          <span className="relic-remaining-label">{t('relicOnce')}</span>
+                          <span className="relic-req-items">{stepCost.once.map(matIcon)}</span>
+                        </span>
                       )}
                       {/* Séries encore sans icônes : lignes de texte historiques. */}
                       {stepCost && stepCost.materials.length > 0 && !showReq && (

@@ -2621,7 +2621,9 @@ a.player-name:hover {
 .relic-step-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 6px 12px;
 }
 
 .relic-bulk {

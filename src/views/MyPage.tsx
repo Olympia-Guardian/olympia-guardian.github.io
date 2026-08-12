@@ -113,7 +113,12 @@ function CatRail({
   active: string | null
   onSelect: (key: string | null) => void
 }) {
-  const { t } = useI18n()
+  const { lang, t } = useI18n()
+  // Ordre alphabétique : on cherche une catégorie par son nom, pas par sa taille.
+  const sorted = useMemo(
+    () => [...entries].sort((a, b) => a.label.localeCompare(b.label, lang)),
+    [entries, lang],
+  )
   const row = (key: string | null, label: string, owned: number, total: number) => (
     <button
       key={key ?? '__all'}
@@ -134,7 +139,7 @@ function CatRail({
   return (
     <nav className="cat-rail">
       {row(null, t('scopeAll'), all.owned, all.total)}
-      {entries.map((e) => row(e.key, e.label, e.owned, e.total))}
+      {sorted.map((e) => row(e.key, e.label, e.owned, e.total))}
     </nav>
   )
 }
@@ -283,7 +288,8 @@ function CardAlbum({
         map.set(type, entry)
       }
     }
-    return [...map.entries()].sort((a, b) => b[1].total - a[1].total)
+    // CatRail trie sur le libellé traduit : ici l'ordre brut suffit.
+    return [...map.entries()]
   }, [allItems, ids])
 
   const shows = (it: Item) =>
@@ -366,7 +372,7 @@ function IconGrid({
       if (arr) arr.push(it)
       else map.set(g, [it])
     }
-    return [...map.entries()]
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], lang))
   }, [items, lang])
 
   const shown = cat
@@ -440,7 +446,7 @@ function GroupedChecklist({
       if (arr) arr.push(it)
       else map.set(g, [it])
     }
-    return [...map.entries()]
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], lang))
   }, [items, lang])
 
   const groups = cat ? allGroups.filter(([g]) => g === cat) : allGroups

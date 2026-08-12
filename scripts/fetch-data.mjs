@@ -3,7 +3,15 @@
 // pour ne solliciter FFXIV Collect qu'une fois par jour au lieu d'une fois par
 // utilisateur. Lancé par .github/workflows/data.yml (cron quotidien).
 
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+
+// Jobs de chaque relique arme (cache committé, rempli par resolve-relic-jobs.mjs).
+let RELIC_JOBS = {}
+try {
+  RELIC_JOBS = JSON.parse(await readFile(new URL('./relic-jobs.json', import.meta.url), 'utf8'))
+} catch {
+  console.warn('relic-jobs.json absent — reliques sans champ jobs')
+}
 
 const API = 'https://ffxivcollect.com/api'
 const OUT = new URL('../public/data/', import.meta.url)
@@ -109,6 +117,8 @@ function mergeRelics(jsonEn, jsonFr) {
       icon: r.icon,
       order: r.order ?? 0,
       series: key,
+      // Catégorie de classe (« GLA PLD ») : sert au tri tank > heal > DPS.
+      ...(RELIC_JOBS[r.name] ? { jobs: RELIC_JOBS[r.name] } : {}),
     }
   })
   return mergeUpgradeTiers([...seriesMap.values()], relics)
@@ -117,7 +127,14 @@ function mergeRelics(jsonEn, jsonFr) {
 /** Rang d'amélioration d'une série : « X » → 0, « X augmentée » → 1, « X +N » → N.
  *  FFXIV Collect en fait des séries distinctes alors que ce sont les paliers
  *  d'une même armure : on les recolle pour retrouver le modèle des armes. */
+// Paliers que le nom seul ne révèle pas : l'armure Anemos est le 4e palier
+// de l'armure de classe d'Eurêka (base → +1 → +2 → Anemos).
+const SPECIAL_TIERS = {
+  'Eureka Anemos Armor': { base: 'Eureka Job Armor', tier: 3 },
+}
+
 function upgradeTier(key) {
+  if (SPECIAL_TIERS[key]) return SPECIAL_TIERS[key]
   const plus = key.match(/^(.*?) \+(\d+)$/)
   if (plus) return { base: plus[1], tier: Number(plus[2]) }
   const augmented = key.match(/^Augmented (.+)$/)

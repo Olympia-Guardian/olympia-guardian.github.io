@@ -193,34 +193,34 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     urlEn: `${WIKI}/Eureka_Weapons`,
     stepLabels: [{ fr: 'Antique', en: 'Antiquated' },{ fr: '+1', en: '+1' },{ fr: '+2', en: '+2' },{ fr: 'Anemos', en: 'Anemos' },{ fr: 'Pagos', en: 'Pagos' },{ fr: 'Pagos +1', en: 'Pagos +1' },{ fr: 'Élémentaire', en: 'Elemental' },{ fr: 'Élémentaire +1', en: 'Elemental +1' },{ fr: 'Élémentaire +2', en: 'Elemental +2' },{ fr: 'Pyros', en: 'Pyros' },{ fr: 'Hydatos', en: 'Hydatos' },{ fr: 'Hydatos +1', en: 'Hydatos +1' },{ fr: 'Eurêka (base)', en: 'Base' },{ fr: 'Eurêka', en: 'Eureka' },{ fr: 'Physeos', en: 'Physeos' }],
     steps: [
-      { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(4, 'cristaux Anemos', 'Anemos Crystals')] },
-      { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(8, 'cristaux Anemos', 'Anemos Crystals')] },
-      { url: EUR1, materials: [m(16, 'cristaux instables', 'Unstable Crystals'), m(12, 'cristaux Anemos', 'Anemos Crystals')] },
+      { url: EUR1, materials: [m(12, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex')), m(4, 'cristaux Anemos', 'Anemos Crystals', undefined, undefined, XIV('ui/icon/020000/020028_hr1.tex'))] },
+      { url: EUR1, materials: [m(12, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex')), m(8, 'cristaux Anemos', 'Anemos Crystals', undefined, undefined, XIV('ui/icon/020000/020028_hr1.tex'))] },
+      { url: EUR1, materials: [m(16, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex')), m(12, 'cristaux Anemos', 'Anemos Crystals', undefined, undefined, XIV('ui/icon/020000/020028_hr1.tex'))] },
       {
         url: EUR1,
         materials: [
-          m(24, 'cristaux instables', 'Unstable Crystals'),
-          m(16, 'cristaux Anemos', 'Anemos Crystals'),
-          m(4, 'plumes de Pazuzu', 'Pazuzu Feathers'),
+          m(24, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex')),
+          m(16, 'cristaux Anemos', 'Anemos Crystals', undefined, undefined, XIV('ui/icon/020000/020028_hr1.tex')),
+          m(4, 'plumes de Pazuzu', "Pazuzu's Feathers", undefined, undefined, XIV('ui/icon/021000/021910_hr1.tex')),
         ],
       },
-      { url: EUR2, materials: [m(5, 'cristaux instables', 'Unstable Crystals')] },
-      { url: EUR2, materials: [m(10, 'cristaux instables', 'Unstable Crystals'), m(500, 'cristaux Pagos', 'Pagos Crystals')] },
-      { url: EUR2, materials: [m(16, 'cristaux instables', 'Unstable Crystals'), m(5, 'glaces de Louhi', "Louhi's Ice")] },
-      { url: EUR3, materials: [m(150, 'cristaux Pyros', 'Pyros Crystals')] },
-      { url: EUR3, materials: [m(200, 'cristaux Pyros', 'Pyros Crystals')] },
-      { url: EUR3, materials: [m(300, 'cristaux Pyros', 'Pyros Crystals'), m(5, 'braises de Penthésilée', "Penthesilea's Flames")] },
-      { url: EUR4, materials: [m(50, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr')] },
-      { url: EUR4, materials: [m(100, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr')] },
-      { url: EUR4, materials: [m(100, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr')] },
+      { url: EUR2, materials: [m(5, 'cristaux instables de glace', 'Frosted Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020031_hr1.tex'))] },
+      { url: EUR2, materials: [m(10, 'cristaux instables de glace', 'Frosted Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020031_hr1.tex')), m(500, 'cristaux Pagos', 'Pagos Crystals', undefined, undefined, XIV('ui/icon/020000/020030_hr1.tex'))] },
+      { url: EUR2, materials: [m(16, 'cristaux instables de glace', 'Frosted Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020031_hr1.tex')), m(5, 'glaces de Louhi', "Louhi's Ice", undefined, undefined, XIV('ui/icon/021000/021266_hr1.tex'))] },
+      { url: EUR3, materials: [m(150, 'cristaux Pyros', 'Pyros Crystals', undefined, undefined, XIV('ui/icon/020000/020032_hr1.tex'))] },
+      { url: EUR3, materials: [m(200, 'cristaux Pyros', 'Pyros Crystals', undefined, undefined, XIV('ui/icon/020000/020032_hr1.tex'))] },
+      { url: EUR3, materials: [m(300, 'cristaux Pyros', 'Pyros Crystals', undefined, undefined, XIV('ui/icon/020000/020032_hr1.tex')), m(5, 'braises de Penthésilée', "Penthesilea's Flames", undefined, undefined, XIV('ui/icon/025000/025911_hr1.tex'))] },
+      { url: EUR4, materials: [m(50, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr', undefined, XIV('ui/icon/020000/020037_hr1.tex'))] },
+      { url: EUR4, materials: [m(100, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr', undefined, XIV('ui/icon/020000/020037_hr1.tex'))] },
+      { url: EUR4, materials: [m(100, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr', undefined, XIV('ui/icon/020000/020037_hr1.tex'))] },
       {
         url: EUR4,
         materials: [
-          m(100, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr'),
-          m(5, 'écailles de dragon de cristal', 'Crystalline Scales'),
+          m(100, 'cristaux Hydatos', 'Hydatos Crystals', 'hydatos-cr', undefined, XIV('ui/icon/020000/020037_hr1.tex')),
+          m(5, 'écailles de dragon de cristal', 'Crystalline Scales', undefined, undefined, XIV('ui/icon/022000/022265_hr1.tex')),
         ],
       },
-      { url: EUR4, materials: [m(100, "fragments d'Eurêka (Arsenal de Baldesion)", 'Eureka Fragments (Baldesion Arsenal)', 'eureka-frag')] },
+      { url: EUR4, materials: [m(100, "fragments d'Eurêka (Arsenal de Baldesion)", 'Eureka Fragments (Baldesion Arsenal)', 'eureka-frag', undefined, XIV('ui/icon/026000/026544_hr1.tex'))] },
     ],
   },
 
@@ -430,27 +430,34 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
 
   // -------------------------------------------------------- Armures Eurêka
+  // Base → +1 → +2 → Anemos : une seule armure, quatre paliers.
   'Eureka Job Armor': {
     url: `${WIKI}/Anemos_Gear`,
+    stepLabels: [
+      { fr: 'Base', en: 'Base' },
+      { fr: '+1', en: '+1' },
+      { fr: '+2', en: '+2' },
+      { fr: 'Anemos', en: 'Anemos' },
+    ],
     steps: [
-      { materials: [m(50, 'cristaux instables', 'Protean Crystals')] },
-      { materials: [m(150, 'cristaux instables', 'Protean Crystals')] },
-      { materials: [m(400, 'cristaux instables', 'Protean Crystals')] },
+      { materials: [m(50, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex'))] },
+      { materials: [m(150, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex'))] },
+      { materials: [m(400, 'cristaux instables', 'Protean Crystals', undefined, undefined, XIV('ui/icon/020000/020029_hr1.tex'))] },
+      { materials: [m(150, 'cristaux Anemos', 'Anemos Crystals', undefined, undefined, XIV('ui/icon/020000/020028_hr1.tex'))] },
     ],
   },
-  'Eureka Anemos Armor': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(150, 'cristaux Anemos', 'Anemos Crystals')] },
   'Elemental Armor': {
     url: `${WIKI}/Elemental_Armor`,
     steps: [
-      { materials: [m(40, 'cristaux Pyros', 'Pyros Crystals')] },
+      { materials: [m(40, 'cristaux Pyros', 'Pyros Crystals', undefined, undefined, XIV('ui/icon/020000/020032_hr1.tex'))] },
       {
         materials: [
-          m(38, 'cristaux Hydatos (moyenne — 30 à 50 selon la pièce)', 'Hydatos Crystals (avg — 30–50 per piece)', 'hydatos-cr'),
+          m(38, 'cristaux Hydatos (moyenne — 30 à 50 selon la pièce)', 'Hydatos Crystals (avg — 30–50 per piece)', 'hydatos-cr', undefined, XIV('ui/icon/020000/020037_hr1.tex')),
         ],
       },
       {
         materials: [
-          m(27, "fragments d'Eurêka (moyenne — 21 à 35 selon la pièce)", 'Eureka Fragments (avg — 21–35 per piece)', 'eureka-frag'),
+          m(27, "fragments d'Eurêka (moyenne — 21 à 35 selon la pièce)", 'Eureka Fragments (avg — 21–35 per piece)', 'eureka-frag', undefined, XIV('ui/icon/026000/026544_hr1.tex')),
         ],
       },
     ],

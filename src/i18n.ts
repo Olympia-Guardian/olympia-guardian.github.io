@@ -137,8 +137,12 @@ const STR = {
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
   myPageAutoNote: {
-    fr: 'Montures et mascottes se synchronisent automatiquement depuis le Lodestone. Les onglets ci-dessous se cochent à la main — clique sur les icônes.',
-    en: 'Mounts and minions sync automatically from the Lodestone. The tabs below are checked by hand — click the icons.',
+    fr: 'Montures et mascottes 🔒 se synchronisent toutes seules depuis le Lodestone (lecture seule). Les autres onglets se cochent à la main — clique sur les icônes.',
+    en: 'Mounts and minions 🔒 sync on their own from the Lodestone (read-only). The other tabs are checked by hand — click the icons.',
+  },
+  myPageReadOnly: {
+    fr: 'Synchronisé automatiquement depuis le Lodestone — lecture seule',
+    en: 'Synced automatically from the Lodestone — read-only',
   },
 
   // Multi-groupes

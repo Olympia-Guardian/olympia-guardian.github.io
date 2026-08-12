@@ -140,12 +140,14 @@ function CollectionEditor({
   kind,
   charId,
   owned,
+  readOnly,
   onSave,
 }: {
   db: Db
   kind: Kind
   charId: number
   owned: number[]
+  readOnly?: boolean
   onSave: (kind: Kind, ids: number[]) => void
 }) {
   const { lang, t } = useI18n()
@@ -160,6 +162,7 @@ function CollectionEditor({
   }, [charId, kind])
 
   function toggle(id: number) {
+    if (readOnly) return
     setIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -415,11 +418,20 @@ export function MyPage({
           </section>
 
           <div className="tabs mypage-tabs">
-            {EDITABLE.map((k) => (
-              <button key={k} className={`tab ${kind === k ? 'is-active' : ''}`} onClick={() => setKind(k)}>
-                {kindLabel(lang, k, 'short')}
-              </button>
-            ))}
+            {KINDS.map((k) => {
+              const locked = !EDITABLE.includes(k)
+              return (
+                <button
+                  key={k}
+                  className={`tab ${kind === k ? 'is-active' : ''}`}
+                  title={locked ? t('myPageReadOnly') : undefined}
+                  onClick={() => setKind(k)}
+                >
+                  {locked ? '🔒 ' : ''}
+                  {kindLabel(lang, k, 'short')}
+                </button>
+              )
+            })}
           </div>
           {savedAt && <p className="mypage-saved">{t('saved')}</p>}
           {notice && <p className="notice">{notice}</p>}
@@ -429,6 +441,7 @@ export function MyPage({
             kind={kind}
             charId={verified.charId}
             owned={char[kind].ids}
+            readOnly={!EDITABLE.includes(kind)}
             onSave={save}
           />
         </>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { type Character, type Item, type Kind, type Source } from '../api'
+import { KIND_INFO, type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
 import { UNAVAILABLE_TYPES, typeLabel } from '../sources'
 import type { Member } from '../store'
@@ -161,8 +161,12 @@ export function Matrix({
       {LODESTONE_HIDDEN.includes(kind) && (
         <p className="notice">
           {t('matrixNotice')}{' '}
-          <a href="https://ffxivcollect.com" target="_blank" rel="noreferrer">
-            ffxivcollect.com
+          <a
+            href={`https://ffxivcollect.com/${KIND_INFO[kind].path}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t('openOnCollect', { what: kindLabel(lang, kind) })}
           </a>
         </p>
       )}

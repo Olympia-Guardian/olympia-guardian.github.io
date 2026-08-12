@@ -188,9 +188,10 @@ const STR = {
   sortGame: { fr: 'Ordre du jeu', en: 'Game order' },
   onlyMissing: { fr: 'Seulement les manquants', en: 'Missing only' },
   matrixNotice: {
-    fr: "Le Lodestone n'expose pas cette collection : chacun la coche sur son profil FFXIV Collect (connexion Discord), et elle apparaît ici à la synchro suivante →",
-    en: 'The Lodestone does not expose this collection: check it on your FFXIV Collect profile (Discord login) and it shows up here on the next sync →',
+    fr: "Le Lodestone n'expose pas cette collection : chacun la coche sur FFXIV Collect (connexion Discord), et elle apparaît ici à la synchro suivante →",
+    en: 'The Lodestone does not expose this collection: check it on FFXIV Collect (Discord login) and it shows up here on the next sync →',
   },
+  openOnCollect: { fr: 'ouvrir « {what} » sur FFXIV Collect ↗', en: 'open "{what}" on FFXIV Collect ↗' },
   itemsCount1: { fr: '{n} objet', en: '{n} item' },
   itemsCountN: { fr: '{n} objets', en: '{n} items' },
   missingCol: { fr: 'Manque à', en: 'Missing' },

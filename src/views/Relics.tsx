@@ -534,7 +534,7 @@ function SeriesCard({
       {ready.length > 1 && steps === 1 && costSteps?.[0] && costSteps[0].materials.length > 0 && (
         <p className="relic-step-mats relic-single-cost">
           <span className="relic-remaining-label">{t(perKey)}</span>{' '}
-          {matsText(costSteps[0].materials, lang)} {guideLink(costSteps[0].url)}
+          {matsText(costSteps[0].materials, lang)} {guideLink(costSteps[0])}
         </p>
       )}
 

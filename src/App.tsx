@@ -192,65 +192,14 @@ export default function App() {
             ))}
           </nav>
           <div className="topbar-actions">
-            {(groups.length > 0 || groupHash !== null) && (
-              <select
-                className="focus-select"
-                value={currentGroupIdx >= 0 ? String(currentGroupIdx) : ''}
-                onChange={(e) => onGroupAction(e.target.value)}
-                title={t('groupsTitle')}
-              >
-                {currentGroupIdx < 0 && <option value="">📁 {t('groupUnsaved')}</option>}
-                {groups.map((g, i) => (
-                  <option key={g.hash} value={i}>
-                    📁 {g.name}
-                  </option>
-                ))}
-                {groupHash && currentGroupIdx < 0 && <option value="__save">{t('groupSave')}</option>}
-                {currentGroupIdx >= 0 && <option value="__forget">{t('groupForget')}</option>}
-              </select>
-            )}
-            {ready.length > 1 && (
-              <select
-                className="focus-select"
-                value={focusId ?? ''}
-                onChange={(e) => setFocusId(e.target.value ? Number(e.target.value) : null)}
-                title={t('focusTitle')}
-              >
-                <option value="">{t('wholeGroup')}</option>
-                {ready.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {t('justMe', { name: m.data.name.split(' ')[0] })}
-                  </option>
-                ))}
-              </select>
-            )}
-            {!hasRoom && members.length > 0 && (
-              <button className="btn btn-ghost" onClick={room.enable} title={t('enableSyncTitle')}>
-                {t('enableSync')}
-              </button>
-            )}
-            {hasRoom && (
-              <span className={`sync-badge sync-${room.status}`} title={syncTitle}>
-                ● {room.status === 'error' ? t('syncKo') : t('syncOn')}
-                <button
-                  className="icon-btn"
-                  title={t('syncOffTitle')}
-                  onClick={() => {
-                    if (confirm(t('syncOffConfirm'))) room.disable()
-                  }}
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {members.length > 0 && (
-              <button className="btn btn-ghost" onClick={copyLink}>
-                {copied ? t('copied') : t(members.length > 1 ? 'copyLink' : 'copyLinkSolo')}
-              </button>
-            )}
-            {!auth.user && (
+            {!auth.user ? (
               <button className="btn btn-ghost" onClick={auth.login} title={t('loginIntro')}>
-                {t('loginDiscord')}
+                👤 {t('loginShort')}
+              </button>
+            ) : (
+              <button className="btn btn-ghost account-btn" onClick={() => setTab('mypage')} title={t('myPage')}>
+                {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
+                {auth.user.name}
               </button>
             )}
             <div className="lang-switch" role="group" aria-label="Language">
@@ -289,6 +238,68 @@ export default function App() {
         <div className="layout">
           <RosterBar
             members={members}
+            controls={
+              <div className="sidebar-controls">
+                {(groups.length > 0 || groupHash !== null) && (
+                  <select
+                    value={currentGroupIdx >= 0 ? String(currentGroupIdx) : ''}
+                    onChange={(e) => onGroupAction(e.target.value)}
+                    title={t('groupsTitle')}
+                  >
+                    {currentGroupIdx < 0 && <option value="">📁 {t('groupUnsaved')}</option>}
+                    {groups.map((g, i) => (
+                      <option key={g.hash} value={i}>
+                        📁 {g.name}
+                      </option>
+                    ))}
+                    {groupHash && currentGroupIdx < 0 && (
+                      <option value="__save">{t('groupSave')}</option>
+                    )}
+                    {currentGroupIdx >= 0 && <option value="__forget">{t('groupForget')}</option>}
+                  </select>
+                )}
+                {ready.length > 1 && (
+                  <select
+                    value={focusId ?? ''}
+                    onChange={(e) => setFocusId(e.target.value ? Number(e.target.value) : null)}
+                    title={t('focusTitle')}
+                  >
+                    <option value="">{t('wholeGroup')}</option>
+                    {ready.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {t('justMe', { name: m.data.name.split(' ')[0] })}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <div className="sidebar-controls-row">
+                  {!hasRoom && members.length > 0 && (
+                    <button className="btn btn-ghost btn-mini" onClick={room.enable} title={t('enableSyncTitle')}>
+                      {t('enableSync')}
+                    </button>
+                  )}
+                  {hasRoom && (
+                    <span className={`sync-badge sync-${room.status}`} title={syncTitle}>
+                      ● {room.status === 'error' ? t('syncKo') : t('syncOn')}
+                      <button
+                        className="icon-btn"
+                        title={t('syncOffTitle')}
+                        onClick={() => {
+                          if (confirm(t('syncOffConfirm'))) room.disable()
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {members.length > 0 && (
+                    <button className="btn btn-ghost btn-mini" onClick={copyLink} title={t('copyLink')}>
+                      {copied ? t('copied') : '🔗 ' + t('copyLinkSolo')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            }
             focusId={focusId}
             absent={absent}
             collapsed={rosterCollapsed}

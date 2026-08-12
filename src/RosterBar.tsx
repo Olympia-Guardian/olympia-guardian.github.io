@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { KINDS, parseLodestoneId } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
@@ -110,6 +110,7 @@ function PlayerCard({
 
 export function RosterBar({
   members,
+  controls,
   focusId,
   absent,
   collapsed,
@@ -121,6 +122,7 @@ export function RosterBar({
   onRefresh,
 }: {
   members: Member[]
+  controls?: ReactNode
   focusId: number | null
   absent: number[]
   collapsed: boolean
@@ -206,6 +208,7 @@ export function RosterBar({
           «
         </button>
       </div>
+      {controls}
       {members.map((m) => (
         <PlayerCard
           key={m.id}

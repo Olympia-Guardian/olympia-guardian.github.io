@@ -104,6 +104,7 @@ const STR = {
   // Comptes & Ma Page
   myPage: { fr: 'Ma Page', en: 'My Page' },
   loginDiscord: { fr: 'Se connecter avec Discord', en: 'Sign in with Discord' },
+  loginShort: { fr: 'Connexion', en: 'Sign in' },
   loginIntro: {
     fr: 'Connecte-toi pour lier ton personnage et renseigner directement tes collections (cartes, orchestrion, magie bleue, accessoires) — sans compte FFXIV Collect.',
     en: 'Sign in to link your character and fill in your collections directly (cards, orchestrion, blue magic, accessories) — no FFXIV Collect account needed.',

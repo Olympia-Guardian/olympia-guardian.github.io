@@ -141,6 +141,34 @@ button:focus-visible {
   font-size: 16px;
 }
 
+/* contrôles de groupe dans le panneau d'équipe */
+.sidebar-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-controls select {
+  width: 100%;
+}
+
+.sidebar-controls-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-btn img {
+  border-radius: 50%;
+}
+
 .rail-face {
   border-radius: 50%;
   border: 2px solid var(--surface);

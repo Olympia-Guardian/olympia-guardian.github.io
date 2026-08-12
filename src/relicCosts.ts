@@ -22,7 +22,7 @@ const CANON: Record<string, { fr: string; en: string }> = {
   'wolf-marks': { fr: 'marques de loup', en: 'Wolf Marks' },
   collectables: { fr: 'collectionnables (tous paliers)', en: 'collectables (all tiers)' },
   eclipticite: { fr: "morceaux d'écliptite", en: 'Eclipticite' },
-  'final-fixative': { fr: 'fixatifs ultimes', en: 'Final Fixatives' },
+  'final-fixative': { fr: 'agents fixants ultimes', en: 'Final Fixatives' },
   'hydatos-cr': { fr: 'cristaux Hydatos', en: 'Hydatos Crystals' },
   'eureka-frag': { fr: "fragments d'Eurêka", en: 'Eureka Fragments' },
 }
@@ -52,6 +52,9 @@ export interface SeriesCosts {
   perPiece?: Material[]
   /** Guide de la série (utilisé quand l'étape n'a pas le sien). */
   url?: string
+  /** Quand les « étapes » sont en réalité des séries venant de contenus
+   *  distincts (donjons sans fond) : libellé de provenance par étape. */
+  stepLabels?: { fr: string; en: string }[]
 }
 
 /** Étapes effectives d'une série (perPiece → répliqué sur chaque étape dérivée). */
@@ -112,13 +115,13 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
         ],
       },
       { url: ZOD2, materials: [m(3, 'lymphes de Thavnair (20 poétiques pièce)', 'Thavnairian Mist (20 poetics each)')] },
-      { url: ZOD2, materials: [m(12, 'atmas (ALÉA 2.x)', 'Atmas (ARR FATEs)')] },
+      { url: ZOD2, materials: [m(12, 'âtmas (ALÉA 2.x)', 'Atmas (ARR FATEs)')] },
       { url: ZOD3, materials: [m(9, 'tomes des chroniques (100 poétiques pièce)', 'Chronicle books (100 poetics each)')] },
       {
         url: ZOD4,
         materials: [
           m(1, 'parchemin stellaire', 'Star Scroll'),
-          m(3, 'encres enchantées HQ (25 poétiques pièce)', 'HQ Enchanted Ink (25 poetics each)'),
+          m(3, 'encres enchantées de haute qualité (25 poétiques pièce)', 'Superior Enchanted Ink (25 poetics each)'),
           m(75, 'alexandrites', 'Alexandrite'),
         ],
       },
@@ -126,7 +129,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       {
         url: ZOD6,
         materials: [
-          m(800, 'mémoquartz poétiques', 'Tomestones of Poetics', 'poetics', 'currency'),
+          m(800, 'mémoquartz allagois poétiques', 'Tomestones of Poetics', 'poetics', 'currency'),
           m(80000, 'sceaux de grande compagnie', 'Grand Company seals', 'gc-seals', 'currency'),
           m(500000, 'gils', 'gil', 'gil', 'currency'),
           m(8, 'objets craftés HQ (tarte, étoffe, bague…)', 'HQ crafted items (pie, cloth, ring…)'),
@@ -150,9 +153,9 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       {
         url: ANI2,
         materials: [
-          m(1, 'mesure de caoutchouc enchanté', 'Enchanted Rubber'),
+          m(1, 'caoutchouc enchanté', 'Enchanted Rubber'),
           m(1, "fiole d'agent solidifiant allagois supérieur", 'Fast-drying Carboncoat'),
-          m(1, 'pot de catalyseur allagois supérieur', 'Divine Water catalyst'),
+          m(1, 'eaux divines', 'Divine Water catalyst'),
           m(1, "bouteille d'eau divine", 'Divine Water'),
         ],
       },
@@ -160,8 +163,8 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       {
         url: ANI3,
         materials: [
-          m(50, 'umbrites dures (75 poétiques pièce)', 'Umbrite (75 poetics each)'),
-          m(50, 'sables cristallisés raffinés', 'Crystal Sand'),
+          m(50, 'roches ombrales dures (75 poétiques pièce)', 'Umbrite (75 poetics each)'),
+          m(50, 'sables de cristal', 'Crystal Sand'),
         ],
       },
       { url: ANI3, materials: [m(50, 'agrégats résonnants (40 poétiques pièce)', 'Singing Clusters (40 poetics each)')] },
@@ -173,14 +176,14 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   // ---------------------------------------------------------- 4.x — Eurêka
   'Eureka Weapons': {
     steps: [
-      { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(4, 'cristaux Anémos', 'Anemos Crystals')] },
-      { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(8, 'cristaux Anémos', 'Anemos Crystals')] },
-      { url: EUR1, materials: [m(16, 'cristaux instables', 'Unstable Crystals'), m(12, 'cristaux Anémos', 'Anemos Crystals')] },
+      { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(4, 'cristaux Anemos', 'Anemos Crystals')] },
+      { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(8, 'cristaux Anemos', 'Anemos Crystals')] },
+      { url: EUR1, materials: [m(16, 'cristaux instables', 'Unstable Crystals'), m(12, 'cristaux Anemos', 'Anemos Crystals')] },
       {
         url: EUR1,
         materials: [
           m(24, 'cristaux instables', 'Unstable Crystals'),
-          m(16, 'cristaux Anémos', 'Anemos Crystals'),
+          m(16, 'cristaux Anemos', 'Anemos Crystals'),
           m(4, 'plumes de Pazuzu', 'Pazuzu Feathers'),
         ],
       },
@@ -212,23 +215,23 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       {
         url: `${WIKI}/Resistance_Weapons`,
         materials: [
-          m(20, 'souvenirs torturés', 'Tortured Memories'),
-          m(20, 'souvenirs affligés', 'Sorrowful Memories'),
-          m(20, 'souvenirs déchirants', 'Harrowing Memories'),
+          m(20, 'amas mémoriels de tourment', 'Tortured Memories'),
+          m(20, 'amas mémoriels de peine', 'Sorrowful Memories'),
+          m(20, 'amas mémoriels de terreur', 'Harrowing Memories'),
         ],
       },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(6, 'souvenirs amers', 'Bitter Memories')] },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'souvenirs détestables', 'Loathsome Memories')] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(6, 'amas mémoriels de sauvagerie', 'Bitter Memories')] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'amas mémoriels de répugnance', 'Loathsome Memories')] },
       { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'artefacts anciens', 'Timeworn Artifacts')] },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'émotions brutes', 'Raw Emotions')] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'cristaux du volcan émotionnel', 'Raw Emotions')] },
     ],
   },
 
   // ----------------------------------------------------- 6.x — Manderville
   'Manderville Weapons': {
     steps: [
-      { url: MAND, materials: [m(3, 'morceaux de météorite rarissime (500 poétiques pièce)', 'Manderium Meteorites (500 poetics each)')] },
-      { url: MAND, materials: [m(3, 'morceaux de chondrite rarissime (500 poétiques pièce)', 'Complementary Chondrites (500 poetics each)')] },
+      { url: MAND, materials: [m(3, 'météorites rarissimes (500 poétiques pièce)', 'Manderium Meteorites (500 poetics each)')] },
+      { url: MAND, materials: [m(3, 'chondrites rarissimes (500 poétiques pièce)', 'Complementary Chondrites (500 poetics each)')] },
       { url: MAND, materials: [m(3, 'achondrites rarissimes (500 poétiques pièce)', 'Amplifying Achondrites (500 poetics each)')] },
       { url: MAND, materials: [m(3, 'cristallites cosmiques (500 poétiques pièce)', 'Cosmic Crystallites (500 poetics each)')] },
     ],
@@ -239,15 +242,15 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     steps: [
       {
         url: PHA1,
-        materials: [m(1500, 'mémoquartz héliologiques (3 lunulites)', 'Tomestones of Heliometry (3 Lunulites)', 'heliometry', 'currency')],
+        materials: [m(1500, 'mémoquartz allagois héliologiques (3 lunulites)', 'Tomestones of Heliometry (3 Lunulites)', 'heliometry', 'currency')],
         once: [m(18, 'demi-âtmas (ALÉA/affrontements du Croissant occulte)', 'Demiatmas (Occult Crescent FATEs/CEs)')],
       },
       {
         url: PHA2,
         materials: [m(3, 'ombralites (500 héliologiques pièce)', 'Umbralites (500 Heliometry each)')],
         once: [
-          m(1, 'bloc de colle de rroneek (300 000 gils)', 'Rroneek Glue (300,000 gil)'),
-          m(1, "fragment de fer météorique d'Ut'ohmu (600 gemmes bicolores)", "Ut'ohmu Siderite (600 bicolor gems)"),
+          m(1, 'colle de rroneek (300 000 gils)', 'Rroneek Glue (300,000 gil)'),
+          m(1, "fer météorique d'Ut'ohmu (600 gemmes bicolores)", "Ut'ohmu Siderite (600 bicolor gems)"),
           m(3, 'matières sombres artificielles α/β/γ', 'Synthetic Dark Matter α/β/γ'),
         ],
       },
@@ -257,7 +260,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
         once: [
           m(1, 'argile ombrale (500 000 gils)', 'Umbral Clay (500,000 gil)'),
           m(3, 'composants additifs aspectés (craft)', 'Aspected additive components (crafted)'),
-          m(1200, 'morceaux de pâte de cristal', 'Crystal Paste'),
+          m(1200, 'pâtes de cristal', 'Crystal Paste'),
         ],
       },
       {
@@ -274,6 +277,22 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
         ],
       },
       { url: PHA4, materials: [m(1, "morceau d'écliptite (cristal de savoir via quête)", 'Eclipticite (Knowledge Crystal via quest)', 'eclipticite')] },
+    ],
+  },
+
+  // ------------------------------------------------------ Donjons sans fond
+  // Ici les « étapes » ne sont pas des paliers d'amélioration : chaque groupe
+  // de 21 armes vient d'un donjon sans fond précis.
+  'Deep Dungeon Weapons': {
+    url: `${WIKI}/Deep_Dungeon`,
+    stepLabels: [
+      { fr: 'Armes padjales — le Palais des morts', en: 'Padjali — Palace of the Dead' },
+      { fr: 'Armes kinna — le Palais des morts (sous-sol 100)', en: 'Kinna — Palace of the Dead (floor 100)' },
+      { fr: 'Armes empyréennes — le Pilier des Cieux', en: 'Empyrean — Heaven-on-High' },
+      { fr: 'Armes Orthos — Eurêka Orthos', en: 'Orthos — Eureka Orthos' },
+      { fr: 'Armes Enaretos — Eurêka Orthos (améliorées)', en: 'Enaretos — Eureka Orthos (upgraded)' },
+      { fr: 'Armes de la Lumière originelle — le Sanctuaire des pèlerins', en: "First Light — Pilgrim's Traverse" },
+      { fr: 'Armes sacramentelles — le Sanctuaire des pèlerins (améliorées)', en: "Sacramental — Pilgrim's Traverse (upgraded)" },
     ],
   },
 
@@ -370,7 +389,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       { materials: [m(400, 'cristaux instables', 'Protean Crystals')] },
     ],
   },
-  'Eureka Anemos Armor': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(150, 'cristaux Anémos', 'Anemos Crystals')] },
+  'Eureka Anemos Armor': { url: `${WIKI}/Anemos_Gear`, perPiece: [m(150, 'cristaux Anemos', 'Anemos Crystals')] },
   'Elemental Armor': {
     url: `${WIKI}/Elemental_Armor`,
     steps: [
@@ -403,7 +422,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       },
       {
         materials: [
-          m(1, 'secret du coureur bozjien (500–999 pièces bozjiennes)', "Bozjan Runner's Secrets (500–999 Bozjan Coins)"),
+          m(1, 'matériaux ultralégers bozjiens (500–999 pièces bozjiennes)', "Bozjan Runner's Secrets (500–999 Bozjan Coins)"),
         ],
       },
     ],
@@ -414,7 +433,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       { materials: [m(1, 'drop de Delubrum Reginae', 'Delubrum Reginae drop', undefined, 'drop')] },
       {
         materials: [
-          m(1, 'secret du coureur ordonné (Delubrum sauvage, ou 10 plaques)', "Orderly Runner's Secrets (DR Savage, or 10 platings)"),
+          m(1, 'matériaux ultralégers du verdict des Juges (Delubrum sauvage, ou 10 plaques)', "Orderly Runner's Secrets (DR Savage, or 10 platings)"),
           m(1, 'pièce bozjienne augmentée correspondante', 'matching Augmented Bozjan piece'),
         ],
       },
@@ -422,7 +441,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
   "Blade's Armor": {
     url: `${WIKI}/Blade's_Armor`,
-    perPiece: [m(7, 'pièces de platine bozjiennes (moyenne — 6 à 9 selon la pièce)', 'Bozjan Platinum Coins (avg — 6–9 per piece)', 'boz-platinum', 'currency')],
+    perPiece: [m(7, 'pièces bozjiennes en platine (moyenne — 6 à 9 selon la pièce)', 'Bozjan Platinum Coins (avg — 6–9 per piece)', 'boz-platinum', 'currency')],
   },
 
   // --------------------------------------------------- Armures du Croissant
@@ -438,14 +457,14 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       },
       {
         materials: [
-          m(3, 'argents éthérés (1 200 argent pièce)', 'Aetherspun Silver (1,200 silver each)'),
-          m(3, 'fixatifs éthérés (1 600 or pièce)', 'Aetherial Fixative (1,600 gold each)'),
+          m(3, 'fils magiques argentés (1 200 argent pièce)', 'Aetherspun Silver (1,200 silver each)'),
+          m(3, 'agents fixants (1 600 or pièce)', 'Aetherial Fixative (1,600 gold each)'),
         ],
       },
       {
         materials: [
-          m(3, 'ors éthérés', 'Aetherspun Gold'),
-          m(6, 'fixatifs X (60 sanguinites pièce)', 'X-Fixative (60 Sanguinite each)'),
+          m(3, 'fils magiques dorés', 'Aetherspun Gold'),
+          m(6, 'agents fixants X (60 sanguinites pièce)', 'X-Fixative (60 Sanguinite each)'),
         ],
       },
     ],
@@ -453,19 +472,19 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   'Phantom Vision': {
     url: `${WIKI}/Phantom_Armor`,
     steps: [
-      { materials: [m(4000, "oboles d'argent (North Horn)", 'Silver Obols (North Horn)', 'obols', 'currency')] },
+      { materials: [m(4000, 'pièces de nickel des douze cités (North Horn)', 'Enlightenment Silver Obols (North Horn)', 'obols', 'currency')] },
       {
         materials: [
-          m(3, 'fixatifs ultimes (ou échange Arcanaut +1)', "Final Fixatives (or Arcanaut's +1 trade-in)", 'final-fixative'),
+          m(3, 'agents fixants ultimes (ou échange Arcanaut +1)', "Final Fixatives (or Arcanaut's +1 trade-in)", 'final-fixative'),
         ],
       },
       {
         materials: [
-          m(4, 'fixatifs ultimes (ou échange Arcanaut +2)', "Final Fixatives (or Arcanaut's +2 trade-in)", 'final-fixative'),
+          m(4, 'agents fixants ultimes (ou échange Arcanaut +2)', "Final Fixatives (or Arcanaut's +2 trade-in)", 'final-fixative'),
         ],
       },
       {
-        materials: [m(8, 'fixatifs ultimes (Tour fourchue)', 'Final Fixatives (Forked Tower)', 'final-fixative')],
+        materials: [m(8, 'agents fixants ultimes (Tour fourchue)', 'Final Fixatives (Forked Tower)', 'final-fixative')],
       },
     ],
   },

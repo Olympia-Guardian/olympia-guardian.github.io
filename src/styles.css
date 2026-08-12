@@ -2477,7 +2477,7 @@ a.player-name:hover {
 
 .relic-exp-row {
   display: grid;
-  grid-template-columns: 1fr 70px auto 46px;
+  grid-template-columns: 1fr 70px 52px 56px;
   align-items: center;
   gap: 10px;
   font-size: 12px;
@@ -2627,4 +2627,21 @@ a.player-name:hover {
 .relic-bulk {
   font-size: 11px;
   padding: 2px 9px;
+}
+
+
+/* pourcentages : colonne fixe alignée à droite, chiffres tabulaires */
+.relic-player .relic-remaining {
+  min-width: 58px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.relic-exp-head .relic-remaining,
+.relic-exp-head .relic-done {
+  min-width: 58px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }

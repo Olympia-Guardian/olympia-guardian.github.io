@@ -93,7 +93,11 @@ function RelicPanel({
         <span className="chip chip-patch">{lang === 'fr' ? info.name : info.key}</span>
         {steps > 1 && (
           <span className="chip chip-patch">
-            {t(info.category === 'armor' ? 'relicTier' : 'relicStep', { n: step + 1 })}
+            {costs?.stepLabels?.[step]
+              ? lang === 'fr'
+                ? costs.stepLabels[step].fr
+                : costs.stepLabels[step].en
+              : t(info.category === 'armor' ? 'relicTier' : 'relicStep', { n: step + 1 })}
           </span>
         )}
         <span className={`chip ${owned ? 'chip-owned' : 'chip-type'}`}>
@@ -153,6 +157,12 @@ function SeriesCard({
   // Pour une armure l'unité est la pièce, et une étape est un palier.
   const isArmor = info.category === 'armor'
   const stepKey = isArmor ? 'relicTier' : 'relicStep'
+  // Donjons sans fond : chaque « étape » est une série d'armes d'un donjon
+  // précis — on affiche sa provenance plutôt qu'un numéro.
+  const stepLabel = (i: number) => {
+    const l = costs?.stepLabels?.[i]
+    return l ? (lang === 'fr' ? l.fr : l.en) : t(stepKey, { n: i + 1 })
+  }
   const catKey =
     info.category === 'weapons'
       ? 'relCatWeapons'
@@ -231,7 +241,7 @@ function SeriesCard({
                         <span className="relic-step-head">
                           {steps > 1 && (
                             <b>
-                              {t(stepKey, { n: i + 1 })} ·{' '}
+                              {stepLabel(i)} ·{' '}
                               <span className={c >= list.length ? 'relic-done' : ''}>
                                 {c}/{list.length}
                               </span>
@@ -330,7 +340,7 @@ function SeriesCard({
                 return (
                   <tr key={i}>
                     <td className="relic-step-info">
-                      <b>{t(stepKey, { n: i + 1 })}</b>
+                      <b>{stepLabel(i)}</b>
                       {stepCost && stepCost.materials.length > 0 && (
                         <span className="relic-step-mats">
                           {' '}
@@ -412,7 +422,9 @@ function SeriesCard({
 
 function pct(count: number, total: number, lang: string): string {
   const v = total > 0 ? (count / total) * 100 : 0
-  return `${v.toFixed(v >= 10 ? 0 : 1).replace('.', lang === 'fr' ? ',' : '.')} %`
+  // Toujours une décimale (sauf 100) : même largeur partout, ça s'aligne.
+  const sv = v >= 100 ? '100' : v.toFixed(1)
+  return `${sv.replace('.', lang === 'fr' ? ',' : '.')} %`
 }
 
 /** Vue de groupe : uniquement l'avancement. Le détail (paliers, matériaux,

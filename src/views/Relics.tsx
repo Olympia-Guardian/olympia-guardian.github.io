@@ -180,9 +180,29 @@ function SeriesCard({
         ? 'relicPerTool'
         : 'relicPerPiece'
 
+  // Armures : pièces regroupées par rôle (l'ordre du jeu), puis par
+  // emplacement. Les sets propres à un job (Eurêka, Idéalistes) n'ont pas de
+  // rôle dans leur nom : on les regroupe par set via le nom anglais, qui
+  // commence toujours par le nom du set.
+  const ROLE_ORDER = ['Fending', 'Maiming', 'Striking', 'Scouting', 'Aiming', 'Casting', 'Healing']
+  const sortArmor = (list: Relic[]): Relic[] => {
+    if (!isArmor) return list
+    const role = (r: Relic) =>
+      ROLE_ORDER.indexOf(
+        r.nameEn.match(/ of (Fending|Maiming|Striking|Scouting|Aiming|Casting|Healing)\b/)?.[1] ?? '',
+      )
+    return [...list].sort((a, b) => {
+      const ra = role(a)
+      const rb = role(b)
+      if (ra !== rb) return ra - rb
+      if (ra === -1) return a.nameEn.localeCompare(b.nameEn) || a.order - b.order
+      return a.order - b.order
+    })
+  }
+
   // relics de chaque étape (l'ordre API est trié étape par étape)
   const stepRelics = Array.from({ length: steps }, (_, i) =>
-    relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1),
+    sortArmor(relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)),
   )
   const ownedInStep = (memberId: number, i: number) => {
     const owned = ownedSets.get(memberId)!

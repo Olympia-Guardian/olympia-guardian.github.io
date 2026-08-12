@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { KINDS, type Character, type Item, type Kind, type Source } from '../api'
+import { PLANNING_KINDS, type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n, type StrKey } from '../i18n'
 import {
   PER_DUTY_TYPES,
@@ -47,6 +47,13 @@ const TILE_KEYS: Record<Kind, StrKey> = {
   minions: 'tileMinions',
   cards: 'tileCards',
   fashions: 'tileFashions',
+  facewear: 'tileFacewear',
+  hairstyles: 'tileHairstyles',
+  outfits: 'tileOutfits',
+  armoires: 'tileArmoires',
+  bardings: 'tileBardings',
+  emotes: 'tileEmotes',
+  frames: 'tileFrames',
   orchestrions: 'tileOrchestrions',
   spells: 'tileSpells',
 }
@@ -160,7 +167,7 @@ export function Planning({
 
   const runs = useMemo(() => {
     const map = new Map<string, Run>()
-    const kinds: Kind[] = kindFilter === 'all' ? KINDS : [kindFilter]
+    const kinds: Kind[] = kindFilter === 'all' ? PLANNING_KINDS : [kindFilter]
     // En vue « juste pour moi », un seuil > 1 gardé d'avant viderait tout.
     const minM = Math.min(minMissing, ready.length)
     for (const kind of kinds) {
@@ -256,7 +263,7 @@ export function Planning({
   }, [runs, search, lang])
 
   const stats = useMemo(() => {
-    const counts = Object.fromEntries(KINDS.map((k) => [k, new Set<number>()])) as Record<
+    const counts = Object.fromEntries(PLANNING_KINDS.map((k) => [k, new Set<number>()])) as Record<
       Kind,
       Set<number>
     >
@@ -272,7 +279,7 @@ export function Planning({
     <div className="view">
       <div className="stat-row">
         <StatTile value={stats.runs} label={t('tileRuns')} />
-        {(kindFilter === 'all' ? KINDS : [kindFilter]).map((k) => (
+        {(kindFilter === 'all' ? PLANNING_KINDS : [kindFilter]).map((k) => (
           <StatTile key={k} value={stats.counts[k].size} label={t(TILE_KEYS[k])} />
         ))}
       </div>
@@ -288,7 +295,7 @@ export function Planning({
           onChange={(e) => setKindFilter(e.target.value as KindFilter)}
         >
           <option value="all">{t('allCollections')}</option>
-          {KINDS.map((k) => (
+          {PLANNING_KINDS.map((k) => (
             <option key={k} value={k}>
               {kindLabel(lang, k)}
             </option>

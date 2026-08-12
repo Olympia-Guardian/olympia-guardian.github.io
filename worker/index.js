@@ -2,10 +2,10 @@
 //
 // Personnages : lus directement sur le Lodestone (profil + montures +
 // mascottes, user-agent mobile → les noms sont dans le HTML), mis en cache en
-// D1 (1 h). Les collections invisibles du Lodestone (cartes, accessoires,
-// orchestrion, magie bleue, reliques) sont amorcées UNE FOIS depuis FFXIV
-// Collect puis vivent chez nous (elles seront modifiables via « Ma Page »
-// une fois les comptes en place).
+// D1 (1 h). Les onze autres collections (cartes, mode, tenues, armoire,
+// bardes, émotes, portraits, orchestrion, magie bleue, reliques) sont
+// invisibles du Lodestone : elles sont amorcées UNE FOIS depuis FFXIV Collect
+// puis vivent chez nous, modifiables depuis « Ma Page ».
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +20,25 @@ const CATALOG_BASE = 'https://olympia-guardian.github.io/data/'
 const COLLECT_API = 'https://ffxivcollect.com/api'
 
 const CHAR_TTL = 3_600_000 // 1 h
-const HIDDEN_KINDS = ['cards', 'fashions', 'orchestrions', 'spells']
+// Seules les montures et les mascottes sont lisibles sur le Lodestone : tout le
+// reste se coche dans « Ma Page ». Copie de KINDS/HIDDEN_KINDS (src/api.ts) —
+// les deux listes doivent rester synchronisées.
+const ALL_KINDS = [
+  'mounts',
+  'minions',
+  'cards',
+  'fashions',
+  'facewear',
+  'hairstyles',
+  'outfits',
+  'armoires',
+  'bardings',
+  'emotes',
+  'frames',
+  'orchestrions',
+  'spells',
+]
+const HIDDEN_KINDS = ALL_KINDS.filter((k) => k !== 'mounts' && k !== 'minions')
 const MAX_DOC_BYTES = 16_384
 const MAX_MEMBERS = 100
 
@@ -36,18 +54,23 @@ function norm(s) {
 
 async function catalogs() {
   if (catalogCache && Date.now() - catalogAt < 6 * 3_600_000) return catalogCache
-  const kinds = ['mounts', 'minions', 'cards', 'fashions', 'orchestrions', 'spells']
   const maps = {}
   const totals = {}
-  for (const kind of kinds) {
+  for (const kind of ALL_KINDS) {
     const res = await fetch(`${CATALOG_BASE}${kind}.json`)
-    if (!res.ok) throw new Error(`catalogue ${kind} indisponible`)
+    // Un catalogue absent (déploiement en cours) ne doit pas priver tout le
+    // monde de sa fiche : on le compte à 0 et on continue.
+    if (!res.ok) {
+      totals[kind] = 0
+      continue
+    }
     const items = await res.json()
     totals[kind] = items.length
     if (kind === 'mounts' || kind === 'minions') {
       maps[kind] = new Map(items.map((it) => [norm(it.nameEn), it.id]))
     }
   }
+  if (!maps.mounts || !maps.minions) throw new Error('catalogues montures/mascottes indisponibles')
   const relics = await fetch(`${CATALOG_BASE}relics.json`)
   totals.relics = relics.ok ? (await relics.json()).relics.length : 0
   catalogCache = { maps, totals }
@@ -160,7 +183,7 @@ async function applySeed(env, id, raw) {
   for (const kind of [...HIDDEN_KINDS, 'relics']) {
     const ids = doc[kind]
     if (ids === undefined) continue
-    if (!validIds(ids, 4000)) return false
+    if (!validIds(ids, 6000)) return false
     rows.push([id, kind, JSON.stringify([...new Set(ids)]), now])
   }
   if (rows.length === 0) return false
@@ -240,10 +263,7 @@ async function getCharacter(env, id, force) {
     last_parsed: new Date(char.updated).toISOString(),
     mounts: block('mounts', !!char.public_mounts),
     minions: block('minions', !!char.public_minions),
-    cards: block('cards'),
-    fashions: block('fashions'),
-    orchestrions: block('orchestrions'),
-    spells: block('spells'),
+    ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),
     relicIds: byKind.relics ?? [],
     needsSeed,
   }
@@ -479,7 +499,7 @@ async function putCollections(env, user, charId, raw) {
   for (const kind of [...HIDDEN_KINDS, 'relics']) {
     const ids = doc?.[kind]
     if (ids === undefined) continue
-    if (!validIds(ids, 4000)) return response('{"error":"invalid ids"}', 422)
+    if (!validIds(ids, 6000)) return response('{"error":"invalid ids"}', 422)
     rows.push([charId, kind, JSON.stringify([...new Set(ids)]), now])
   }
   if (rows.length === 0) return response('{"error":"nothing to update"}', 422)
@@ -550,7 +570,7 @@ export default {
       const id = Number(charMatch[1])
       if (charMatch[2] === '/seed' && req.method === 'POST') {
         const raw = await req.text()
-        if (raw.length > 131_072) return response('{"error":"too large"}', 413)
+        if (raw.length > 262_144) return response('{"error":"too large"}', 413)
         const ok = await applySeed(env, id, raw)
         return ok ? response('{"ok":true}') : response('{"error":"invalid seed"}', 422)
       }
@@ -558,7 +578,7 @@ export default {
         const user = await authenticate(env, req)
         if (!user) return response('{"error":"unauthorized"}', 401)
         const raw = await req.text()
-        if (raw.length > 131_072) return response('{"error":"too large"}', 413)
+        if (raw.length > 262_144) return response('{"error":"too large"}', 413)
         return putCollections(env, user, id, raw)
       }
       if (!charMatch[2] && req.method === 'GET') {

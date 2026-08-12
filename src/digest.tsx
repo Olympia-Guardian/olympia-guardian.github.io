@@ -8,7 +8,8 @@ type Ready = Member & { data: Character }
 // visite suivante on affiche le diff (« Eowyn +3 montures »). Local au
 // navigateur : chacun voit ce qui a changé depuis SA dernière visite.
 
-const SNAP_KEY = 'ogs.snapshot.v1'
+// v2 : sept collections de plus — repartir de zéro évite un digest « +N » massif
+const SNAP_KEY = 'ogs.snapshot.v2'
 
 interface Snapshot {
   at: number

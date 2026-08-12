@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  HIDDEN_KINDS,
   KINDS,
+  KIND_FAMILIES,
   fetchCharacter,
   invalidateCharacter,
   type Character,
@@ -23,7 +25,10 @@ import { Meter, TypeChip, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
 
 // Collections modifiables depuis « Ma Page » (le reste vient du Lodestone).
-const EDITABLE: Kind[] = ['cards', 'fashions', 'orchestrions', 'spells']
+const EDITABLE = HIDDEN_KINDS
+
+// Collections où le nom et l'obtention comptent plus que la vignette : liste.
+const LIST_KINDS: Kind[] = ['emotes', 'frames']
 
 type Auth = ReturnType<typeof useAuth>
 
@@ -326,11 +331,9 @@ function CardAlbum({
   )
 }
 
-/** Liste groupée par catégorie (orchestrion) : filtres façon Lodestone,
- *  numéro + nom + obtention + rouleau. */
-const ROLL_ICON = `${import.meta.env.BASE_URL}assets/roll.webp`
-
-function GroupedChecklist({
+/** Grille de vignettes. Si la collection a des catégories (armoire), le rail
+ *  de gauche évite de dérouler des milliers d'icônes d'un bloc. */
+function IconGrid({
   items,
   ids,
   onItemClick,
@@ -341,10 +344,11 @@ function GroupedChecklist({
 }) {
   const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
-  const allGroups = useMemo(() => {
+  const cats = useMemo(() => {
     const map = new Map<string, Item[]>()
-    for (const it of [...items].sort((a, b) => Number(a.num ?? a.order) - Number(b.num ?? b.order))) {
-      const g = (lang === 'fr' ? it.group : it.groupEn) ?? '—'
+    for (const it of items) {
+      const g = (lang === 'fr' ? it.group : it.groupEn) ?? ''
+      if (!g) continue
       const arr = map.get(g)
       if (arr) arr.push(it)
       else map.set(g, [it])
@@ -352,12 +356,34 @@ function GroupedChecklist({
     return [...map.entries()]
   }, [items, lang])
 
-  const groups = cat ? allGroups.filter(([g]) => g === cat) : allGroups
+  const shown = cat
+    ? items.filter((it) => ((lang === 'fr' ? it.group : it.groupEn) ?? '') === cat)
+    : items
 
+  const grid = (
+    <div className="relic-icons mypage-grid">
+      {shown.map((it) => {
+        const has = ids.has(it.id)
+        return (
+          <button
+            key={it.id}
+            className={`relic-icon mypage-tile ${has ? 'is-owned' : 'is-missing'}`}
+            title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
+            onClick={() => onItemClick(it)}
+          >
+            <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
+            {has && <span className="relic-badge">✓</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  if (cats.length === 0) return grid
   return (
-    <div className="cat-layout checklist">
+    <div className="cat-layout">
       <CatRail
-        entries={allGroups.map(([g, list]) => ({
+        entries={cats.map(([g, list]) => ({
           key: g,
           label: g,
           owned: list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0),
@@ -370,17 +396,75 @@ function GroupedChecklist({
         active={cat}
         onSelect={setCat}
       />
+      <div className="cat-content">{grid}</div>
+    </div>
+  )
+}
+
+/** Liste groupée par catégorie (orchestrion) : filtres façon Lodestone,
+ *  numéro + nom + obtention + rouleau. */
+const ROLL_ICON = `${import.meta.env.BASE_URL}assets/orchestrion_roll.jpg`
+
+function GroupedChecklist({
+  items,
+  ids,
+  onItemClick,
+  variant = 'orchestrion',
+}: {
+  items: Item[]
+  ids: Set<number>
+  onItemClick: (it: Item) => void
+  /** L'orchestrion affiche le rouleau à droite ; les autres, leur propre icône à gauche. */
+  variant?: 'orchestrion' | 'icon'
+}) {
+  const { lang } = useI18n()
+  const [cat, setCat] = useState<string | null>(null)
+  const allGroups = useMemo(() => {
+    const map = new Map<string, Item[]>()
+    for (const it of [...items].sort((a, b) => Number(a.num ?? a.order) - Number(b.num ?? b.order))) {
+      const g = (lang === 'fr' ? it.group : it.groupEn) ?? ''
+      const arr = map.get(g)
+      if (arr) arr.push(it)
+      else map.set(g, [it])
+    }
+    return [...map.entries()]
+  }, [items, lang])
+
+  const groups = cat ? allGroups.filter(([g]) => g === cat) : allGroups
+  // Collections sans catégorie (portraits) : ni rail ni en-tête de section.
+  const grouped = allGroups.length > 1 || allGroups[0]?.[0]
+
+  return (
+    <div className={`checklist ${grouped ? 'cat-layout' : ''}`}>
+      {grouped && (
+        <CatRail
+          entries={allGroups.map(([g, list]) => ({
+            key: g,
+            label: g,
+            owned: list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0),
+            total: list.length,
+          }))}
+          all={{
+            owned: items.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0),
+            total: items.length,
+          }}
+          active={cat}
+          onSelect={setCat}
+        />
+      )}
       <div className="cat-content checklist-groups">
       {groups.map(([group, list]) => {
         const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
         return (
           <section key={group} className="checklist-group">
-            <header className="album-page-head">
-              <b>{group}</b>
-              <span className={`mypage-count ${owned === list.length ? 'relic-done' : ''}`}>
-                {owned}/{list.length}
-              </span>
-            </header>
+            {grouped && (
+              <header className="album-page-head">
+                <b>{group}</b>
+                <span className={`mypage-count ${owned === list.length ? 'relic-done' : ''}`}>
+                  {owned}/{list.length}
+                </span>
+              </header>
+            )}
             <ul className="checklist-rows">
               {list.map((it) => {
                 const has = ids.has(it.id)
@@ -393,22 +477,40 @@ function GroupedChecklist({
                       <span className={`checklist-box ${has ? 'is-owned' : ''}`}>
                         {has ? '✓' : ''}
                       </span>
-                      {it.num !== undefined && (
+                      {variant === 'icon' && (
+                        <img
+                          className={`checklist-icon ${has ? '' : 'is-missing'}`}
+                          src={it.icon}
+                          alt=""
+                          width={28}
+                          height={28}
+                          loading="lazy"
+                          onError={onItemImgError}
+                        />
+                      )}
+                      {variant === 'orchestrion' && it.num !== undefined && (
                         <span className="checklist-num">{String(it.num).padStart(3, '0')}</span>
                       )}
-                      <span className="checklist-name">{localName(it, lang)}</span>
+                      <span className="checklist-name">
+                        {variant === 'icon' && it.itemName
+                          ? (lang === 'fr' ? it.itemName : (it.itemNameEn ?? it.itemName))
+                          : localName(it, lang)}
+                      </span>
+                      {it.command && <span className="chip chip-cmd">{it.command}</span>}
                       {it.patch && <span className="chip chip-patch">{it.patch}</span>}
                       <span className="checklist-src">
                         {it.sources[0] ? (lang === 'fr' ? it.sources[0].text : it.sources[0].textEn) : ''}
                       </span>
-                      <img
-                        className={`checklist-roll ${has ? '' : 'is-missing'}`}
-                        src={ROLL_ICON}
-                        alt=""
-                        width={26}
-                        height={26}
-                        loading="lazy"
-                      />
+                      {variant === 'orchestrion' && (
+                        <img
+                          className={`checklist-roll ${has ? '' : 'is-missing'}`}
+                          src={ROLL_ICON}
+                          alt=""
+                          width={26}
+                          height={26}
+                          loading="lazy"
+                        />
+                      )}
                     </button>
                   </li>
                 )
@@ -523,23 +625,10 @@ function CollectionEditor({
             <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} />
           ) : kind === 'spells' ? (
             <SpellBook items={items} ids={ids} onItemClick={handleItem} />
+          ) : LIST_KINDS.includes(kind) ? (
+            <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} variant="icon" />
           ) : (
-            <div className="relic-icons mypage-grid">
-              {items.map((it: Item) => {
-                const has = ids.has(it.id)
-                return (
-                  <button
-                    key={it.id}
-                    className={`relic-icon mypage-tile ${has ? 'is-owned' : 'is-missing'}`}
-                    title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
-                    onClick={() => handleItem(it)}
-                  >
-                    <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
-                    {has && <span className="relic-badge">✓</span>}
-                  </button>
-                )
-              })}
-            </div>
+            <IconGrid items={items} ids={ids} onItemClick={handleItem} />
           )}
         </div>
         {selected && (
@@ -769,21 +858,25 @@ export function MyPage({
             </p>
           </section>
 
-          <div className="tabs mypage-tabs">
-            {KINDS.map((k) => {
-              const locked = !EDITABLE.includes(k)
-              return (
-                <button
-                  key={k}
-                  className={`tab ${kind === k ? 'is-active' : ''}`}
-                  title={locked ? t('myPageReadOnly') : undefined}
-                  onClick={() => setKind(k)}
-                >
-                  {locked && <GiPadlock className="tab-lock" />} {kindLabel(lang, k, 'short')}
-                </button>
-              )
-            })}
-          </div>
+          <nav className="kind-bar mypage-tabs">
+            {KIND_FAMILIES.map((fam) => (
+              <span key={fam.key} className="kind-family">
+                {fam.kinds.map((k) => {
+                  const locked = !EDITABLE.includes(k)
+                  return (
+                    <button
+                      key={k}
+                      className={`kind-btn ${kind === k ? 'is-active' : ''}`}
+                      title={locked ? t('myPageReadOnly') : undefined}
+                      onClick={() => setKind(k)}
+                    >
+                      {locked && <GiPadlock className="tab-lock" />} {kindLabel(lang, k, 'short')}
+                    </button>
+                  )
+                })}
+              </span>
+            ))}
+          </nav>
           {notice && <p className="notice">{notice}</p>}
           <CollectionEditor
             key={`${verified.charId}-${kind}`}

@@ -137,6 +137,7 @@ const STR = {
   saveError: { fr: 'Sauvegarde impossible — réessaie.', en: 'Could not save — retry.' },
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
+  collections: { fr: 'Collections', en: 'Collections' },
   spellNo: { fr: 'N° {n}', en: 'No. {n}' },
   spellAspect: { fr: 'Aspect', en: 'Aspect' },
   spellDamage: { fr: 'Dégâts', en: 'Damage' },
@@ -242,6 +243,13 @@ const STR = {
   tileFashions: { fr: 'accessoires à récupérer', en: 'accessories to get' },
   tileOrchestrions: { fr: 'rouleaux à récupérer', en: 'rolls to get' },
   tileSpells: { fr: 'sorts à apprendre', en: 'spells to learn' },
+  tileFacewear: { fr: 'lunettes à récupérer', en: 'facewear to get' },
+  tileHairstyles: { fr: 'coiffures à récupérer', en: 'hairstyles to get' },
+  tileOutfits: { fr: 'tenues à récupérer', en: 'outfits to get' },
+  tileArmoires: { fr: "pièces d'armoire à récupérer", en: 'armoire pieces to get' },
+  tileBardings: { fr: 'bardes à récupérer', en: 'bardings to get' },
+  tileEmotes: { fr: 'émotes à récupérer', en: 'emotes to get' },
+  tileFrames: { fr: 'portraits à récupérer', en: 'portraits to get' },
   planningEmpty: { fr: 'Rien à farmer avec ces filtres — collection complète ? 🎉', en: 'Nothing to farm with these filters — collection complete? 🎉' },
   toLoot: { fr: '{n} à looter', en: '{n} to loot' },
   toLootTitle: {
@@ -354,7 +362,42 @@ const KIND_LABELS: Record<Kind, Record<'label' | 'one' | 'short', Record<Lang, s
   fashions: {
     label: { fr: 'Accessoires de mode', en: 'Fashion Accessories' },
     one: { fr: 'Accessoire', en: 'Accessory' },
-    short: { fr: 'Access.', en: 'Fashion' },
+    short: { fr: 'Accessoires', en: 'Accessories' },
+  },
+  facewear: {
+    label: { fr: 'Lunettes', en: 'Facewear' },
+    one: { fr: 'Paire de lunettes', en: 'Facewear' },
+    short: { fr: 'Lunettes', en: 'Facewear' },
+  },
+  hairstyles: {
+    label: { fr: 'Coiffures', en: 'Hairstyles' },
+    one: { fr: 'Coiffure', en: 'Hairstyle' },
+    short: { fr: 'Coiffures', en: 'Hairstyles' },
+  },
+  outfits: {
+    label: { fr: 'Tenues', en: 'Outfits' },
+    one: { fr: 'Tenue', en: 'Outfit' },
+    short: { fr: 'Tenues', en: 'Outfits' },
+  },
+  armoires: {
+    label: { fr: 'Armoire', en: 'Armoire' },
+    one: { fr: 'Pièce', en: 'Piece' },
+    short: { fr: 'Armoire', en: 'Armoire' },
+  },
+  bardings: {
+    label: { fr: 'Bardes de chocobo', en: 'Chocobo Bardings' },
+    one: { fr: 'Barde', en: 'Barding' },
+    short: { fr: 'Bardes', en: 'Bardings' },
+  },
+  emotes: {
+    label: { fr: 'Émotes', en: 'Emotes' },
+    one: { fr: 'Émote', en: 'Emote' },
+    short: { fr: 'Émotes', en: 'Emotes' },
+  },
+  frames: {
+    label: { fr: 'Portraits', en: 'Portraits' },
+    one: { fr: "Kit d'encadrement", en: "Framer's Kit" },
+    short: { fr: 'Portraits', en: 'Portraits' },
   },
   orchestrions: {
     label: { fr: 'Orchestrion', en: 'Orchestrion' },

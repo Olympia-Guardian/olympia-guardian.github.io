@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GiCharacter } from 'react-icons/gi'
-import { KINDS, type Kind } from './api'
+import { KINDS, KIND_FAMILIES, type Kind } from './api'
 import { useAuth } from './auth'
 import { useDigest } from './digest'
 import { currentGroupHash, loadGroups, saveGroups, switchToGroup, type SavedGroup } from './groups'
@@ -67,6 +67,8 @@ export default function App() {
   }, [])
 
   const [tab, setTab] = useState<Tab>('planning')
+  // Dernière collection consultée : cliquer sur « Collections » y revient.
+  const [collectionTab, setCollectionTab] = useState<Kind>('mounts')
   const [copied, setCopied] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
 
@@ -166,9 +168,13 @@ export default function App() {
       ? t('syncErrTitle')
       : `${t('syncOkTitle')}${room.lastSync ? ' ' + t('lastSync', { time: new Date(room.lastSync).toLocaleTimeString() }) : ''}`
 
+  // Treize collections ne tiennent pas dans une pilule d'onglets : la barre du
+  // haut ne garde que les grandes sections, la collection se choisit sur une
+  // seconde ligne quand on est dans « Collections ».
+  const isCollection = (KINDS as string[]).includes(tab)
   const TABS: { id: Tab; label: string }[] = [
     { id: 'planning', label: t('planning') },
-    ...KINDS.map((k) => ({ id: k as Tab, label: kindLabel(lang, k, 'short') })),
+    { id: collectionTab, label: t('collections') },
     { id: 'relics', label: t('relicsTab') },
     ...(auth.user ? [{ id: 'mypage' as Tab, label: t('myPage') }] : []),
   ]
@@ -185,7 +191,7 @@ export default function App() {
             {TABS.map((tb) => (
               <button
                 key={tb.id}
-                className={`tab ${tab === tb.id ? 'is-active' : ''}`}
+                className={`tab ${tab === tb.id || (tb.id === collectionTab && isCollection) ? 'is-active' : ''}`}
                 onClick={() => setTab(tb.id)}
               >
                 {tb.label}
@@ -217,6 +223,27 @@ export default function App() {
           </div>
         </header>
 
+        {isCollection && (
+          <nav className="kind-bar">
+            {KIND_FAMILIES.map((fam) => (
+              <span key={fam.key} className="kind-family">
+                {fam.kinds.map((k) => (
+                  <button
+                    key={k}
+                    className={`kind-btn ${tab === k ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setTab(k)
+                      setCollectionTab(k)
+                    }}
+                  >
+                    {kindLabel(lang, k, 'short')}
+                  </button>
+                ))}
+              </span>
+            ))}
+          </nav>
+        )}
+
         {digest.lines && (
           <div className="digest">
             <span className="digest-label">{t('digestSince')}</span>
@@ -240,6 +267,7 @@ export default function App() {
           {tab !== 'mypage' && (
           <RosterBar
             members={members}
+            activeKind={isCollection ? (tab as Kind) : undefined}
             controls={
               <div className="sidebar-controls">
                 {(groups.length > 0 || groupHash !== null) && (

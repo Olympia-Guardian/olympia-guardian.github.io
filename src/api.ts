@@ -3,18 +3,78 @@
 
 const API = 'https://ffxivcollect.com/api'
 
-export type Kind = 'mounts' | 'minions' | 'cards' | 'fashions' | 'orchestrions' | 'spells'
+export type Kind =
+  | 'mounts'
+  | 'minions'
+  | 'cards'
+  | 'fashions'
+  | 'facewear'
+  | 'hairstyles'
+  | 'outfits'
+  | 'armoires'
+  | 'bardings'
+  | 'emotes'
+  | 'frames'
+  | 'orchestrions'
+  | 'spells'
 
-export const KINDS: Kind[] = ['mounts', 'minions', 'cards', 'fashions', 'orchestrions', 'spells']
+export const KINDS: Kind[] = [
+  'mounts',
+  'minions',
+  'cards',
+  'fashions',
+  'facewear',
+  'hairstyles',
+  'outfits',
+  'armoires',
+  'bardings',
+  'emotes',
+  'frames',
+  'orchestrions',
+  'spells',
+]
 
 export const KIND_INFO: Record<Kind, { path: string }> = {
   mounts: { path: 'mounts' },
   minions: { path: 'minions' },
   cards: { path: 'triad/cards' },
   fashions: { path: 'fashions' },
+  facewear: { path: 'facewear' },
+  hairstyles: { path: 'hairstyles' },
+  outfits: { path: 'outfits' },
+  armoires: { path: 'armoires' },
+  bardings: { path: 'bardings' },
+  emotes: { path: 'emotes' },
+  frames: { path: 'frames' },
   orchestrions: { path: 'orchestrions' },
   spells: { path: 'spells' },
 }
+
+/** Collections que le Lodestone n'expose pas : elles se cochent à la main dans
+ *  « Ma Page » (le worker n'en scrape que les montures et les mascottes).
+ *  Référence unique — le worker en garde une copie, à garder synchronisée. */
+export const HIDDEN_KINDS: Kind[] = KINDS.filter((k) => k !== 'mounts' && k !== 'minions')
+
+/** Collections proposées dans le Planning : ce qui se farme réellement en jeu.
+ *  Les portraits (kits d'encadrement), tenues et armoire en sont exclus — ce
+ *  sont des listes de complétion, pas du contenu à organiser en groupe. */
+export const PLANNING_KINDS: Kind[] = KINDS.filter(
+  (k) => k !== 'frames' && k !== 'outfits' && k !== 'armoires',
+)
+
+/** Familles d'onglets : les petites collections cousines partagent un onglet. */
+export const KIND_FAMILIES: { key: string; kinds: Kind[] }[] = [
+  { key: 'mounts', kinds: ['mounts'] },
+  { key: 'minions', kinds: ['minions'] },
+  { key: 'cards', kinds: ['cards'] },
+  { key: 'fashion', kinds: ['fashions', 'facewear', 'hairstyles'] },
+  { key: 'attire', kinds: ['outfits', 'armoires'] },
+  { key: 'bardings', kinds: ['bardings'] },
+  { key: 'emotes', kinds: ['emotes'] },
+  { key: 'frames', kinds: ['frames'] },
+  { key: 'orchestrions', kinds: ['orchestrions'] },
+  { key: 'spells', kinds: ['spells'] },
+]
 
 export interface Source {
   type: string
@@ -50,6 +110,13 @@ export interface Item {
   spellTypeEn?: string
   aspect?: string
   aspectEn?: string
+  /** Émotes : la commande de chat (/lookback). */
+  command?: string
+  /** Portraits : nom du kit d'encadrement (le « name » n'est qu'un libellé court). */
+  itemName?: string
+  itemNameEn?: string
+  /** Tenues : pièces qui composent l'ensemble. */
+  pieces?: string[]
   /** type = enum anglais stable de l'API (la logique de catégories s'appuie dessus) ; text = français. */
   sources: Source[]
 }
@@ -61,7 +128,8 @@ export interface CharCollection {
   ids: number[]
 }
 
-export interface Character {
+/** Une entrée par kind : le type suit automatiquement l'ajout d'une collection. */
+export type Character = { [K in Kind]: CharCollection } & {
   id: number
   name: string
   server: string
@@ -69,12 +137,6 @@ export interface Character {
   avatar: string
   portrait: string
   lastParsed: string
-  mounts: CharCollection
-  minions: CharCollection
-  cards: CharCollection
-  fashions: CharCollection
-  orchestrions: CharCollection
-  spells: CharCollection
   /** IDs de reliques possédées, toutes catégories confondues (armes, ultimate, armures, outils). */
   relicIds: number[]
 }
@@ -101,9 +163,15 @@ function readCache<T>(key: string, ttl: number): T | null {
   }
 }
 
+// localStorage plafonne autour de 5 Mo : au-delà, on laisse le cache HTTP faire
+// le travail (nos catalogues sont servis en statique depuis notre domaine).
+const CACHE_MAX_CHARS = 300_000
+
 function writeCache<T>(key: string, data: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify({ at: Date.now(), data } satisfies Cached<T>))
+    const payload = JSON.stringify({ at: Date.now(), data } satisfies Cached<T>)
+    if (payload.length > CACHE_MAX_CHARS) return
+    localStorage.setItem(key, payload)
   } catch {
     // localStorage plein ou indisponible : on continue sans cache
   }
@@ -137,8 +205,8 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
   }
   const path = KIND_INFO[kind].path
   const [resEn, resFr] = await Promise.all([
-    fetch(`${API}/${path}?limit=1000`),
-    fetch(`${API}/${path}?limit=1000&language=fr`),
+    fetch(`${API}/${path}?limit=6000`),
+    fetch(`${API}/${path}?limit=6000&language=fr`),
   ])
   if (!resEn.ok || !resFr.ok) {
     throw new Error(`FFXIV Collect a répondu ${resEn.status}/${resFr.status} pour la liste des ${kind}`)
@@ -202,12 +270,7 @@ function mapCharacter(r: any): Character {
     avatar: r.avatar,
     portrait: r.portrait,
     lastParsed: r.last_parsed,
-    mounts: col(r.mounts),
-    minions: col(r.minions),
-    cards: col(r.cards),
-    fashions: col(r.fashions),
-    orchestrions: col(r.orchestrions),
-    spells: col(r.spells),
+    ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??
       [
@@ -227,11 +290,9 @@ async function seedFromCollect(lodestoneId: number): Promise<void> {
   const res = await fetch(`${API}/characters/${lodestoneId}?ids=true`)
   if (!res.ok) return
   const d = await res.json()
+  // Les clés de l'API personnage portent exactement le nom de nos kinds.
   const seed = {
-    cards: d.cards?.ids ?? [],
-    fashions: d.fashions?.ids ?? [],
-    orchestrions: d.orchestrions?.ids ?? [],
-    spells: d.spells?.ids ?? [],
+    ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, d[k]?.ids ?? []])),
     relics: [
       ...new Set<number>(
         (['weapons', 'ultimate', 'armor', 'tools'] as const).flatMap(
@@ -249,7 +310,7 @@ async function seedFromCollect(lodestoneId: number): Promise<void> {
 
 export async function fetchCharacter(lodestoneId: number, force = false): Promise<Character> {
   // v5 : les personnages viennent de notre worker (Lodestone en direct)
-  const cacheKey = `ogs.char.${lodestoneId}.v5`
+  const cacheKey = `ogs.char.${lodestoneId}.v6`
   if (!force) {
     const cached = readCache<Character>(cacheKey, CHAR_TTL)
     if (cached) return cached
@@ -383,7 +444,7 @@ export async function fetchRelicDb(force = false): Promise<RelicDb> {
 /** Invalide le cache local d'un perso (après édition dans « Ma Page »). */
 export function invalidateCharacter(lodestoneId: number): void {
   try {
-    localStorage.removeItem(`ogs.char.${lodestoneId}.v5`)
+    localStorage.removeItem(`ogs.char.${lodestoneId}.v6`)
   } catch {
     // rien
   }

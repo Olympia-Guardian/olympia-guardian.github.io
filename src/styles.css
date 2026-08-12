@@ -1668,9 +1668,11 @@ a.player-name:hover {
   vertical-align: -3px;
 }
 
+/* Quatorze jauges : on remplit la largeur disponible plutôt que trois colonnes
+   figées, sinon l'en-tête du perso occupe la moitié de l'écran. */
 .mypage-meters {
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px 28px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px 28px;
   margin-top: 10px;
 }
 
@@ -2335,4 +2337,61 @@ a.player-name:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ===== Seconde ligne : choix de la collection ===== */
+
+.kind-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  padding: 10px 0 0;
+}
+
+/* Les collections cousines (mode, tenues) restent visuellement soudées */
+.kind-family {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.kind-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-s);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.kind-btn:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.kind-btn.is-active {
+  background: var(--surface-2);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* icône d'objet dans les listes (émotes, portraits) */
+.checklist-icon {
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.checklist-icon.is-missing {
+  filter: grayscale(1) brightness(0.65);
+}
+
+/* commande de chat d'une émote */
+.chip-cmd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--gold);
+  background: var(--surface-2);
+}
+
+/* la barre d'onglets de Ma Page reprend le rail de collections */
+.mypage-tabs {
+  padding-top: 0;
 }

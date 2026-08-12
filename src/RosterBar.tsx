@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { KINDS, parseLodestoneId } from './api'
+import { parseLodestoneId, type Kind } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
 import { Meter, onAvatarImgError } from './ui'
@@ -11,10 +11,15 @@ function relativeDate(iso: string, t: I18n['t']): string {
   return t('daysAgo', { n: days })
 }
 
+// Treize jauges par joueur rendraient la colonne illisible : on affiche celle
+// de la collection consultée, plus les deux qui viennent du Lodestone.
+const BASE_METERS: Kind[] = ['mounts', 'minions']
+
 function PlayerCard({
   member,
   focus,
   present,
+  activeKind,
   onTogglePresence,
   onRemove,
   onRefresh,
@@ -22,6 +27,7 @@ function PlayerCard({
   member: Member
   focus?: boolean
   present: boolean
+  activeKind?: Kind
   onTogglePresence?: () => void
   onRemove: () => void
   onRefresh: () => void
@@ -90,7 +96,7 @@ function PlayerCard({
         </span>
       </div>
       <div className="meter-grid">
-        {KINDS.map((k) => (
+        {[...new Set([...(activeKind ? [activeKind] : []), ...BASE_METERS])].map((k) => (
           <Meter key={k} label={kindLabel(lang, k, 'short')} count={c[k].count} total={c[k].total} />
         ))}
       </div>
@@ -113,6 +119,7 @@ export function RosterBar({
   controls,
   focusId,
   absent,
+  activeKind,
   collapsed,
   onToggleCollapsed,
   onTogglePresence,
@@ -125,6 +132,8 @@ export function RosterBar({
   controls?: ReactNode
   focusId: number | null
   absent: number[]
+  /** Collection consultée : sa jauge s'ajoute aux cartes des joueurs. */
+  activeKind?: Kind
   collapsed: boolean
   onToggleCollapsed: () => void
   onTogglePresence: (id: number) => void
@@ -215,6 +224,7 @@ export function RosterBar({
           member={m}
           focus={m.id === focusId}
           present={!absent.includes(m.id)}
+          activeKind={activeKind}
           onTogglePresence={members.length > 1 ? () => onTogglePresence(m.id) : undefined}
           onRemove={() => onRemove(m.id)}
           onRefresh={() => onRefresh(m.id)}

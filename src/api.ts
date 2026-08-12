@@ -159,30 +159,17 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
   return items
 }
 
-export async function fetchCharacter(lodestoneId: number, force = false): Promise<Character> {
-  // v2 : ajout cartes Triple Triad + accessoires de mode
-  // v3 : ajout orchestrion + magie bleue
-  // v4 : ajout reliques
-  const cacheKey = `ogs.char.${lodestoneId}.v4`
-  if (!force) {
-    const cached = readCache<Character>(cacheKey, CHAR_TTL)
-    if (cached) return cached
-  }
-  const res = await fetch(`${API}/characters/${lodestoneId}?ids=true`)
-  if (res.status === 404) {
-    throw new Error(
-      "Personnage introuvable sur FFXIV Collect. Vérifie l'ID Lodestone, puis cherche le personnage une première fois sur ffxivcollect.com pour l'importer.",
-    )
-  }
-  if (!res.ok) throw new Error(`FFXIV Collect a répondu ${res.status}`)
-  const r = await res.json()
+/** Worker OGS : personnages lus directement sur le Lodestone, stockés en D1. */
+export const WORKER_API = 'https://ogs-room.olympia-guardian.workers.dev'
+
+function mapCharacter(r: any): Character {
   const col = (c: any): CharCollection => ({
     count: c?.count ?? 0,
     total: c?.total ?? 0,
     isPublic: c?.public !== false,
     ids: (c?.ids ?? []) as number[],
   })
-  const char: Character = {
+  return {
     id: r.id,
     name: r.name,
     server: r.server,
@@ -196,16 +183,87 @@ export async function fetchCharacter(lodestoneId: number, force = false): Promis
     fashions: col(r.fashions),
     orchestrions: col(r.orchestrions),
     spells: col(r.spells),
-    relicIds: [
+    relicIds:
+      (r.relicIds as number[] | undefined) ??
+      [
+        ...new Set<number>(
+          (['weapons', 'ultimate', 'armor', 'tools'] as const).flatMap(
+            (g) => (r.relics?.[g]?.ids ?? []) as number[],
+          ),
+        ),
+      ],
+  }
+}
+
+/** Amorçage des collections invisibles du Lodestone : le WAF de FFXIV Collect
+ *  bloque notre worker, c'est donc le navigateur qui fait le pont, une seule
+ *  fois par perso. Ensuite ces données vivent chez nous (D1). */
+async function seedFromCollect(lodestoneId: number): Promise<void> {
+  const res = await fetch(`${API}/characters/${lodestoneId}?ids=true`)
+  if (!res.ok) return
+  const d = await res.json()
+  const seed = {
+    cards: d.cards?.ids ?? [],
+    fashions: d.fashions?.ids ?? [],
+    orchestrions: d.orchestrions?.ids ?? [],
+    spells: d.spells?.ids ?? [],
+    relics: [
       ...new Set<number>(
         (['weapons', 'ultimate', 'armor', 'tools'] as const).flatMap(
-          (g) => (r.relics?.[g]?.ids ?? []) as number[],
+          (g) => (d.relics?.[g]?.ids ?? []) as number[],
         ),
       ),
     ],
   }
-  writeCache(cacheKey, char)
-  return char
+  await fetch(`${WORKER_API}/character/${lodestoneId}/seed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(seed),
+  })
+}
+
+export async function fetchCharacter(lodestoneId: number, force = false): Promise<Character> {
+  // v5 : les personnages viennent de notre worker (Lodestone en direct)
+  const cacheKey = `ogs.char.${lodestoneId}.v5`
+  if (!force) {
+    const cached = readCache<Character>(cacheKey, CHAR_TTL)
+    if (cached) return cached
+  }
+
+  try {
+    const url = `${WORKER_API}/character/${lodestoneId}${force ? '?force=1' : ''}`
+    let res = await fetch(url)
+    if (res.status === 404) {
+      throw Object.assign(new Error("Personnage introuvable — vérifie l'ID Lodestone."), {
+        notFound: true,
+      })
+    }
+    if (!res.ok) throw new Error(`worker ${res.status}`)
+    let r = await res.json()
+    if (r.needsSeed) {
+      try {
+        await seedFromCollect(lodestoneId)
+        const res2 = await fetch(`${WORKER_API}/character/${lodestoneId}`)
+        if (res2.ok) r = await res2.json()
+      } catch {
+        // pas d'amorçage possible : données Lodestone uniquement pour l'instant
+      }
+    }
+    const char = mapCharacter(r)
+    writeCache(cacheKey, char)
+    return char
+  } catch (e) {
+    if ((e as any)?.notFound) throw e
+    // Secours : FFXIV Collect en direct si le worker est injoignable.
+    const res = await fetch(`${API}/characters/${lodestoneId}?ids=true`)
+    if (res.status === 404) {
+      throw new Error("Personnage introuvable — vérifie l'ID Lodestone.")
+    }
+    if (!res.ok) throw new Error(`FFXIV Collect a répondu ${res.status}`)
+    const char = mapCharacter(await res.json())
+    writeCache(cacheKey, char)
+    return char
+  }
 }
 
 // ---------------------------------------------------------------------------

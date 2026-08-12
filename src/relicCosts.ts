@@ -110,6 +110,7 @@ const WIKI = 'https://ffxiv.consolegameswiki.com/wiki'
 export const RELIC_COSTS: Record<string, SeriesCosts> = {
   // -------------------------------------------------------- 2.x — Zodiaque
   'A Relic Reborn': {
+    stepLabels: [{ fr: 'Antique', en: 'Relic' },{ fr: 'Zénith', en: 'Zenith' },{ fr: 'Âtma', en: 'Atma' },{ fr: 'Animus', en: 'Animus' },{ fr: 'Novus', en: 'Novus' },{ fr: 'Nexus', en: 'Nexus' },{ fr: 'Zodiaque', en: 'Zodiac' },{ fr: 'Zodiaque Zêta', en: 'Zodiac Zeta' }],
     steps: [
       {
         url: ZOD1,
@@ -148,6 +149,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
 
   // ---------------------------------------------------------- 3.x — Animas
   'Anima Weapons': {
+    stepLabels: [{ fr: 'Animée', en: 'Animated' },{ fr: 'Éveillée', en: 'Awoken' },{ fr: 'Anima', en: 'Anima' },{ fr: 'Hyperconductrice', en: 'Hyperconductive' },{ fr: 'Épanouie', en: 'Reconditioned' },{ fr: 'Vivifiée', en: 'Sharpened' },{ fr: 'Parachevée', en: 'Complete' },{ fr: 'Lux', en: 'Lux' }],
     steps: [
       {
         url: ANI1,
@@ -182,6 +184,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
 
   // ---------------------------------------------------------- 4.x — Eurêka
   'Eureka Weapons': {
+    stepLabels: [{ fr: 'Antique', en: 'Antiquated' },{ fr: '+1', en: '+1' },{ fr: '+2', en: '+2' },{ fr: 'Anemos', en: 'Anemos' },{ fr: 'Pagos', en: 'Pagos' },{ fr: 'Pagos +1', en: 'Pagos +1' },{ fr: 'Élémentaire', en: 'Elemental' },{ fr: 'Élémentaire +1', en: 'Elemental +1' },{ fr: 'Élémentaire +2', en: 'Elemental +2' },{ fr: 'Pyros', en: 'Pyros' },{ fr: 'Hydatos', en: 'Hydatos' },{ fr: 'Hydatos +1', en: 'Hydatos +1' },{ fr: 'Eurêka (base)', en: 'Base' },{ fr: 'Eurêka', en: 'Eureka' },{ fr: 'Physeos', en: 'Physeos' }],
     steps: [
       { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(4, 'cristaux Anemos', 'Anemos Crystals')] },
       { url: EUR1, materials: [m(12, 'cristaux instables', 'Unstable Crystals'), m(8, 'cristaux Anemos', 'Anemos Crystals')] },
@@ -216,6 +219,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
 
   // ------------------------------------------------------ 5.x — Résistance
   'Resistance Weapons': {
+    stepLabels: [{ fr: 'Résistance', en: 'Resistance' },{ fr: 'Résistance améliorée', en: 'Augmented Resistance' },{ fr: 'In memoriam', en: 'Recollection' },{ fr: 'Verdict des Juges', en: "Law's Order" },{ fr: 'Verdict des Juges amélioré', en: "Augmented Law's Order" },{ fr: 'Euphorie de Gunnhildr', en: "Blade's" }],
     url: `${WIKI}/Resistance_Weapons`,
     steps: [
       { url: `${WIKI}/Resistance_Weapons`, materials: [m(4, "poudres d'écaille de Thavnair (250 poétiques pièce)", 'Thavnairian Scalepowder (250 poetics each)')] },
@@ -236,6 +240,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
 
   // ----------------------------------------------------- 6.x — Manderville
   'Manderville Weapons': {
+    stepLabels: [{ fr: 'Manderville', en: 'Manderville' },{ fr: 'Éblouissante', en: 'Amazing' },{ fr: 'Majestueuse', en: 'Majestic' },{ fr: 'Manderveilleuse', en: 'Mandervillous' }],
     steps: [
       { url: MAND, materials: [m(3, 'météorites rarissimes (500 poétiques pièce)', 'Manderium Meteorites (500 poetics each)')] },
       { url: MAND, materials: [m(3, 'chondrites rarissimes (500 poétiques pièce)', 'Complementary Chondrites (500 poetics each)')] },
@@ -246,6 +251,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
 
   // -------------------------------------------------- 7.x — Armes fantômes
   'Phantom Weapons': {
+    stepLabels: [{ fr: 'Penumbra', en: 'Penumbra' },{ fr: 'Umbra', en: 'Umbra' },{ fr: 'Obscurum', en: 'Obscurum' },{ fr: 'Eclipticum', en: 'Eclipticum' },{ fr: 'Occultum', en: 'Occultum' }],
     steps: [
       {
         url: PHA1,

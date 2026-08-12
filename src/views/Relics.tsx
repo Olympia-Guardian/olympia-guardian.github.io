@@ -247,6 +247,21 @@ function SeriesCard({
   const showReq = totalMats.length > 0 && totalMats.some((mat) => mat.icon)
   const compactQty = (n: number) => (n >= 10000 ? `${Math.round(n / 1000)}k` : fmt(n, lang))
 
+  // Switch « 1 arme / restant » : le restant agrège les matériaux de toutes
+  // les pièces manquantes du joueur (visible seul, donc dans Mon Journal).
+  const [reqLeft, setReqLeft] = useState(false)
+  const remainingMats = (() => {
+    if (!costs || ready.length !== 1) return null
+    const missingPerStep = stepRelics.map((list, i) =>
+      list.length > 0 ? info.jobs - ownedInStep(ready[0].id, i) : 0,
+    )
+    const rem = remainingMaterials(costs, missingPerStep, info.jobs)
+    const acc = new Map<string, Material>()
+    for (const mat of [...rem.perWeapon, ...rem.once]) mergeMaterial(acc, mat)
+    return [...acc.values()]
+  })()
+  const shownMats = reqLeft && remainingMats ? remainingMats : totalMats
+
   return (
     <article className="relic-series">
       <header className="relic-series-head">
@@ -261,17 +276,39 @@ function SeriesCard({
 
       {showReq && (
         <div className="relic-req">
-          <span className="relic-remaining-label">{t(isArmor ? 'relicReqPiece' : 'relicReqWeapon')}</span>
-          {totalMats.map((mat) => (
-            <span
-              key={mat.key ?? mat.en}
-              className="relic-req-item"
-              title={`${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`}
-            >
-              <img src={mat.icon ?? ITEM_FALLBACK} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
-              <i>×{compactQty(mat.qty)}</i>
+          {remainingMats ? (
+            <div className="mode-switch relic-req-switch">
+              <button
+                className={`mode-btn ${!reqLeft ? 'is-active' : ''}`}
+                onClick={() => setReqLeft(false)}
+              >
+                {t(isArmor ? 'relicReqOnePiece' : 'relicReqOneWeapon')}
+              </button>
+              <button
+                className={`mode-btn ${reqLeft ? 'is-active' : ''}`}
+                onClick={() => setReqLeft(true)}
+              >
+                {t('relicReqLeft')}
+              </button>
+            </div>
+          ) : (
+            <span className="relic-remaining-label">
+              {t(isArmor ? 'relicReqPiece' : 'relicReqWeapon')}
             </span>
-          ))}
+          )}
+          <div className="relic-req-items">
+            {shownMats.length === 0 && <span className="relic-done">{t('relicDone')}</span>}
+            {shownMats.map((mat) => (
+              <span
+                key={mat.key ?? mat.en}
+                className="relic-req-item"
+                title={`${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`}
+              >
+                <img src={mat.icon ?? ITEM_FALLBACK} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
+                <i>×{compactQty(mat.qty)}</i>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

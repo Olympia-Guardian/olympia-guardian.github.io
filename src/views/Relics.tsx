@@ -40,6 +40,73 @@ function stepTotal(step: StepCost, missing: number): Material[] {
   return step.materials.map((mat) => ({ ...mat, qty: mat.qty * missing }))
 }
 
+/** Icône officielle d'un job (planche 0621xx du jeu, servie par XIVAPI). */
+const jobIcon = (id: string) =>
+  `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/062000/${id}_hr1.tex`)}`
+
+/** Job de chaque set d'armure Eurêka (catégories de classe officielles).
+ *  Les paliers +1/+2/Anemos gardent le même préfixe de set.
+ *  `sort` : rôles dans l'ordre du jeu — tanks, soigneurs, puis DPS. */
+const ARMOR_SET_JOBS: { match: RegExp; fr: string; en: string; icon: string; sort: number }[] = [
+  { match: /^Chivalrous /, fr: 'Paladin', en: 'Paladin', icon: jobIcon('062119'), sort: 0 },
+  { match: /^Brutal /, fr: 'Guerrier', en: 'Warrior', icon: jobIcon('062121'), sort: 1 },
+  { match: /^Abyss /, fr: 'Chevalier noir', en: 'Dark Knight', icon: jobIcon('062132'), sort: 2 },
+  { match: /^Seventh Heaven /, fr: 'Mage blanc', en: 'White Mage', icon: jobIcon('062124'), sort: 10 },
+  { match: /^Orator's /, fr: 'Érudit', en: 'Scholar', icon: jobIcon('062128'), sort: 11 },
+  { match: /^Constellation /, fr: 'Astromancien', en: 'Astrologian', icon: jobIcon('062133'), sort: 12 },
+  { match: /^Pacifist's /, fr: 'Moine', en: 'Monk', icon: jobIcon('062120'), sort: 20 },
+  { match: /^Trueblood /, fr: 'Chevalier dragon', en: 'Dragoon', icon: jobIcon('062122'), sort: 21 },
+  { match: /^Kage-kakushi /, fr: 'Ninja', en: 'Ninja', icon: jobIcon('062130'), sort: 22 },
+  { match: /^Myochin /, fr: 'Samouraï', en: 'Samurai', icon: jobIcon('062134'), sort: 23 },
+  { match: /^Storyteller's /, fr: 'Barde', en: 'Bard', icon: jobIcon('062123'), sort: 24 },
+  { match: /^Gunner's /, fr: 'Machiniste', en: 'Machinist', icon: jobIcon('062131'), sort: 25 },
+  { match: /^Seventh Hell /, fr: 'Mage noir', en: 'Black Mage', icon: jobIcon('062125'), sort: 26 },
+  { match: /^Channeler's /, fr: 'Invocateur', en: 'Summoner', icon: jobIcon('062127'), sort: 27 },
+  { match: /^Duelist's /, fr: 'Mage rouge', en: 'Red Mage', icon: jobIcon('062135'), sort: 28 },
+]
+
+/** Rang de chaque job pour le tri tank > heal > DPS des grilles d'armes.
+ *  Les reliques portent leur catégorie de classe (« GLA PLD ») dans `jobs`. */
+const JOB_SORT: Record<string, number> = {
+  PLD: 0, WAR: 1, DRK: 2, GNB: 3,
+  WHM: 10, SCH: 11, AST: 12, SGE: 13,
+  MNK: 20, DRG: 21, NIN: 22, SAM: 23, RPR: 24, VPR: 25,
+  BRD: 30, MCH: 31, DNC: 32,
+  BLM: 40, SMN: 41, RDM: 42, PCT: 43, BLU: 44,
+}
+
+/** Rang d'une relique : le meilleur rang parmi ses jobs (inconnu → à la fin). */
+function jobRank(r: Relic): number {
+  if (!r.jobs) return 99
+  let best = 99
+  for (const ab of r.jobs.split(' ')) {
+    const v = JOB_SORT[ab]
+    if (v !== undefined && v < best) best = v
+  }
+  return best
+}
+
+/** Rôle de chaque set GARO, pour le tri tanks → soigneurs → DPS. */
+const GARO_SORT: Record<string, number> = {
+  'Golden Wolf': 0, // Paladin
+  'Undying Twilight': 1, // Guerrier
+  'Pressing Darkness': 2, // Chevalier noir
+  'Makai Vanguard': 3, // Pistosabreur
+  'Makai Vanbreaker': 4,
+  'Makai Sun Guide': 10, // Soigneurs
+  'Makai Moon Guide': 11,
+  'White Night': 20, // Chevalier dragon
+  'Silver Wolf': 21, // Ninja
+  'Makai Mauler': 22, // Moine / Samouraï
+  'Makai Manhandler': 23,
+  'Makai Harbinger': 24, // Faucheur
+  'Makai Harrower': 25,
+  'Makai Marksman': 26, // Distance
+  'Makai Markswoman': 27,
+  'Makai Priest': 28, // Mages
+  'Makai Priestess': 29,
+}
+
 /** Relique sélectionnée : la fiche a besoin de sa série et de son palier. */
 type RelicPick = { relic: Relic; info: RelicSeriesInfo; step: number }
 
@@ -187,14 +254,21 @@ function SeriesCard({
   // emplacement. Les sets propres à un job (Eurêka, Idéalistes) n'ont pas de
   // rôle dans leur nom : on les regroupe par set via le nom anglais, qui
   // commence toujours par le nom du set.
-  const ROLE_ORDER = ['Fending', 'Maiming', 'Striking', 'Scouting', 'Aiming', 'Casting', 'Healing'] as const
+  // Tank > Heal > DPS (mêlée, distance, mages) — la règle de tri des reliques.
+  const ROLE_ORDER = ['Fending', 'Healing', 'Maiming', 'Striking', 'Scouting', 'Aiming', 'Casting'] as const
   const roleOf = (r: Relic) =>
     ROLE_ORDER.indexOf(
       (r.nameEn.match(/ of (Fending|Maiming|Striking|Scouting|Aiming|Casting|Healing)\b/)?.[1] ??
         '') as (typeof ROLE_ORDER)[number],
     )
   const sortArmor = (list: Relic[]): Relic[] => {
-    if (!isArmor) return list
+    if (!isArmor) {
+      // Armes (sagas, ultimates, GARO, donjons sans fond) : tank > heal > DPS
+      // via la catégorie de classe de chaque arme. Les outils restent dans
+      // l'ordre des métiers.
+      if (info.category === 'tools') return list
+      return [...list].sort((a, b) => jobRank(a) - jobRank(b) || a.order - b.order)
+    }
     return [...list].sort((a, b) => {
       const ra = roleOf(a)
       const rb = roleOf(b)
@@ -206,25 +280,28 @@ function SeriesCard({
 
   /** Blocs affichés dans la grille : un par rôle (libellé), ou un par set de
    *  job (5 pièces, sans libellé) pour les armures spécifiques à un job. */
-  const armorGroups = (list: Relic[]): { label: string | null; items: Relic[] }[] => {
+  const armorGroups = (list: Relic[]): { label: string | null; icon?: string; items: Relic[] }[] => {
     if (garoSets) {
       // Un bloc par set de 5 pièces contiguës, étiqueté du nom du set —
-      // personnages GARO (« Loup doré ») comme sets Makai (« Lutteur Makai »).
+      // personnages GARO (« Loup doré ») comme sets Makai (« Lutteur Makai »),
+      // rangés tanks → soigneurs → DPS (le job du set n'est pas affiché).
+      const enKey = (r: Relic) =>
+        r.nameEn.match(/^The \w+ of (?:the )?(.+)$/i)?.[1] ??
+        r.nameEn.match(/^(Makai .+?)'s /i)?.[1] ??
+        r.nameEn
       const label = (r: Relic) => {
         const raw =
           lang === 'fr'
             ? r.name.replace(/^.*?\s(?:du |de la |de l'|des |de )/i, '')
-            : (r.nameEn.match(/^The \w+ of (?:the )?(.+)$/i)?.[1] ??
-              r.nameEn.match(/^(Makai .+?)'s /i)?.[1] ??
-              r.nameEn)
+            : enKey(r)
         return raw.charAt(0).toUpperCase() + raw.slice(1)
       }
-      const out: { label: string | null; items: Relic[] }[] = []
+      const out: { label: string | null; sort: number; items: Relic[] }[] = []
       for (let j = 0; j < list.length; j += 5) {
         const items = list.slice(j, j + 5)
-        out.push({ label: label(items[0]), items })
+        out.push({ label: label(items[0]), sort: GARO_SORT[enKey(items[0])] ?? 99, items })
       }
-      return out
+      return out.sort((a, b) => a.sort - b.sort)
     }
     if (!isArmor) return [{ label: null, items: list }]
     if (list.some((r) => roleOf(r) >= 0)) {
@@ -233,9 +310,23 @@ function SeriesCard({
         items: list.filter((r) => roleOf(r) === ri),
       })).filter((g) => g.items.length > 0)
     }
-    const out: { label: string | null; items: Relic[] }[] = []
-    for (let j = 0; j < list.length; j += 5) out.push({ label: null, items: list.slice(j, j + 5) })
-    return out
+    // Sets de job (Eurêka, Idéalistes) : contigus par ordre, 5 pièces chacun.
+    // Quand le set est connu : icône + nom de la classe, rangés tanks →
+    // soigneurs → DPS (l'ordre du jeu).
+    const sorted = [...list].sort((a, b) => a.order - b.order)
+    const out: { label: string | null; icon?: string; sort: number; items: Relic[] }[] = []
+    for (let j = 0; j < sorted.length; j += 5) {
+      const items = sorted.slice(j, j + 5)
+      const base = items[0].nameEn.replace(/^Anemos /, '')
+      const job = ARMOR_SET_JOBS.find((e) => e.match.test(base))
+      out.push({
+        label: job ? (lang === 'fr' ? job.fr : job.en) : null,
+        icon: job?.icon,
+        sort: job?.sort ?? 99,
+        items,
+      })
+    }
+    return out.sort((a, b) => a.sort - b.sort)
   }
 
   // relics de chaque étape (l'ordre API est trié étape par étape).
@@ -455,7 +546,12 @@ function SeriesCard({
                     <div className={isArmor || garoSets ? 'relic-icon-groups' : undefined}>
                       {armorGroups(list).map((g, gi) => (
                         <div key={gi} className={isArmor || garoSets ? 'relic-icon-group' : undefined}>
-                          {g.label && <span className="relic-role-label">{g.label}</span>}
+                          {g.label && (
+                            <span className="relic-role-label">
+                              {g.icon && <img src={g.icon} alt="" width={16} height={16} loading="lazy" />}
+                              {g.label}
+                            </span>
+                          )}
                           <div className="relic-icons">
                             {g.items.map((r) => {
                               const has = owned.has(r.id)

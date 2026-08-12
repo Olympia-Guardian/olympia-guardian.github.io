@@ -2761,3 +2761,15 @@ a.player-name:hover {
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
+
+/* icône de job devant le nom de classe des sets */
+.relic-role-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.relic-role-label img {
+  border-radius: 3px;
+  opacity: 0.9;
+}

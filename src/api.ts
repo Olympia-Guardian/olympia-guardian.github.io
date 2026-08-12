@@ -393,6 +393,8 @@ export interface Relic {
   order: number
   /** Clé de série = nom anglais stable. */
   series: string
+  /** Catégorie de classe (« GLA PLD ») — tri tank > heal > DPS des armes. */
+  jobs?: string
 }
 
 export interface RelicSeriesInfo {

@@ -233,7 +233,7 @@ function CollectionEditor({
     })
   }
 
-  const [mode, setMode] = useState<'quick' | 'inspect'>('quick')
+  const [mode, setMode] = useState<'quick' | 'inspect'>('inspect')
   const [selected, setSelected] = useState<Item | null>(null)
   const inspect = readOnly || mode === 'inspect'
 

@@ -230,19 +230,19 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     stepLabels: [{ fr: 'Résistance', en: 'Resistance' },{ fr: 'Résistance améliorée', en: 'Augmented Resistance' },{ fr: 'In memoriam', en: 'Recollection' },{ fr: 'Verdict des Juges', en: "Law's Order" },{ fr: 'Verdict des Juges amélioré', en: "Augmented Law's Order" },{ fr: 'Euphorie de Gunnhildr', en: "Blade's" }],
     url: `${WIKI}/Resistance_Weapons`,
     steps: [
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(4, "poudres d'écaille de Thavnair (250 poétiques pièce)", 'Thavnairian Scalepowder (250 poetics each)')] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(4, "poudres d'écaille de Thavnair (250 poétiques pièce)", 'Thavnairian Scalepowder (250 poetics each)', undefined, undefined, XIV('ui/icon/022000/022650_hr1.tex'))] },
       {
         url: `${WIKI}/Resistance_Weapons`,
         materials: [
-          m(20, 'amas mémoriels de tourment', 'Tortured Memories'),
-          m(20, 'amas mémoriels de peine', 'Sorrowful Memories'),
-          m(20, 'amas mémoriels de terreur', 'Harrowing Memories'),
+          m(20, 'amas mémoriels de tourment', 'Tortured Memories', undefined, undefined, XIV('ui/icon/020000/020038_hr1.tex')),
+          m(20, 'amas mémoriels de peine', 'Sorrowful Memories', undefined, undefined, XIV('ui/icon/020000/020039_hr1.tex')),
+          m(20, 'amas mémoriels de terreur', 'Harrowing Memories', undefined, undefined, XIV('ui/icon/020000/020040_hr1.tex')),
         ],
       },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(6, 'amas mémoriels de sauvagerie', 'Bitter Memories')] },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'amas mémoriels de répugnance', 'Loathsome Memories')] },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'artefacts anciens', 'Timeworn Artifacts')] },
-      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'cristaux du volcan émotionnel', 'Raw Emotions')] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(6, 'amas mémoriels de sauvagerie', 'Bitter Memories', undefined, undefined, XIV('ui/icon/020000/020041_hr1.tex'))] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'amas mémoriels de répugnance', 'Loathsome Memories', undefined, undefined, XIV('ui/icon/020000/020020_hr1.tex'))] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'artefacts anciens', 'Timeworn Artifacts', undefined, undefined, XIV('ui/icon/026000/026597_hr1.tex'))] },
+      { url: `${WIKI}/Resistance_Weapons`, materials: [m(15, 'cristaux du volcan émotionnel', 'Raw Emotions', undefined, undefined, XIV('ui/icon/020000/020027_hr1.tex'))] },
     ],
   },
 
@@ -350,7 +350,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   // ----------------------------------------------------------------- Outils
   'Resplendent Tools': {
     url: `${WIKI}/Resplendent_Tools`,
-    perPiece: [m(1, "lot de composants resplendissants (craft/récolte)", 'resplendent component set (craft/gather)', undefined, 'drop')],
+    perPiece: [m(1, "lot de composants resplendissants (craft/récolte)", 'resplendent component set (craft/gather)', undefined, 'drop', XIV('ui/icon/026000/026125_hr1.tex'))],
   },
   'Lucis Tools': {
     url: `${WIKI}/Lucis_Tools`,
@@ -385,7 +385,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   'Skysteel Tools': {
     url: `${WIKI}/Skysteel_Tools`,
     steps: [
-      { url: `${WIKI}/Skysteel_Tools`, materials: [m(80000, 'gils (ou coffre de quête)', 'gil (or quest coffer)', 'gil', 'currency')] },
+      { url: `${WIKI}/Skysteel_Tools`, materials: [m(80000, 'gils (ou coffre de quête)', 'gil (or quest coffer)', 'gil', 'currency', XIV('ui/icon/065000/065002_hr1.tex'))] },
       { url: `${WIKI}/Skysteel_Tools`, materials: [m(20, 'collectionnables HQ du métier', 'HQ collectables', 'collectables')] },
       { url: `${WIKI}/Skysteel_Tools`, materials: [m(30, 'collectionnables HQ du métier', 'HQ collectables', 'collectables')] },
       { url: `${WIKI}/Skysteel_Tools`, materials: [m(18, 'collectionnables (collecte maximale)', 'max-collectability collectables', 'collectables')] },
@@ -473,39 +473,52 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
         'High Legatus Idols (Memoria Misera Extreme — 19 for a 5-piece set)',
         undefined,
         'drop',
+        XIV('ui/icon/026000/026541_hr1.tex'),
       ),
     ],
   },
-  'Bozjan Armor': {
-    url: `${WIKI}/Augmented_Bozjan_Armor`,
+  // Bozja → Bozja améliorée → Verdict des Juges → Verdict amélioré →
+  // Gunnhildr : la progression unique des armures de la Résistance.
+  'Resistance Armor': {
+    url: `${WIKI}/Blade's_Armor`,
+    stepLabels: [
+      { fr: 'Bozja', en: 'Bozjan' },
+      { fr: 'Bozja améliorée', en: 'Augmented Bozjan' },
+      { fr: 'Verdict des Juges', en: "Law's Order" },
+      { fr: 'Verdict des Juges amélioré', en: "Augmented Law's Order" },
+      { fr: 'Gunnhildr', en: "Blade's" },
+    ],
     steps: [
       {
+        url: `${WIKI}/Augmented_Bozjan_Armor`,
         materials: [
           m(1, 'drop du Front sud de Bozja (engagements/coffres)', 'Bozjan Southern Front drop (engagements/coffers)', undefined, 'drop'),
         ],
       },
       {
+        url: `${WIKI}/Augmented_Bozjan_Armor`,
         materials: [
-          m(1, 'matériaux ultralégers bozjiens (500–999 pièces bozjiennes)', "Bozjan Runner's Secrets (500–999 Bozjan Coins)"),
+          m(1, 'matériaux ultralégers bozjiens (500–999 pièces bozjiennes)', "Bozjan Runner's Secrets (500–999 Bozjan Coins)", undefined, undefined, XIV('ui/icon/026000/026108_hr1.tex')),
         ],
       },
-    ],
-  },
-  "Law's Order": {
-    url: `${WIKI}/Augmented_Law's_Order_Armor`,
-    steps: [
-      { materials: [m(1, 'drop de Delubrum Reginae', 'Delubrum Reginae drop', undefined, 'drop')] },
       {
+        url: `${WIKI}/Augmented_Law's_Order_Armor`,
+        materials: [m(1, 'drop de Delubrum Reginae', 'Delubrum Reginae drop', undefined, 'drop')],
+      },
+      {
+        url: `${WIKI}/Augmented_Law's_Order_Armor`,
         materials: [
-          m(1, 'matériaux ultralégers du verdict des Juges (Delubrum sauvage, ou 10 plaques)', "Orderly Runner's Secrets (DR Savage, or 10 platings)"),
+          m(1, 'matériaux ultralégers du verdict des Juges (Delubrum sauvage, ou 10 plaques)', "Orderly Runner's Secrets (DR Savage, or 10 platings)", undefined, undefined, XIV('ui/icon/020000/020917_hr1.tex')),
           m(1, 'pièce bozjienne augmentée correspondante', 'matching Augmented Bozjan piece'),
         ],
       },
+      {
+        url: `${WIKI}/Blade's_Armor`,
+        materials: [
+          m(7, 'pièces bozjiennes en platine (moyenne — 6 à 9 selon la pièce)', 'Bozjan Platinum Coins (avg — 6–9 per piece)', 'boz-platinum', 'currency', XIV('ui/icon/026000/026329_hr1.tex')),
+        ],
+      },
     ],
-  },
-  "Blade's Armor": {
-    url: `${WIKI}/Blade's_Armor`,
-    perPiece: [m(7, 'pièces bozjiennes en platine (moyenne — 6 à 9 selon la pièce)', 'Bozjan Platinum Coins (avg — 6–9 per piece)', 'boz-platinum', 'currency')],
   },
 
   // --------------------------------------------------- Armures du Croissant

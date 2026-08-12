@@ -63,6 +63,24 @@ const ARMOR_SET_JOBS: { match: RegExp; fr: string; en: string; icon: string; sor
   { match: /^Seventh Hell /, fr: 'Mage noir', en: 'Black Mage', icon: jobIcon('062125'), sort: 26 },
   { match: /^Channeler's /, fr: 'Invocateur', en: 'Summoner', icon: jobIcon('062127'), sort: 27 },
   { match: /^Duelist's /, fr: 'Mage rouge', en: 'Red Mage', icon: jobIcon('062135'), sort: 28 },
+  // Sets Idéalistes (Shadowbringers)
+  { match: /^Idealized Chevalier's /, fr: 'Paladin', en: 'Paladin', icon: jobIcon('062119'), sort: 0 },
+  { match: /^Idealized Boii /, fr: 'Guerrier', en: 'Warrior', icon: jobIcon('062121'), sort: 1 },
+  { match: /^Idealized Bale /, fr: 'Chevalier noir', en: 'Dark Knight', icon: jobIcon('062132'), sort: 2 },
+  { match: /^Idealized Bodyguard's /, fr: 'Pistosabreur', en: 'Gunbreaker', icon: jobIcon('062137'), sort: 3 },
+  { match: /^Idealized Ebers /, fr: 'Mage blanc', en: 'White Mage', icon: jobIcon('062124'), sort: 10 },
+  { match: /^Idealized Arbatel /, fr: 'Érudit', en: 'Scholar', icon: jobIcon('062128'), sort: 11 },
+  { match: /^Idealized Soothsayer's /, fr: 'Astromancien', en: 'Astrologian', icon: jobIcon('062133'), sort: 12 },
+  { match: /^Idealized Bhikku /, fr: 'Moine', en: 'Monk', icon: jobIcon('062120'), sort: 20 },
+  { match: /^Idealized Pteroslaver /, fr: 'Chevalier dragon', en: 'Dragoon', icon: jobIcon('062122'), sort: 21 },
+  { match: /^Idealized Hattori /, fr: 'Ninja', en: 'Ninja', icon: jobIcon('062130'), sort: 22 },
+  { match: /^Idealized Kasuga /, fr: 'Samouraï', en: 'Samurai', icon: jobIcon('062134'), sort: 23 },
+  { match: /^Idealized Fili /, fr: 'Barde', en: 'Bard', icon: jobIcon('062123'), sort: 24 },
+  { match: /^Idealized Gunslinger's /, fr: 'Machiniste', en: 'Machinist', icon: jobIcon('062131'), sort: 25 },
+  { match: /^Idealized Dancer's /, fr: 'Danseur', en: 'Dancer', icon: jobIcon('062138'), sort: 26 },
+  { match: /^Idealized Wicce /, fr: 'Mage noir', en: 'Black Mage', icon: jobIcon('062125'), sort: 27 },
+  { match: /^Idealized Beckoner's /, fr: 'Invocateur', en: 'Summoner', icon: jobIcon('062127'), sort: 28 },
+  { match: /^Idealized Estoqueur's /, fr: 'Mage rouge', en: 'Red Mage', icon: jobIcon('062135'), sort: 29 },
 ]
 
 /** Rang de chaque job pour le tri tank > heal > DPS des grilles d'armes.
@@ -807,7 +825,8 @@ export function Relics({
   }, [db])
 
   // Séries par extension ; dans chaque extension : armes d'abord, puis le reste.
-  const CAT_ORDER = ['weapons', 'ultimate', 'tools', 'armor', 'garo']
+  // Les armures suivent directement leurs armes ; les outils ferment la marche.
+  const CAT_ORDER = ['weapons', 'ultimate', 'armor', 'garo', 'tools']
   const byExpansion = useMemo(() => {
     const map = new Map<number, RelicSeriesInfo[]>()
     for (const s of db.series) {

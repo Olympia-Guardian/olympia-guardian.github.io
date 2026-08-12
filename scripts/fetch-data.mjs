@@ -128,9 +128,19 @@ function mergeRelics(jsonEn, jsonFr) {
  *  FFXIV Collect en fait des séries distinctes alors que ce sont les paliers
  *  d'une même armure : on les recolle pour retrouver le modèle des armes. */
 // Paliers que le nom seul ne révèle pas : l'armure Anemos est le 4e palier
-// de l'armure de classe d'Eurêka (base → +1 → +2 → Anemos).
+// de l'armure de classe d'Eurêka, et les trois armures de Bozja forment la
+// progression unique des armures de la Résistance (Bozja → Bozja améliorée →
+// Verdict des Juges → Verdict amélioré → Gunnhildr).
 const SPECIAL_TIERS = {
   'Eureka Anemos Armor': { base: 'Eureka Job Armor', tier: 3 },
+  "Law's Order": { base: 'Bozjan Armor', tier: 2 },
+  "Augmented Law's Order": { base: 'Bozjan Armor', tier: 3 },
+  "Blade's Armor": { base: 'Bozjan Armor', tier: 4 },
+}
+
+// Séries fusionnées qui méritent un nom à elles.
+const SERIES_RENAME = {
+  'Bozjan Armor': { key: 'Resistance Armor', name: 'Armures de la Résistance', order: 0 },
 }
 
 function upgradeTier(key) {
@@ -180,12 +190,18 @@ function mergeUpgradeTiers(series, relics) {
     .filter((s) => !baseOf.has(s.key) || baseOf.get(s.key) === s.key)
     .map((s) => {
       const list = families.get(s.key)
+      const renamed = SERIES_RENAME[s.key] ? { ...s, ...SERIES_RENAME[s.key] } : s
       // Pour une armure, un « job » du modèle = une pièce, et une étape = un
       // palier : sans palier, la série tient donc en une seule étape.
-      if (s.category !== 'armor') return s
+      if (renamed.category !== 'armor') return renamed
       const tiers = 1 + (list?.length ?? 0)
-      return { ...s, jobs: s.total, total: s.total * tiers }
+      return { ...renamed, jobs: renamed.total, total: renamed.total * tiers }
     })
+
+  // Les reliques suivent le renommage de leur série.
+  for (const r of outRelics) {
+    if (SERIES_RENAME[r.series]) r.series = SERIES_RENAME[r.series].key
+  }
 
   return { series: outSeries, relics: outRelics }
 }

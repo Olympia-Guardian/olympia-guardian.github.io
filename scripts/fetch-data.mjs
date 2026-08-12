@@ -15,7 +15,17 @@ const KIND_PATHS = {
   fashions: 'fashions',
   orchestrions: 'orchestrions',
   spells: 'spells',
+  facewear: 'facewear',
+  hairstyles: 'hairstyles',
+  emotes: 'emotes',
+  bardings: 'bardings',
+  frames: 'frames',
+  outfits: 'outfits',
+  armoires: 'armoires',
 }
+
+// L'armoire compte ~3500 entrées : la limite par défaut ne suffit plus.
+const PAGE_LIMIT = 6000
 
 async function getJson(url) {
   const res = await fetch(url)
@@ -56,6 +66,14 @@ function mergeDb(jsonEn, jsonFr) {
             aspect: fr?.aspect?.name ?? r.aspect.name,
             aspectEn: r.aspect.name,
           }
+        : {}),
+      // Émotes : la commande de chat (/lookback) fait partie de l'identité de l'émote.
+      ...(r.command ? { command: r.command } : {}),
+      // Portraits : le vrai nom affiché est celui du kit d'encadrement.
+      ...(r.item_name ? { itemName: fr?.item_name ?? r.item_name, itemNameEn: r.item_name } : {}),
+      // Tenues : les pièces qui composent l'ensemble.
+      ...(r.items?.length
+        ? { pieces: r.items.map((p, i) => fr?.items?.[i]?.name ?? p.name) }
         : {}),
       sources: sourcesEn.map((s, i) => ({
         type: s.type,
@@ -100,8 +118,8 @@ await mkdir(OUT, { recursive: true })
 
 for (const [kind, path] of Object.entries(KIND_PATHS)) {
   const [en, fr] = await Promise.all([
-    getJson(`${API}/${path}?limit=1000`),
-    getJson(`${API}/${path}?limit=1000&language=fr`),
+    getJson(`${API}/${path}?limit=${PAGE_LIMIT}`),
+    getJson(`${API}/${path}?limit=${PAGE_LIMIT}&language=fr`),
   ])
   const items = mergeDb(en, fr)
   await writeFile(new URL(`${kind}.json`, OUT), JSON.stringify(items))

@@ -396,7 +396,7 @@ function pct(count: number, total: number, lang: string): string {
 }
 
 /** Vue de groupe : uniquement l'avancement. Le détail (paliers, matériaux,
- *  icônes) vit dans « Ma Page », où l'on ne regarde que son propre perso. */
+ *  icônes) vit dans « Mon Journal », où l'on ne regarde que son propre perso. */
 function RelicSummary({
   db,
   ready,
@@ -505,9 +505,9 @@ export function Relics({
 }: {
   db: RelicDb
   ready: Ready[]
-  /** « Ma Page » : paliers, matériaux et icônes. Sinon : avancement seul. */
+  /** « Mon Journal » : paliers, matériaux et icônes. Sinon : avancement seul. */
   detailed?: boolean
-  /** Fourni dans « Ma Page » : chaque relique devient cochable. */
+  /** Fourni dans « Mon Journal » : chaque relique devient cochable. */
   onToggleRelic?: (id: number) => void
 }) {
   const { lang, t } = useI18n()

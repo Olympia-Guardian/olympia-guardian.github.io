@@ -51,7 +51,7 @@ export const KIND_INFO: Record<Kind, { path: string }> = {
 }
 
 /** Collections que le Lodestone n'expose pas : elles se cochent à la main dans
- *  « Ma Page » (le worker n'en scrape que les montures et les mascottes).
+ *  « Mon Journal » (le worker n'en scrape que les montures et les mascottes).
  *  Référence unique — le worker en garde une copie, à garder synchronisée. */
 export const HIDDEN_KINDS: Kind[] = KINDS.filter((k) => k !== 'mounts' && k !== 'minions')
 
@@ -441,7 +441,7 @@ export async function fetchRelicDb(force = false): Promise<RelicDb> {
   return db
 }
 
-/** Invalide le cache local d'un perso (après édition dans « Ma Page »). */
+/** Invalide le cache local d'un perso (après édition dans « Mon Journal »). */
 export function invalidateCharacter(lodestoneId: number): void {
   try {
     localStorage.removeItem(`ogs.char.${lodestoneId}.v6`)

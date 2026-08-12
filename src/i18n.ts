@@ -87,8 +87,8 @@ const STR = {
   },
   heroTitle: { fr: 'Complétez vos collections ensemble', en: 'Complete your collections together' },
   heroBody: {
-    fr: "Ajoutez les persos du groupe (ID Lodestone à gauche) et l'appli croise vos collections de montures, mascottes, cartes Triple Triad et accessoires de mode via FFXIV Collect : elle vous dit quel contenu farmer ensemble pour que chaque run profite au plus de monde.",
-    en: 'Add your group\'s characters (Lodestone ID on the left) and the app cross-references your mount, minion, Triple Triad card and fashion accessory collections via FFXIV Collect: it tells you what content to farm together so every run benefits as many players as possible.',
+    fr: "Ajoutez les persos du groupe (ID Lodestone à gauche) et l'appli croise vos treize collections — montures, mascottes, cartes, mode, tenues, émotes, orchestrion, magie bleue, reliques… : elle vous dit quel contenu farmer ensemble pour que chaque run profite au plus de monde.",
+    en: 'Add your group\'s characters (Lodestone ID on the left) and the app cross-references your thirteen collections — mounts, minions, cards, fashion, outfits, emotes, orchestrion, blue magic, relics…: it tells you what content to farm together so every run benefits as many players as possible.',
   },
   heroHint: {
     fr: 'Astuce : une fois le groupe constitué, « ⚡ Activer la synchro » puis partagez le lien une seule fois — roster et coches se synchronisent ensuite tout seuls.',
@@ -101,13 +101,13 @@ const STR = {
   dataBy: { fr: 'Catalogues', en: 'Catalogues by' },
   feedback: { fr: 'un souci, une idée ?', en: 'issues & ideas' },
 
-  // Comptes & Ma Page
-  myPage: { fr: 'Ma Page', en: 'My Page' },
+  // Comptes & Mon Journal
+  myPage: { fr: 'Mon Journal', en: 'My Journal' },
   loginDiscord: { fr: 'Se connecter avec Discord', en: 'Sign in with Discord' },
   loginShort: { fr: 'Connexion', en: 'Sign in' },
   loginIntro: {
-    fr: 'Connecte-toi pour lier ton personnage et renseigner directement tes collections (cartes, orchestrion, magie bleue, accessoires) — sans compte FFXIV Collect.',
-    en: 'Sign in to link your character and fill in your collections directly (cards, orchestrion, blue magic, accessories) — no FFXIV Collect account needed.',
+    fr: 'Connecte-toi pour lier un ou plusieurs personnages et renseigner directement tes collections — cartes, mode, tenues, émotes, orchestrion, magie bleue, reliques…',
+    en: 'Sign in to link one or more characters and fill in your collections directly — cards, fashion, outfits, emotes, orchestrion, blue magic, relics…',
   },
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   bindTitle: { fr: 'Lier mon personnage', en: 'Link my character' },
@@ -151,8 +151,8 @@ const STR = {
     en: 'Click a relic to mark it obtained — remaining materials update instantly.',
   },
   relicSummaryNote: {
-    fr: "Déplie un joueur pour voir son avancement par extension et par série. Le détail des paliers et des matériaux se trouve dans « Ma Page ».",
-    en: 'Expand a player to see progress per expansion and series. Step-by-step costs and materials live in “My Page”.',
+    fr: "Déplie un joueur pour voir son avancement par extension et par série. Le détail des paliers et des matériaux se trouve dans « Mon Journal ».",
+    en: 'Expand a player to see progress per expansion and series. Step-by-step costs and materials live in “My Journal”.',
   },
   spellNo: { fr: 'N° {n}', en: 'No. {n}' },
   spellAspect: { fr: 'Aspect', en: 'Aspect' },
@@ -225,10 +225,10 @@ const STR = {
   today: { fr: "aujourd'hui", en: 'today' },
   yesterday: { fr: 'hier', en: 'yesterday' },
   daysAgo: { fr: 'il y a {n} j', en: '{n} d ago' },
-  playerNote: { fr: 'Collections à renseigner dans « Ma Page »', en: 'Collections to fill in from “My Page”' },
+  playerNote: { fr: 'Collections à renseigner dans « Mon Journal »', en: 'Collections to fill in from “My Journal”' },
   playerNoteTitle: {
-    fr: "Le Lodestone n'expose que les montures et les mascottes. Les onze autres collections (cartes, mode, tenues, armoire, bardes, émotes, portraits, orchestrion, magie bleue) se cochent directement dans « Ma Page », après avoir lié son personnage.",
-    en: 'The Lodestone only exposes mounts and minions. The other eleven collections (cards, fashion, outfits, armoire, bardings, emotes, portraits, orchestrion, blue magic) are checked directly in “My Page”, once your character is linked.',
+    fr: "Le Lodestone n'expose que les montures et les mascottes. Les onze autres collections (cartes, mode, tenues, armoire, bardes, émotes, portraits, orchestrion, magie bleue) se cochent directement dans « Mon Journal », après avoir lié son personnage.",
+    en: 'The Lodestone only exposes mounts and minions. The other eleven collections (cards, fashion, outfits, armoire, bardings, emotes, portraits, orchestrion, blue magic) are checked directly in “My Journal”, once your character is linked.',
   },
   privateCollection: { fr: '⚠ Collection privée', en: '⚠ Private collection' },
   privateTitle: {
@@ -285,8 +285,8 @@ const STR = {
   sortGame: { fr: 'Ordre du jeu', en: 'Game order' },
   onlyMissing: { fr: 'Seulement les manquants', en: 'Missing only' },
   matrixNotice: {
-    fr: "Le Lodestone n'expose pas cette collection : chacun la coche dans « Ma Page », après avoir lié son personnage.",
-    en: 'The Lodestone does not expose this collection: everyone checks it in “My Page”, once their character is linked.',
+    fr: "Le Lodestone n'expose pas cette collection : chacun la coche dans « Mon Journal », après avoir lié son personnage.",
+    en: 'The Lodestone does not expose this collection: everyone checks it in “My Journal”, once their character is linked.',
   },
   openOnCollect: { fr: 'ouvrir « {what} » sur FFXIV Collect ↗', en: 'open "{what}" on FFXIV Collect ↗' },
   itemsCount1: { fr: '{n} objet', en: '{n} item' },

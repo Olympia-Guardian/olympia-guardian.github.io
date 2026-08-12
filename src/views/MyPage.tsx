@@ -25,7 +25,7 @@ import { Meter, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
-// Collections modifiables depuis « Ma Page » (le reste vient du Lodestone).
+// Collections modifiables depuis « Mon Journal » (le reste vient du Lodestone).
 const EDITABLE = HIDDEN_KINDS
 
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.

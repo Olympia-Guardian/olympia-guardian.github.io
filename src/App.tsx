@@ -210,7 +210,7 @@ export default function App() {
                 >
                   <GiCharacter /> {t('myPage')}
                 </button>
-                {/* Le compte n'est affiché qu'ici : plus de doublon dans Ma Page. */}
+                {/* Le compte n'est affiché qu'ici : plus de doublon dans Mon Journal. */}
                 <span className="account-chip" title={auth.user.name}>
                   {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
                   <span className="account-name">{auth.user.name}</span>

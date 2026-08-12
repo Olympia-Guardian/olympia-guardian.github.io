@@ -1666,26 +1666,37 @@ a.player-name:hover {
   }
 }
 
-/* album de cartes (pages de 30, illustrations) */
+/* album de cartes : pages 5×6 côte à côte, comme l'album en jeu */
 .album {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.album-page {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 10px 12px 12px;
 }
 
 .album-page-head {
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 10px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--hairline);
-  padding-bottom: 4px;
+}
+
+.album-page-head b {
+  color: var(--ink-2);
 }
 
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(5, 62px);
+  gap: 6px;
 }
 
 .album-card {
@@ -1702,11 +1713,7 @@ a.player-name:hover {
 }
 
 .album-card.is-missing img {
-  filter: grayscale(0.85) brightness(0.55);
-}
-
-.album-card.is-owned img {
-  border-color: rgba(12, 163, 12, 0.5);
+  filter: grayscale(0.85) brightness(0.5);
 }
 
 .album-card:hover img {
@@ -1714,9 +1721,26 @@ a.player-name:hover {
   filter: none;
 }
 
-.album-card .relic-badge {
-  bottom: 4px;
-  right: 4px;
+/* coche translucide centrée, façon album du jeu */
+.album-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+/* case vide (carte masquée par le filtre) : la grille reste en place */
+.album-slot {
+  border-radius: 6px;
+  background: var(--surface-2);
+  opacity: 0.4;
+  aspect-ratio: 40 / 51;
 }
 
 /* panneau de fiche : tiroir flottant par-dessus l'interface, zéro reflow */

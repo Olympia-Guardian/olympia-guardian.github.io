@@ -92,7 +92,7 @@ function CardAlbum({
   ids: Set<number>
   onItemClick: (it: Item) => void
 }) {
-  const { lang, t } = useI18n()
+  const { lang } = useI18n()
   const pages = useMemo(() => {
     const sorted = [...allItems].sort((a, b) => a.order - b.order)
     const out: Item[][] = []
@@ -109,13 +109,14 @@ function CardAlbum({
         return (
           <section key={i} className="album-page">
             <header className="album-page-head">
-              <b>{t('albumPage', { n: i + 1 })}</b>
+              <b>{i + 1}</b>
               <span className={`mypage-count ${owned === page.length ? 'relic-done' : ''}`}>
                 {owned}/{page.length}
               </span>
             </header>
             <div className="album-grid">
-              {shown.map((it) => {
+              {page.map((it) => {
+                if (!visible.has(it.id)) return <span key={it.id} className="album-slot" />
                 const has = ids.has(it.id)
                 return (
                   <button
@@ -125,7 +126,7 @@ function CardAlbum({
                     onClick={() => onItemClick(it)}
                   >
                     <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />
-                    {has && <span className="relic-badge">✓</span>}
+                    {has && <span className="album-check">✓</span>}
                   </button>
                 )
               })}

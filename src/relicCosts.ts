@@ -277,14 +277,32 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     ],
   },
 
-  // ------------------------------------------- 7.x — Armes de rêve/magnifiées
+  // --------------------------------- Armes de rêve/magnifiées (donjons annexes)
+  // Rien à voir avec le Croissant occulte : ces deux séries viennent des donjons
+  // à embranchements et de leurs versions annexes (Aloalo, Contes du Camelot).
   'Figmental Weapons': {
-    url: `${WIKI}/Phantom_Weapons`,
-    perPiece: [m(1, 'drop de coffres du Croissant occulte', 'Occult Crescent coffer drop', undefined, 'drop')],
+    url: `${WIKI}/Figmental_Weapons`,
+    perPiece: [
+      m(
+        1,
+        "coffret d'arme de rêve (Cénote Ja Ja Gural ou Le coffre d'Oneiron)",
+        'Figmental Weapon Coffer (Cenote Ja Ja Gural or Vault Oneiron)',
+        undefined,
+        'drop',
+      ),
+    ],
   },
   'Exquisite Weapons': {
-    url: `${WIKI}/Phantom_Weapons`,
-    perPiece: [m(1, 'drop de la Tour fourchue', 'Forked Tower drop', undefined, 'drop')],
+    url: `${WIKI}/Exquisite_Weapons`,
+    perPiece: [
+      m(1, 'arme Credendum améliorée', 'Augmented Credendum Weapon'),
+      m(
+        1,
+        "agent renforçant du ciel ouvert (L'île d'Aloalo annexe sadique, ou Contes du Camelot)",
+        "Elevated Ester (Another Aloalo Island Savage, or The Merchant's Tale)",
+        'elevated-ester',
+      ),
+    ],
   },
 
   // ----------------------------------------------------------------- Outils

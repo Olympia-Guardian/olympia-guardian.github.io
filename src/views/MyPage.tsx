@@ -11,36 +11,96 @@ import {
 import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
 import type { Db, Member } from '../store'
-import { Meter, onItemImgError } from '../ui'
+import { Meter, TypeChip, onItemImgError } from '../ui'
+import { localSource } from '../i18n'
 
 // Collections modifiables depuis « Ma Page » (le reste vient du Lodestone).
 const EDITABLE: Kind[] = ['cards', 'fashions', 'orchestrions', 'spells']
 
 type Auth = ReturnType<typeof useAuth>
 
+/** Panneau latéral : fiche de l'objet sélectionné + ajout/retrait. */
+function ItemPanel({
+  item,
+  owned,
+  readOnly,
+  onToggle,
+  onClose,
+}: {
+  item: Item
+  owned: boolean
+  readOnly?: boolean
+  onToggle: () => void
+  onClose: () => void
+}) {
+  const { lang, t } = useI18n()
+  const description = lang === 'fr' ? item.description : item.descriptionEn
+  return (
+    <aside className="item-panel">
+      <button className="icon-btn item-panel-close" title={t('close')} onClick={onClose}>
+        ×
+      </button>
+      <img className="item-panel-image" src={item.image} alt="" loading="lazy" onError={onItemImgError} />
+      <h3 className="item-panel-name">{localName(item, lang)}</h3>
+      {item.nameEn !== localName(item, lang) && <p className="modal-en">{item.nameEn}</p>}
+      <p className="modal-chips">
+        {item.patch && <span className="chip chip-patch">{t('patch', { n: item.patch })}</span>}
+        {item.tradeable && (
+          <span className="chip chip-hv" title={t('hvTitle')}>
+            HV
+          </span>
+        )}
+        <span className={`chip ${owned ? 'chip-owned' : 'chip-type'}`}>
+          {owned ? t('panelOwned') : t('panelMissing')}
+        </span>
+      </p>
+      {description && <p className="modal-desc">{description}</p>}
+      {item.sources.length > 0 && (
+        <ul className="modal-sources">
+          {item.sources.map((s, i) => (
+            <li key={i}>
+              <TypeChip type={s.type} /> {localSource(s, lang)}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!readOnly && (
+        <button className={`btn ${owned ? 'btn-ghost' : 'btn-primary'} item-panel-action`} onClick={onToggle}>
+          {owned ? t('panelRemove') : t('panelAdd')}
+        </button>
+      )}
+    </aside>
+  )
+}
+
 /** Album de cartes façon jeu : pages de 30, illustrations, clic pour cocher. */
 function CardAlbum({
-  items,
+  allItems,
+  visible,
   ids,
-  toggle,
+  onItemClick,
 }: {
-  items: Item[]
+  /** Toutes les cartes : les pages d'album restent fixes… */
+  allItems: Item[]
+  /** …et le filtre ne fait que masquer (pages vides cachées, numéros conservés). */
+  visible: Set<number>
   ids: Set<number>
-  toggle: (id: number) => void
+  onItemClick: (it: Item) => void
 }) {
   const { lang, t } = useI18n()
   const pages = useMemo(() => {
-    const sorted = [...items].sort((a, b) => a.order - b.order)
+    const sorted = [...allItems].sort((a, b) => a.order - b.order)
     const out: Item[][] = []
     for (let i = 0; i < sorted.length; i += 30) out.push(sorted.slice(i, i + 30))
     return out
-  }, [items])
+  }, [allItems])
 
   return (
     <div className="album">
       {pages.map((page, i) => {
+        const shown = page.filter((it) => visible.has(it.id))
+        if (shown.length === 0) return null
         const owned = page.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
-        if (page.length === 0) return null
         return (
           <section key={i} className="album-page">
             <header className="album-page-head">
@@ -50,14 +110,14 @@ function CardAlbum({
               </span>
             </header>
             <div className="album-grid">
-              {page.map((it) => {
+              {shown.map((it) => {
                 const has = ids.has(it.id)
                 return (
                   <button
                     key={it.id}
                     className={`album-card ${has ? 'is-owned' : 'is-missing'}`}
                     title={`${localName(it, lang)} · n°${it.order}${has ? ' ✓' : ''}`}
-                    onClick={() => toggle(it.id)}
+                    onClick={() => onItemClick(it)}
                   >
                     <img src={it.image} alt="" loading="lazy" onError={onItemImgError} />
                     {has && <span className="relic-badge">✓</span>}
@@ -76,11 +136,11 @@ function CardAlbum({
 function GroupedChecklist({
   items,
   ids,
-  toggle,
+  onItemClick,
 }: {
   items: Item[]
   ids: Set<number>
-  toggle: (id: number) => void
+  onItemClick: (it: Item) => void
 }) {
   const { lang } = useI18n()
   const groups = useMemo(() => {
@@ -113,7 +173,7 @@ function GroupedChecklist({
                   <li key={it.id}>
                     <button
                       className={`checklist-row ${has ? 'is-owned' : ''}`}
-                      onClick={() => toggle(it.id)}
+                      onClick={() => onItemClick(it)}
                     >
                       <span className={`checklist-box ${has ? 'is-owned' : ''}`}>
                         {has ? '✓' : ''}
@@ -173,6 +233,15 @@ function CollectionEditor({
     })
   }
 
+  const [mode, setMode] = useState<'quick' | 'inspect'>('quick')
+  const [selected, setSelected] = useState<Item | null>(null)
+  const inspect = readOnly || mode === 'inspect'
+
+  function handleItem(it: Item) {
+    if (inspect) setSelected(it)
+    else toggle(it.id)
+  }
+
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
     return db[kind].filter(
@@ -181,6 +250,8 @@ function CollectionEditor({
         (!onlyMissing || !ids.has(it.id)),
     )
   }, [db, kind, search, onlyMissing, ids])
+
+  const visible = useMemo(() => new Set(items.map((it) => it.id)), [items])
 
   return (
     <div className="mypage-editor">
@@ -200,32 +271,63 @@ function CollectionEditor({
           />
           {t('onlyMissing')}
         </label>
+        {!readOnly && (
+          <div className="lang-switch">
+            <button
+              className={`lang-btn ${mode === 'quick' ? 'is-active' : ''}`}
+              title={t('modeQuickTitle')}
+              onClick={() => setMode('quick')}
+            >
+              {t('modeQuick')}
+            </button>
+            <button
+              className={`lang-btn ${mode === 'inspect' ? 'is-active' : ''}`}
+              title={t('modeInspectTitle')}
+              onClick={() => setMode('inspect')}
+            >
+              {t('modeInspect')}
+            </button>
+          </div>
+        )}
         <div className="mypage-progress">
           <Meter label={kindLabel(lang, kind, 'short')} count={ids.size} total={db[kind].length} />
         </div>
       </div>
-      {kind === 'cards' ? (
-        <CardAlbum items={items} ids={ids} toggle={toggle} />
-      ) : kind === 'orchestrions' ? (
-        <GroupedChecklist items={items} ids={ids} toggle={toggle} />
-      ) : (
-        <div className="relic-icons mypage-grid">
-          {items.map((it: Item) => {
-            const has = ids.has(it.id)
-            return (
-              <button
-                key={it.id}
-                className={`relic-icon mypage-tile ${has ? 'is-owned' : 'is-missing'}`}
-                title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
-                onClick={() => toggle(it.id)}
-              >
-                <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
-                {has && <span className="relic-badge">✓</span>}
-              </button>
-            )
-          })}
+      <div className="editor-layout">
+        <div className="editor-body">
+          {kind === 'cards' ? (
+            <CardAlbum allItems={db[kind]} visible={visible} ids={ids} onItemClick={handleItem} />
+          ) : kind === 'orchestrions' ? (
+            <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} />
+          ) : (
+            <div className="relic-icons mypage-grid">
+              {items.map((it: Item) => {
+                const has = ids.has(it.id)
+                return (
+                  <button
+                    key={it.id}
+                    className={`relic-icon mypage-tile ${has ? 'is-owned' : 'is-missing'}`}
+                    title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
+                    onClick={() => handleItem(it)}
+                  >
+                    <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
+                    {has && <span className="relic-badge">✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
-      )}
+        {selected && (
+          <ItemPanel
+            item={selected}
+            owned={ids.has(selected.id)}
+            readOnly={readOnly}
+            onToggle={() => toggle(selected.id)}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </div>
     </div>
   )
 }

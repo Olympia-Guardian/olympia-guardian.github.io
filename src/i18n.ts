@@ -136,6 +136,20 @@ const STR = {
   saveError: { fr: 'Sauvegarde impossible — réessaie.', en: 'Could not save — retry.' },
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
+  modeQuick: { fr: '⚡ Ajout rapide', en: '⚡ Quick add' },
+  modeQuickTitle: {
+    fr: 'Un clic sur une icône coche/décoche directement',
+    en: 'One click on an icon checks/unchecks directly',
+  },
+  modeInspect: { fr: '🔍 Un par un', en: '🔍 One by one' },
+  modeInspectTitle: {
+    fr: "Un clic ouvre la fiche de l'objet à droite, tu l'ajoutes depuis là",
+    en: 'A click opens the item panel on the right; add it from there',
+  },
+  panelAdd: { fr: '✓ Ajouter à ma collection', en: '✓ Add to my collection' },
+  panelRemove: { fr: '✗ Retirer de ma collection', en: '✗ Remove from my collection' },
+  panelOwned: { fr: 'Possédé ✓', en: 'Owned ✓' },
+  panelMissing: { fr: 'Manquant', en: 'Missing' },
   myPageAutoNote: {
     fr: 'Montures et mascottes 🔒 se synchronisent toutes seules depuis le Lodestone (lecture seule). Les autres onglets se cochent à la main — clique sur les icônes.',
     en: 'Mounts and minions 🔒 sync on their own from the Lodestone (read-only). The other tabs are checked by hand — click the icons.',

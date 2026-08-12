@@ -1635,6 +1635,77 @@ a.player-name:hover {
   right: 4px;
 }
 
+/* disposition éditeur + panneau latéral de fiche */
+.editor-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.editor-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.item-panel {
+  position: sticky;
+  top: 12px;
+  width: 290px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1px solid var(--ring);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 18px;
+}
+
+.item-panel-image {
+  max-width: 140px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--ring);
+  align-self: center;
+}
+
+.item-panel-name {
+  margin: 0;
+  font-size: 16px;
+}
+
+.item-panel .modal-sources {
+  font-size: 12px;
+}
+
+.item-panel-action {
+  margin-top: 4px;
+}
+
+.chip-owned {
+  background: rgba(12, 163, 12, 0.12);
+  border: 1px solid rgba(12, 163, 12, 0.4);
+  color: var(--good);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .editor-layout {
+    flex-direction: column-reverse;
+  }
+
+  .item-panel {
+    position: static;
+    width: 100%;
+  }
+}
+
 /* liste à cocher groupée (orchestrion) */
 .checklist {
   display: flex;

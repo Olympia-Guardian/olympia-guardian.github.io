@@ -1594,6 +1594,12 @@ a.player-name:hover {
 }
 
 /* ligne de contrôles de l'éditeur : hauteurs uniformes, icônes alignées */
+.mypage-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .editor-controls {
   align-items: center;
 }
@@ -1758,10 +1764,12 @@ a.player-name:hover {
   color: var(--ink-2);
 }
 
+/* 5 cases de 60px : la page fait ~362px, il en tient 3 par ligne à côté
+   du rail de catégories dans l'app à 1440px. */
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(5, 64px);
-  gap: 9px;
+  grid-template-columns: repeat(5, 60px);
+  gap: 8px;
 }
 
 .album-card {

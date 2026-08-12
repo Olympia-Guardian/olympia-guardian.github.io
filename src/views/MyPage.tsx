@@ -16,6 +16,7 @@ import {
   GiMagnifyingGlass,
   GiPadlock,
   GiPowerLightning,
+  GiRoundStar,
 } from 'react-icons/gi'
 import type { Db, Member } from '../store'
 import { Meter, TypeChip, onItemImgError } from '../ui'
@@ -80,6 +81,107 @@ function ItemPanel({
   )
 }
 
+/** Rail de catégories : navigation verticale avec compte et mini-jauge par
+ *  catégorie, façon Lodestone — remplace les nuages de pastilles. */
+function CatRail({
+  entries,
+  all,
+  active,
+  onSelect,
+}: {
+  entries: { key: string; label: string; owned: number; total: number }[]
+  /** Totaux réels pour « Tout » (un objet peut compter dans plusieurs catégories). */
+  all: { owned: number; total: number }
+  active: string | null
+  onSelect: (key: string | null) => void
+}) {
+  const { t } = useI18n()
+  const row = (key: string | null, label: string, owned: number, total: number) => (
+    <button
+      key={key ?? '__all'}
+      className={`cat-item ${active === key ? 'is-active' : ''} ${owned === total ? 'is-done' : ''}`}
+      onClick={() => onSelect(key)}
+    >
+      <span className="cat-item-top">
+        <span className="cat-item-label">{label}</span>
+        <span className="cat-item-count">
+          {owned}/{total}
+        </span>
+      </span>
+      <span className="cat-item-bar">
+        <i style={{ width: `${total > 0 ? (owned / total) * 100 : 0}%` }} />
+      </span>
+    </button>
+  )
+  return (
+    <nav className="cat-rail">
+      {row(null, t('scopeAll'), all.owned, all.total)}
+      {entries.map((e) => row(e.key, e.label, e.owned, e.total))}
+    </nav>
+  )
+}
+
+/** Grimoire de magie bleue : n°, aspect/dégâts, rang en étoiles et obtention,
+ *  comme le carnet en jeu. */
+function SpellBook({
+  items,
+  ids,
+  onItemClick,
+}: {
+  items: Item[]
+  ids: Set<number>
+  onItemClick: (it: Item) => void
+}) {
+  const { lang, t } = useI18n()
+  const sorted = useMemo(() => [...items].sort((a, b) => a.order - b.order), [items])
+  return (
+    <div className="spellbook">
+      {sorted.map((it) => {
+        const has = ids.has(it.id)
+        const physical = it.spellTypeEn === 'Physical'
+        const aspect = (lang === 'fr' ? it.aspect : it.aspectEn) ?? ''
+        return (
+          <button
+            key={it.id}
+            className={`spell-row ${has ? 'is-owned' : 'is-missing'}`}
+            onClick={() => onItemClick(it)}
+          >
+            <img className="spell-icon" src={it.icon} alt="" loading="lazy" onError={onItemImgError} />
+            <span className="spell-main">
+              <span className="spell-top">
+                <span className="spell-name">
+                  {localName(it, lang)}
+                  {has && <GiCheckMark className="spell-check" />}
+                </span>
+                <span className="spell-no">{t('spellNo', { n: it.order })}</span>
+              </span>
+              <span className="spell-mid">
+                <span className="spell-aspect">
+                  <i className={`spell-dot aspect-${(it.aspectEn ?? 'none').toLowerCase()}`} />
+                  {physical ? t('spellDamage') : t('spellAspect')} : {aspect}
+                </span>
+                <span className="spell-stars" title={`${it.rank ?? 0}/5`}>
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <GiRoundStar key={i} className={i < (it.rank ?? 0) ? 'is-filled' : ''} />
+                  ))}
+                </span>
+              </span>
+              <span className="spell-src">
+                {it.sources[0] && (
+                  <>
+                    <TypeChip type={it.sources[0].type} />
+                    <span className="spell-src-text">{localSource(it.sources[0], lang)}</span>
+                  </>
+                )}
+              </span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 /** Album de cartes façon jeu : pages de 30, illustrations, clic pour cocher. */
 function CardAlbum({
   allItems,
@@ -94,7 +196,7 @@ function CardAlbum({
   ids: Set<number>
   onItemClick: (it: Item) => void
 }) {
-  const { lang, t } = useI18n()
+  const { lang } = useI18n()
   const [srcType, setSrcType] = useState<string | null>(null)
 
   // Position d'album par NUMÉRO de carte : page = ⌈n/30⌉, case = (n-1) mod 30,
@@ -143,25 +245,22 @@ function CardAlbum({
     visible.has(it.id) && (!srcType || it.sources.some((s) => s.type === srcType))
 
   return (
-    <div className="album-wrap">
-      <div className="cat-filter">
-        <button className={`cat-chip ${srcType === null ? 'is-active' : ''}`} onClick={() => setSrcType(null)}>
-          {t('scopeAll')}
-        </button>
-        {srcTypes.map(([type, { total, owned }]) => (
-          <button
-            key={type}
-            className={`cat-chip ${srcType === type ? 'is-active' : ''} ${owned === total ? 'is-done' : ''}`}
-            onClick={() => setSrcType(srcType === type ? null : type)}
-          >
-            {typeLabel(type, lang)}
-            <span className="cat-chip-count">
-              {owned}/{total}
-            </span>
-          </button>
-        ))}
-      </div>
-      <div className="album">
+    <div className="cat-layout album-wrap">
+      <CatRail
+        entries={srcTypes.map(([type, { total, owned }]) => ({
+          key: type,
+          label: typeLabel(type, lang),
+          owned,
+          total,
+        }))}
+        all={{
+          owned: allItems.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0),
+          total: allItems.length,
+        }}
+        active={srcType}
+        onSelect={setSrcType}
+      />
+      <div className="cat-content album">
         {pages.map(({ label, cells, isEx }) => {
           const real = cells.filter((it): it is Item => it !== null)
           const shown = real.filter((it) => shows(it))
@@ -213,7 +312,7 @@ function GroupedChecklist({
   ids: Set<number>
   onItemClick: (it: Item) => void
 }) {
-  const { lang, t } = useI18n()
+  const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
   const allGroups = useMemo(() => {
     const map = new Map<string, Item[]>()
@@ -229,30 +328,22 @@ function GroupedChecklist({
   const groups = cat ? allGroups.filter(([g]) => g === cat) : allGroups
 
   return (
-    <div className="checklist">
-      <div className="cat-filter">
-        <button
-          className={`cat-chip ${cat === null ? 'is-active' : ''}`}
-          onClick={() => setCat(null)}
-        >
-          {t('scopeAll')}
-        </button>
-        {allGroups.map(([g, list]) => {
-          const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
-          return (
-            <button
-              key={g}
-              className={`cat-chip ${cat === g ? 'is-active' : ''} ${owned === list.length ? 'is-done' : ''}`}
-              onClick={() => setCat(cat === g ? null : g)}
-            >
-              {g}
-              <span className="cat-chip-count">
-                {owned}/{list.length}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+    <div className="cat-layout checklist">
+      <CatRail
+        entries={allGroups.map(([g, list]) => ({
+          key: g,
+          label: g,
+          owned: list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0),
+          total: list.length,
+        }))}
+        all={{
+          owned: items.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0),
+          total: items.length,
+        }}
+        active={cat}
+        onSelect={setCat}
+      />
+      <div className="cat-content checklist-groups">
       {groups.map(([group, list]) => {
         const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
         return (
@@ -299,6 +390,7 @@ function GroupedChecklist({
           </section>
         )
       })}
+      </div>
     </div>
   )
 }
@@ -402,6 +494,8 @@ function CollectionEditor({
             <CardAlbum allItems={db[kind]} visible={visible} ids={ids} onItemClick={handleItem} />
           ) : kind === 'orchestrions' ? (
             <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} />
+          ) : kind === 'spells' ? (
+            <SpellBook items={items} ids={ids} onItemClick={handleItem} />
           ) : (
             <div className="relic-icons mypage-grid">
               {items.map((it: Item) => {

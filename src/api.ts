@@ -44,6 +44,12 @@ export interface Item {
   groupEn?: string
   /** Numéro d'album (rouleaux, cartes). */
   num?: number | string
+  /** Magie bleue : rang en étoiles (1-5), type (Magique/Physique) et aspect (élément ou type de dégâts). */
+  rank?: number
+  spellType?: string
+  spellTypeEn?: string
+  aspect?: string
+  aspectEn?: string
   /** type = enum anglais stable de l'API (la logique de catégories s'appuie dessus) ; text = français. */
   sources: Source[]
 }
@@ -109,7 +115,8 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
   // v3 : ajout de sources[].textEn pour les heuristiques solo/groupe.
   // v4 : image + description pour la fiche objet.
   // v5 : group/groupEn (catégorie orchestrion) + num (numéro d'album des cartes).
-  const cacheKey = `ogs.db.${kind}.v5`
+  // v6 : rank/spellType/aspect (magie bleue).
+  const cacheKey = `ogs.db.${kind}.v6`
   if (!force) {
     const cached = readCache<Item[]>(cacheKey, DB_TTL)
     if (cached) return cached
@@ -162,6 +169,15 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
       // Mêmes champs que les catalogues statiques (scripts/fetch-data.mjs)
       ...(r.category ? { group: fr?.category?.name ?? r.category.name, groupEn: r.category.name } : {}),
       ...(r.number !== undefined ? { num: r.number } : {}),
+      ...(r.rank !== undefined ? { rank: r.rank } : {}),
+      ...(r.aspect?.name && r.type?.name
+        ? {
+            spellType: fr?.type?.name ?? r.type.name,
+            spellTypeEn: r.type.name,
+            aspect: fr?.aspect?.name ?? r.aspect.name,
+            aspectEn: r.aspect.name,
+          }
+        : {}),
     }
   })
   writeCache(cacheKey, items)

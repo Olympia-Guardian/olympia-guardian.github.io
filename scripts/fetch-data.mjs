@@ -45,6 +45,18 @@ function mergeDb(jsonEn, jsonFr) {
       // Catégorie (orchestrion : Lieux, Donjons…) et numéro d'album quand présents
       ...(r.category ? { group: fr?.category?.name ?? r.category.name, groupEn: r.category.name } : {}),
       ...(r.number !== undefined ? { num: r.number } : {}),
+      // Magie bleue : rang (étoiles), type (Magique/Physique) et aspect (élément).
+      // Les cartes ont aussi un champ type (Society, Primal…) → on ne prend le
+      // couple type/aspect que si aspect existe (propre aux sorts).
+      ...(r.rank !== undefined ? { rank: r.rank } : {}),
+      ...(r.aspect?.name && r.type?.name
+        ? {
+            spellType: fr?.type?.name ?? r.type.name,
+            spellTypeEn: r.type.name,
+            aspect: fr?.aspect?.name ?? r.aspect.name,
+            aspectEn: r.aspect.name,
+          }
+        : {}),
       sources: sourcesEn.map((s, i) => ({
         type: s.type,
         text: sourcesFr[i]?.text ?? s.text,

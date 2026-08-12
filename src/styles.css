@@ -1894,16 +1894,6 @@ a.player-name:hover {
 }
 
 /* filtres par catégorie façon Lodestone */
-.cat-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-}
-
 .cat-chip {
   display: inline-flex;
   align-items: center;
@@ -2046,4 +2036,287 @@ a.player-name:hover {
     margin-left: 42px;
     width: 100%;
   }
+}
+
+/* ===== Rail de catégories (Ma Page : cartes, orchestrion) ===== */
+
+.cat-layout {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.cat-rail {
+  flex: 0 0 216px;
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+
+.cat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.cat-item:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.cat-item.is-active {
+  background: var(--surface-2);
+  border-left-color: var(--gold);
+  color: var(--ink);
+}
+
+.cat-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cat-item-label {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-item.is-active .cat-item-label {
+  font-weight: 600;
+}
+
+.cat-item-count {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.cat-item.is-done .cat-item-count {
+  color: var(--good);
+}
+
+.cat-item-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.cat-item-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.cat-item.is-done .cat-item-bar i {
+  background: var(--good);
+}
+
+.cat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.checklist-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* L'album reste un flux de pages dans la zone de contenu */
+.cat-content.album {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  .cat-layout {
+    flex-direction: column;
+  }
+
+  .cat-rail {
+    position: static;
+    flex: none;
+    width: 100%;
+    max-height: none;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 6px;
+  }
+
+  .cat-item {
+    flex: 0 0 auto;
+    min-width: 130px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: var(--radius-s) var(--radius-s) 0 0;
+  }
+
+  .cat-item.is-active {
+    border-bottom-color: var(--gold);
+  }
+}
+
+/* ===== Grimoire de magie bleue (Ma Page : sorts) ===== */
+
+.spellbook {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 10px;
+}
+
+.spell-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.spell-row:hover {
+  border-color: var(--ring);
+  transform: translateY(-1px);
+}
+
+.spell-row.is-missing {
+  opacity: 0.66;
+}
+
+.spell-row.is-missing .spell-icon {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.spell-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-s);
+  flex-shrink: 0;
+}
+
+.spell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spell-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.spell-name {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spell-check {
+  color: var(--good);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.spell-no {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spell-mid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.spell-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: #6b6b68;
+}
+
+.aspect-fire { background: #e0684b; }
+.aspect-water { background: #4e9de0; }
+.aspect-wind { background: #63bd63; }
+.aspect-earth { background: #d0a85c; }
+.aspect-lightning { background: #a875e8; }
+.aspect-ice { background: #7fd4e8; }
+
+.spell-stars {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 11px;
+  color: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.spell-stars .is-filled {
+  color: var(--gold);
+}
+
+.spell-src {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.spell-src-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

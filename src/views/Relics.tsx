@@ -143,7 +143,11 @@ const GARO_SORT: Record<string, number> = {
 }
 
 /** Relique sélectionnée : la fiche a besoin de sa série et de son palier. */
-type RelicPick = { relic: Relic; info: RelicSeriesInfo; step: number }
+/** Paliers liés d'une même arme/pièce : cocher implique les précédents,
+ *  décocher entraîne les suivants (séries à étapes d'amélioration seulement). */
+type RelicChain = { before: number[]; after: number[] }
+
+type RelicPick = { relic: Relic; info: RelicSeriesInfo; step: number; chain?: RelicChain }
 
 /** Fiche latérale d'une relique, jumelle de celle des collections. */
 function RelicPanel({
@@ -247,7 +251,7 @@ function SeriesCard({
   relics: Relic[]
   ready: Ready[]
   ownedSets: Map<number, Set<number>>
-  onRelicClick?: (relic: Relic, step: number) => void
+  onRelicClick?: (relic: Relic, step: number, chain?: RelicChain) => void
   /** « Tout ajouter / retirer » sur un palier (Mon Journal). */
   onSetRelics?: (ids: number[], add: boolean) => void
 }) {
@@ -391,6 +395,25 @@ function SeriesCard({
   const ownedInStep = (memberId: number, i: number) => {
     const owned = ownedSets.get(memberId)!
     return stepRelics[i].reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
+  }
+
+  // Coche en cascade : un palier implique les précédents (et décosher un
+  // palier retire les suivants). Uniquement quand les étapes sont de vraies
+  // améliorations — pas pour les donjons sans fond, ultimates ou sets GARO.
+  const chained = steps > 1 && !info.stepSizes && !garoSets && !costs?.independentSteps
+  const chainFor = (relic: Relic, step: number): RelicChain | undefined => {
+    if (!chained) return undefined
+    // Position de l'arme/pièce dans son palier via l'ordre API (1-based),
+    // insensible aux tris d'affichage (rôles, jobs, noms).
+    const pos = (relic.order - 1) % info.jobs
+    const before: number[] = []
+    const after: number[] = []
+    for (let s = 0; s < stepRelics.length; s++) {
+      if (s === step) continue
+      const match = stepRelics[s].find((r) => (r.order - 1) % info.jobs === pos)
+      if (match) (s < step ? before : after).push(match.id)
+    }
+    return { before, after }
   }
 
   // Guide dans la langue de l'interface : FR → guides ffxiv-eorzea des sagas,
@@ -544,12 +567,17 @@ function SeriesCard({
                           {onSetRelics && (
                             <button
                               className="btn btn-ghost btn-mini relic-bulk"
-                              onClick={() =>
-                                onSetRelics(
-                                  list.map((r) => r.id),
-                                  c < list.length,
-                                )
-                              }
+                              onClick={() => {
+                                const add = c < list.length
+                                // Cascade : ajouter un palier ajoute les précédents,
+                                // le retirer retire aussi les suivants.
+                                const ids = chained
+                                  ? (add ? stepRelics.slice(0, i + 1) : stepRelics.slice(i))
+                                      .flat()
+                                      .map((r) => r.id)
+                                  : list.map((r) => r.id)
+                                onSetRelics(ids, add)
+                              }}
                             >
                               {c < list.length ? t('relicAddAll') : t('relicRemoveAll')}
                             </button>
@@ -624,7 +652,7 @@ function SeriesCard({
                                   key={r.id}
                                   className={`relic-icon is-editable ${has ? 'is-owned' : 'is-missing'}`}
                                   title={`${label} — ${t(has ? 'relicUncheck' : 'relicCheck')}`}
-                                  onClick={() => onRelicClick(r, i)}
+                                  onClick={() => onRelicClick(r, i, chainFor(r, i))}
                                 >
                                   {content}
                                 </button>
@@ -1005,11 +1033,28 @@ export function Relics({
     )
   }
 
+  // Coche avec cascade : ajouter un palier ajoute les précédents manquants,
+  // retirer un palier retire aussi les suivants possédés.
+  const toggleWithChain = (relic: Relic, chain?: RelicChain) => {
+    if (!onToggleRelic) return
+    const owned = ownedSets.get(ready[0]?.id ?? 0) ?? new Set<number>()
+    if (onSetRelics && chain) {
+      if (owned.has(relic.id)) {
+        const after = chain.after.filter((id) => owned.has(id))
+        if (after.length > 0) return onSetRelics([relic.id, ...after], false)
+      } else {
+        const before = chain.before.filter((id) => !owned.has(id))
+        if (before.length > 0) return onSetRelics([...before, relic.id], true)
+      }
+    }
+    onToggleRelic(relic.id)
+  }
+
   // Clic sur une relique : coche directe en « ajout rapide », fiche sinon.
   const handleRelic = onToggleRelic
-    ? (info: RelicSeriesInfo) => (relic: Relic, step: number) => {
-        if (mode === 'quick') onToggleRelic(relic.id)
-        else setPick({ relic, info, step })
+    ? (info: RelicSeriesInfo) => (relic: Relic, step: number, chain?: RelicChain) => {
+        if (mode === 'quick') toggleWithChain(relic, chain)
+        else setPick({ relic, info, step, chain })
       }
     : undefined
 
@@ -1042,7 +1087,7 @@ export function Relics({
         <RelicPanel
           pick={pick}
           owned={(ownedSets.get(ready[0]?.id ?? 0) ?? new Set()).has(pick.relic.id)}
-          onToggle={() => onToggleRelic(pick.relic.id)}
+          onToggle={() => toggleWithChain(pick.relic, pick.chain)}
           onClose={() => setPick(null)}
         />
       )}

@@ -67,6 +67,9 @@ export interface SeriesCosts {
   /** Quand les « étapes » sont en réalité des séries venant de contenus
    *  distincts (donjons sans fond) : libellé de provenance par étape. */
   stepLabels?: { fr: string; en: string }[]
+  /** Étapes indépendantes (donjons sans fond) : cocher un palier n'implique
+   *  pas les précédents — la coche en cascade est désactivée. */
+  independentSteps?: boolean
 }
 
 /** Étapes effectives d'une série (perPiece → répliqué sur chaque étape dérivée). */
@@ -148,7 +151,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
           m(800, 'mémoquartz allagois poétiques', 'Tomestones of Poetics', 'poetics', 'currency', XIV('ui/icon/065000/065023_hr1.tex')),
           m(80000, 'sceaux de grande compagnie', 'Grand Company seals', 'gc-seals', 'currency', XIV('ui/icon/065000/065004_hr1.tex')),
           m(500000, 'gils', 'gil', 'gil', 'currency', XIV('ui/icon/065000/065002_hr1.tex')),
-          m(8, 'objets craftés HQ (tarte, étoffe, bague…)', 'HQ crafted items (pie, cloth, ring…)'),
+          m(8, 'objets craftés HQ (tarte, étoffe, bague…)', 'HQ crafted items (pie, cloth, ring…)', undefined, undefined, XIV('ui/icon/061000/061816_hr1.tex')),
         ],
       },
       { url: ZOD7, materials: [m(12, 'mahatmas (50 poétiques pièce)', 'Mahatmas (50 poetics each)')] },
@@ -333,6 +336,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   // de 21 armes vient d'un donjon sans fond précis.
   'Deep Dungeon Weapons': {
     url: `${WIKI}/Deep_Dungeon`,
+    independentSteps: true,
     stepLabels: [
       { fr: 'Armes padjales — le Palais des morts', en: 'Padjali — Palace of the Dead' },
       { fr: 'Armes kinna — le Palais des morts (sous-sol 100)', en: 'Kinna — Palace of the Dead (floor 100)' },
@@ -420,7 +424,7 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
       {
         url: `${WIKI}/Mastercraft_Tools`,
         materials: [
-          m(1, 'quête de classe niv. 50 « Just Tooling Around » (Mor Dhona)', 'level 50 class quest "Just Tooling Around" (Mor Dhona)', undefined, 'drop'),
+          m(1, 'quête de classe niv. 50 « Just Tooling Around » (Mor Dhona)', 'level 50 class quest "Just Tooling Around" (Mor Dhona)', undefined, 'drop', XIV('ui/icon/071000/071141_hr1.tex')),
         ],
       },
       {

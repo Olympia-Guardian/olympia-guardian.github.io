@@ -224,7 +224,7 @@ const DB_V = 'v9' // catalogues par collection (v9 : succès)
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
-const CHAR_V = 'v8' // fiches de personnage (v8 : bloc succès)
+const CHAR_V = 'v9' // fiches de personnage (v9 : ré-amorçage des succès des membres)
 
 /** Purge les caches des versions précédentes : ils ne servent plus et
  *  encombrent un localStorage déjà juste. */

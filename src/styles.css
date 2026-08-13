@@ -2178,12 +2178,25 @@ a.player-name:hover {
   padding: 12px 14px 14px;
 }
 
+/* titre séparateur de section : centré, liseret doré de chaque côté */
 .album-page-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.album-page-head::before,
+.album-page-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(214, 178, 107, 0.55));
+}
+
+.album-page-head::after {
+  background: linear-gradient(90deg, rgba(214, 178, 107, 0.55), transparent);
 }
 
 .album-page-head b {
@@ -3263,4 +3276,15 @@ a.player-name:hover {
 .relic-role-label img {
   border-radius: 3px;
   opacity: 0.9;
+}
+
+/* sections visuelles de la grille (armoire : armes / armures) */
+.icon-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.icon-sections .album-page-head {
+  margin-bottom: 8px;
 }

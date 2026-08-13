@@ -149,12 +149,16 @@ export interface CharProfile {
   guardian: string | null
   city: string | null
   grandCompany: string | null
+  /** Grande compagnie et rang en français (page FR du Lodestone). */
+  grandCompanyFr?: string | null
   /** Icône de la grande compagnie (Lodestone). */
   gcIcon?: string | null
   freeCompany: string | null
   /** Blason de la compagnie libre : calques à superposer. */
   fcCrest?: string[]
   title: string | null
+  /** Titre en français. */
+  titleFr?: string | null
   activeLevel: number | null
   jobs: CharJob[]
 }
@@ -354,13 +358,17 @@ function mapCharacter(r: any): Character {
 /** Amorçage des collections invisibles du Lodestone : le WAF de FFXIV Collect
  *  bloque notre worker, c'est donc le navigateur qui fait le pont, une seule
  *  fois par perso. Ensuite ces données vivent chez nous (D1). */
-async function seedFromCollect(lodestoneId: number): Promise<void> {
+/** Fiche FFXIV Collect d'un perso : document par collection + nombre total
+ *  d'entrées cochées là-bas. null si la fiche n'existe pas. */
+export async function fetchCollectDoc(
+  lodestoneId: number,
+): Promise<{ doc: Record<string, number[]>; total: number } | null> {
   const res = await fetch(`${API}/characters/${lodestoneId}?ids=true`)
-  if (!res.ok) return
+  if (!res.ok) return null
   const d = await res.json()
   // Les clés de l'API personnage portent exactement le nom de nos kinds.
-  const seed = {
-    ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, d[k]?.ids ?? []])),
+  const doc = {
+    ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, (d[k]?.ids ?? []) as number[]])),
     relics: [
       ...new Set<number>(
         (['weapons', 'ultimate', 'armor', 'tools'] as const).flatMap(
@@ -369,11 +377,36 @@ async function seedFromCollect(lodestoneId: number): Promise<void> {
       ),
     ],
   }
+  const total = Object.values(doc).reduce((sum, ids) => sum + ids.length, 0)
+  return { doc, total }
+}
+
+async function seedFromCollect(lodestoneId: number): Promise<void> {
+  const found = await fetchCollectDoc(lodestoneId)
+  if (!found) return
   await fetch(`${WORKER_API}/character/${lodestoneId}/seed`, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(seed),
+    body: JSON.stringify(found.doc),
   })
+}
+
+/** Import FFXIV Collect (fusion, ne retire jamais rien) — propriétaire
+ *  vérifié uniquement. Renvoie le nombre d'entrées ajoutées. */
+export async function pushCollectSync(
+  lodestoneId: number,
+  doc: Record<string, number[]>,
+  token: string,
+): Promise<number> {
+  const res = await fetch(`${WORKER_API}/character/${lodestoneId}/collect-sync`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(doc),
+  })
+  if (!res.ok) throw new Error(`collect-sync ${res.status}`)
+  const j = await res.json()
+  invalidateCharacter(lodestoneId)
+  return j.added ?? 0
 }
 
 export async function fetchCharacter(lodestoneId: number, force = false): Promise<Character> {

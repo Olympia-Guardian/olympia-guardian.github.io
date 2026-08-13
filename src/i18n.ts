@@ -284,6 +284,20 @@ const STR = {
   jobLevel: { fr: 'niveau {n}', en: 'level {n}' },
   jobLocked: { fr: 'non débloqué', en: 'not unlocked' },
   viewOnLodestone: { fr: 'Voir sur le Lodestone', en: 'View on the Lodestone' },
+  collectOffer: {
+    fr: 'On dirait que tu tiens déjà tes collections sur FFXIV Collect ({n} entrées cochées là-bas). Veux-tu tout importer ici ? Rien ne sera retiré, seulement ajouté.',
+    en: 'Looks like you already track your collections on FFXIV Collect ({n} entries checked there). Import everything here? Nothing will be removed, only added.',
+  },
+  collectSynced: {
+    fr: 'Perso vérifié ✓ — {n} entrées importées depuis FFXIV Collect.',
+    en: 'Character verified ✓ — {n} entries imported from FFXIV Collect.',
+  },
+  collectNothingNew: {
+    fr: 'Perso vérifié ✓ — tes collections étaient déjà à jour.',
+    en: 'Character verified ✓ — your collections were already up to date.',
+  },
+  armoireWeapons: { fr: 'Armes & outils', en: 'Weapons & tools' },
+  armoireArmor: { fr: 'Armures & accessoires', en: 'Armor & accessories' },
   invite: { fr: 'Inviter', en: 'Invite' },
   inviteTitle: {
     fr: "Copier le lien d'invitation du groupe",

@@ -4,7 +4,9 @@ import {
   KINDS,
   KIND_FAMILIES,
   fetchCharacter,
+  fetchCollectDoc,
   invalidateCharacter,
+  pushCollectSync,
   type Character,
   type CharProfile,
   type Item,
@@ -32,7 +34,15 @@ import { Relics } from './Relics'
 const EDITABLE = HIDDEN_KINDS
 
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.
-const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings']
+const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings', 'mounts', 'minions']
+
+/** L'armoire mélange armes esthétiques et pièces d'armure : les icônes du jeu
+ *  rangent les armes/outils dans les planches 030000-039999. */
+function isArmoireWeapon(it: Item): boolean {
+  const m = String(it.icon).match(/0(\d{5})_hr1/)
+  const n = m ? Number(m[1]) : 0
+  return n >= 30000 && n < 40000
+}
 
 const ACTIVE_CHAR_KEY = 'ogs.activeChar.v1'
 
@@ -44,10 +54,47 @@ function localItemName(it: Item, lang: string): string {
 type Auth = ReturnType<typeof useAuth>
 
 /** Panneau latéral : fiche de l'objet sélectionné + ajout/retrait. */
+/** Noms français des jobs (le Lodestone est scrappé en anglais). */
+const JOB_NAMES_FR: Record<string, string> = {
+  Paladin: 'Paladin',
+  Warrior: 'Guerrier',
+  'Dark Knight': 'Chevalier noir',
+  Gunbreaker: 'Pistosabreur',
+  'White Mage': 'Mage blanc',
+  Scholar: 'Érudit',
+  Astrologian: 'Astromancien',
+  Sage: 'Sage',
+  Monk: 'Moine',
+  Dragoon: 'Chevalier dragon',
+  Ninja: 'Ninja',
+  Samurai: 'Samouraï',
+  Reaper: 'Faucheur',
+  Viper: 'Rôdeur vipère',
+  Bard: 'Barde',
+  Machinist: 'Machiniste',
+  Dancer: 'Danseur',
+  'Black Mage': 'Mage noir',
+  Summoner: 'Invocateur',
+  'Red Mage': 'Mage rouge',
+  Pictomancer: 'Pictomancien',
+  'Blue Mage': 'Mage bleu',
+  Carpenter: 'Menuisier',
+  Blacksmith: 'Forgeron',
+  Armorer: 'Armurier',
+  Goldsmith: 'Orfèvre',
+  Leatherworker: 'Tanneur',
+  Weaver: 'Couturier',
+  Alchemist: 'Alchimiste',
+  Culinarian: 'Cuisinier',
+  Miner: 'Mineur',
+  Botanist: 'Botaniste',
+  Fisher: 'Pêcheur',
+}
+
 /** Niveaux de toutes les classes, groupés visuellement par rôle — les icônes
  *  du Lodestone parlent d'elles-mêmes, pas de libellés. */
 function CharStats({ profile }: { profile: CharProfile }) {
-  const { t } = useI18n()
+  const { lang, t } = useI18n()
   const roles: { role: string; jobs: CharProfile['jobs'] }[] = []
   for (const job of profile.jobs) {
     const entry = roles.find((r) => r.role === job.role)
@@ -63,7 +110,9 @@ function CharStats({ profile }: { profile: CharProfile }) {
             <span
               key={j.name}
               className={`job-tile ${j.level >= 100 ? 'is-max' : ''} ${j.level === 0 ? 'is-none' : ''}`}
-              title={`${j.name} — ${j.level > 0 ? t('jobLevel', { n: j.level }) : t('jobLocked')}`}
+              title={`${lang === 'fr' ? (JOB_NAMES_FR[j.name] ?? j.name) : j.name} — ${
+                j.level > 0 ? t('jobLevel', { n: j.level }) : t('jobLocked')
+              }`}
             >
               <img src={j.icon} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
               <i>{j.level > 0 ? j.level : '—'}</i>
@@ -414,10 +463,13 @@ function IconGrid({
   items,
   ids,
   onItemClick,
+  sectionOf,
 }: {
   items: Item[]
   ids: Set<number>
   onItemClick: (it: Item) => void
+  /** Découpe visuelle de la grille en sections titrées (armoire : armes/armures). */
+  sectionOf?: (it: Item) => string
 }) {
   const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
@@ -437,9 +489,9 @@ function IconGrid({
     ? items.filter((it) => ((lang === 'fr' ? it.group : it.groupEn) ?? '') === cat)
     : items
 
-  const grid = (
+  const tiles = (list: Item[]) => (
     <div className="relic-icons mypage-grid">
-      {shown.map((it) => {
+      {list.map((it) => {
         const has = ids.has(it.id)
         return (
           <button
@@ -455,6 +507,37 @@ function IconGrid({
       })}
     </div>
   )
+
+  // Sections visuelles (mêmes données) : en-tête + compte par section.
+  const grid = sectionOf
+    ? (() => {
+        const secs = new Map<string, Item[]>()
+        for (const it of shown) {
+          const s = sectionOf(it)
+          const arr = secs.get(s)
+          if (arr) arr.push(it)
+          else secs.set(s, [it])
+        }
+        return (
+          <div className="icon-sections">
+            {[...secs.entries()].map(([label, list]) => {
+              const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
+              return (
+                <section key={label}>
+                  <header className="album-page-head">
+                    <b>{label}</b>
+                    <span className={`mypage-count ${owned === list.length ? 'relic-done' : ''}`}>
+                      {owned}/{list.length}
+                    </span>
+                  </header>
+                  {tiles(list)}
+                </section>
+              )
+            })}
+          </div>
+        )
+      })()
+    : tiles(shown)
 
   if (cats.length === 0) return grid
   return (
@@ -810,8 +893,9 @@ function CollectionEditor({
         (!q || it.name.toLowerCase().includes(q) || it.nameEn.toLowerCase().includes(q)) &&
         (!onlyMissing || !ids.has(it.id)),
     )
-    // Tenues : classées par méthode d'obtention — le rail de gauche filtre.
-    if (kind === 'outfits')
+    // Tenues, bardes, montures, mascottes : classées par méthode d'obtention —
+    // le rail de gauche sert de tri/filtre.
+    if (kind === 'outfits' || kind === 'bardings' || kind === 'mounts' || kind === 'minions')
       return base.map((it) => ({
         ...it,
         group: typeLabel(it.sources[0]?.type ?? 'Other', 'fr'),
@@ -868,7 +952,16 @@ function CollectionEditor({
           ) : LIST_KINDS.includes(kind) ? (
             <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} variant="icon" />
           ) : (
-            <IconGrid items={items} ids={ids} onItemClick={handleItem} />
+            <IconGrid
+              items={items}
+              ids={ids}
+              onItemClick={handleItem}
+              sectionOf={
+                kind === 'armoires'
+                  ? (it) => t(isArmoireWeapon(it) ? 'armoireWeapons' : 'armoireArmor')
+                  : undefined
+              }
+            />
           )}
         </div>
         {selected && (
@@ -1004,6 +1097,17 @@ export function MyPage({
         // On bascule directement sur le perso qu'on vient de lier.
         setActiveId(charId)
         setAdding(false)
+        // « Ah, je vois que tu as une fiche FFXIV Collect — je récupère ? »
+        try {
+          const found = await fetchCollectDoc(charId)
+          if (found && found.total > 0 && auth.token && confirm(t('collectOffer', { n: found.total }))) {
+            const added = await pushCollectSync(charId, found.doc, auth.token)
+            setNotice(added > 0 ? t('collectSynced', { n: added }) : t('collectNothingNew'))
+            setChar(await fetchCharacter(charId))
+          }
+        } catch {
+          // Collect indisponible : l'amorçage standard a déjà fait le minimum.
+        }
       }
     } catch (e) {
       setNotice((e as Error).message === 'conflict' ? t('bindConflict') : t('bindError'))
@@ -1202,7 +1306,9 @@ export function MyPage({
                     <span className="player-name mypage-char-name">
                       {char.name}
                       {char.profile?.title && (
-                        <span className="char-title">« {char.profile.title} »</span>
+                        <span className="char-title">
+                          « {(lang === 'fr' && char.profile.titleFr) || char.profile.title} »
+                        </span>
                       )}
                       <span className="chip chip-owned">
                         <GiCheckMark /> {t('bindVerifiedChip')}
@@ -1212,7 +1318,8 @@ export function MyPage({
                           {char.profile.gcIcon && (
                             <img src={char.profile.gcIcon} alt="" width={20} height={20} />
                           )}
-                          {char.profile.grandCompany}
+                          {(lang === 'fr' && char.profile.grandCompanyFr) ||
+                            char.profile.grandCompany}
                         </span>
                       )}
                       {char.profile?.freeCompany && (

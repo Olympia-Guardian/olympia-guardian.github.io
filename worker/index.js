@@ -80,9 +80,10 @@ async function catalogs() {
 
 // ----------------------------------------------------------------- lodestone
 
-async function lodestoneGet(path) {
-  const res = await fetch(`${LODESTONE}${path}`, {
-    headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': 'en' },
+async function lodestoneGet(path, lang = 'en') {
+  const base = lang === 'fr' ? 'https://fr.finalfantasyxiv.com/lodestone' : LODESTONE
+  const res = await fetch(`${base}${path}`, {
+    headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': lang },
   })
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Lodestone ${res.status}`)
@@ -177,6 +178,26 @@ async function scrapeCharacter(id) {
     ? [...crestBlock[1].matchAll(/<img src="([^"]+)"/g)].map((m) => m[1])
     : []
 
+  // ------- version française de la fiche : grande compagnie et titre
+  // localisés (le reste des libellés affichés est identique ou traduit côté
+  // front). Un échec ici n'est pas bloquant.
+  let grandCompanyFr = null
+  let titleFr = null
+  try {
+    const profileFr = await lodestoneGet(`/character/${id}/`, 'fr')
+    if (profileFr) {
+      const gcFr = profileFr.match(
+        /character-block__name">Grande compagnie<\/p>\s*<p class="character-block__profile[^"]*">(.*?)<\/p>/s,
+      )
+      grandCompanyFr = gcFr
+        ? decodeEntities(gcFr[1].replace(/<[^>]+>/g, '').trim())
+        : null
+      titleFr = decodeEntities(extract(profileFr, /frame__chara__title[^>]*>([^<]+)</) ?? '') || null
+    }
+  } catch {
+    // tant pis, l'anglais servira de repli
+  }
+
   // ------- niveaux de classes/jobs (page dédiée, groupés par rôle)
   const jobsHtml = await lodestoneGet(`/character/${id}/class_job/`)
   const jobs = []
@@ -204,10 +225,12 @@ async function scrapeCharacter(id) {
     guardian: blockVal('Guardian'),
     city: blockVal('City-state'),
     grandCompany: blockVal('Grand Company'),
+    grandCompanyFr,
     gcIcon,
     freeCompany: fcName || null,
     fcCrest,
     title: title || null,
+    titleFr,
     activeLevel: activeLevel ? Number(activeLevel) : null,
     jobs,
   }
@@ -276,8 +299,21 @@ async function getCharacter(env, id, force) {
   const allowForce = force && (!row || Date.now() - (row.forced_at ?? 0) >= FORCE_COOLDOWN)
 
   if (!fresh || allowForce) {
-    const scraped = await scrapeCharacter(id)
+    // Un scrape peut échouer (rate limit Lodestone quand plusieurs fiches se
+    // rafraîchissent en même temps) : on sert alors la fiche en cache et on
+    // retente dans 5 minutes plutôt que de marteler à chaque requête.
+    let scraped = null
+    try {
+      scraped = await scrapeCharacter(id)
+    } catch {
+      scraped = null
+    }
     if (!scraped && !row) return null
+    if (!scraped && row) {
+      await env.DB.prepare('UPDATE characters SET updated = ?2 WHERE id = ?1')
+        .bind(id, Date.now() - CHAR_TTL + 300_000)
+        .run()
+    }
     if (scraped) {
       await env.DB.prepare(
         'INSERT INTO characters (id, name, server, dc, avatar, portrait, public_mounts, public_minions, updated, profile, forced_at) ' +
@@ -1096,6 +1132,53 @@ async function removeGroupMember(env, user, id, charId) {
   return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user.id)))
 }
 
+/** POST /character/:id/collect-sync — fusion (union) des collections avec les
+ *  données FFXIV Collect, à la vérification du perso. Appelée par le
+ *  NAVIGATEUR (le WAF de Collect bloque le worker) et réservée au propriétaire
+ *  vérifié. N'enlève jamais rien : ajoute ce qui existe là-bas. */
+async function collectSync(env, user, charId, raw) {
+  const binding = await env.DB.prepare(
+    'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
+  )
+    .bind(user.id, charId)
+    .first()
+  if (!binding) return response('{"error":"not the verified owner"}', 403)
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const rows = await env.DB.prepare(
+    'SELECT kind, ids, source FROM collections WHERE char_id = ?1',
+  )
+    .bind(charId)
+    .all()
+  const current = new Map(rows.results.map((r) => [r.kind, r]))
+  const now = Date.now()
+  const upsert = env.DB.prepare(
+    'INSERT INTO collections (char_id, kind, ids, updated, source) VALUES (?1, ?2, ?3, ?4, ?5) ' +
+      'ON CONFLICT(char_id, kind) DO UPDATE SET ids=?3, updated=?4, source=?5',
+  )
+  const stmts = []
+  let added = 0
+  for (const kind of [...HIDDEN_KINDS, 'relics']) {
+    const incoming = doc?.[kind]
+    if (incoming === undefined) continue
+    if (!validIds(incoming, 6000)) return response('{"error":"invalid ids"}', 422)
+    const cur = current.get(kind)
+    const curIds = cur ? JSON.parse(cur.ids) : []
+    const merged = [...new Set([...curIds, ...incoming])]
+    if (cur && merged.length === curIds.length) continue // rien de neuf ici
+    added += merged.length - curIds.length
+    // Les coches faites dans l'app restent « user » ; le reste devient « seed ».
+    const source = cur?.source === 'user' ? 'user' : 'seed'
+    stmts.push(upsert.bind(charId, kind, JSON.stringify(merged), now, source))
+  }
+  if (stmts.length > 0) await env.DB.batch(stmts)
+  return response(JSON.stringify({ ok: true, added }))
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -1162,9 +1245,18 @@ export default {
 
     // --- personnages : GET /character/:id[?force=1] · POST /character/:id/seed
     //                   PUT /character/:id/collections (propriétaire vérifié)
-    const charMatch = url.pathname.match(/^\/character\/(\d{1,12})(\/seed|\/collections)?$/)
+    const charMatch = url.pathname.match(
+      /^\/character\/(\d{1,12})(\/seed|\/collections|\/collect-sync)?$/,
+    )
     if (charMatch) {
       const id = Number(charMatch[1])
+      if (charMatch[2] === '/collect-sync' && req.method === 'POST') {
+        const user = await authenticate(env, req)
+        if (!user) return response('{"error":"unauthorized"}', 401)
+        const raw = await req.text()
+        if (raw.length > 262_144) return response('{"error":"too large"}', 413)
+        return collectSync(env, user, id, raw)
+      }
       if (charMatch[2] === '/seed' && req.method === 'POST') {
         const raw = await req.text()
         if (raw.length > 262_144) return response('{"error":"too large"}', 413)

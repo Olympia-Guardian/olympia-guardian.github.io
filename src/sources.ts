@@ -171,3 +171,79 @@ export function sourceGroupNeed(type: string, textEn: string, patch: string): Gr
       return 'solo'
   }
 }
+
+// ---------------------------------------------------------------------------
+// Icône de prérequis d'une source : monnaie officielle reconnue dans le texte
+// (la quantité est déjà dans le texte affiché), sinon icône du type de contenu
+// (planches du Duty Finder). Les regex tolèrent les deux apostrophes et
+// testent FR + EN à la fois (le texte anglais est le plus stable).
+// ---------------------------------------------------------------------------
+
+const XIV_ICON = (id: string) =>
+  `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/${id.slice(0, 3)}000/${id}_hr1.tex`)}`
+
+const CURRENCY_ICONS: [RegExp, string][] = [
+  [/\b(MGP|PGS)\b/, '065025'],
+  [/bicolor gemstone|gemmes? bicolores?/i, '065071'],
+  [/wolf mark|marques? de loup/i, '065014'],
+  [/trophy crystal|crista(l|ux)-trophées?/i, '065090'],
+  [/faux (leaf|leaves)|folioles? irréelles?/i, '065078'],
+  [/allied seal|insignes? alliés?/i, '065024'],
+  [/centurio seal|insignes? de centurio/i, '065034'],
+  [/sacks? of nuts|insignes? de chasse/i, '065068'],
+  [/(company|storm|serpent|flame) seal|sceaux? de (compagnie|la Tempête|du Serpent|de la Flamme)/i, '065004'],
+  [/achievement certificate|jetons? de hauts? faits/i, '065059'],
+  [/bozjan cluster|crista(l|ux) bozjiens?/i, '065082'],
+  [/poetics|poétiques?/i, '065023'],
+  [/skybuilders.? scrip|assignats? d'Azurée/i, '065073'],
+  [/seafarer.?s cowrie|assignats? insulaires? azur/i, '065096'],
+  [/islander.?s cowrie|assignats? insulaires? émeraude/i, '065097'],
+  [/purple crafters.? scrip|assignats? mauves? d'artisan/i, '065088'],
+  [/purple gatherers.? scrip|assignats? mauves? de récolteur/i, '065087'],
+  [/orange crafters.? scrip|assignats? oranges? d'artisan/i, '065110'],
+  [/orange gatherers.? scrip|assignats? oranges? de récolteur/i, '065109'],
+  [/khloe.?s gold certificate|certificats? de mérite d'or/i, '026191'],
+  [/khloe.?s silver certificate|certificats? de mérite d'argent/i, '026190'],
+  [/khloe.?s bronze certificate|certificats? de mérite de bronze/i, '026186'],
+  [/sanguinite|gemmes? mystiques? de la Force/i, '021467'],
+  [/talismans? de la Magie/i, '065141'],
+  [/gemmes? des pèlerins/i, '021282'],
+  [/devises? du Gold Saucer/i, '065140'],
+  [/\bgils?\b/i, '065002'],
+]
+
+// Icônes des types de contenu (feuille ContentType du jeu).
+const TYPE_ICONS: Record<string, string> = {
+  Dungeon: '061801',
+  Trial: '061804',
+  Raid: '061802',
+  'Chaotic Raid': '061850',
+  PvP: '061806',
+  FATE: '061809',
+  'Treasure Hunt': '061808',
+  'Deep Dungeon': '061824',
+  Eureka: '061833',
+  Bozja: '061838',
+  'Occult Crescent': '061851',
+  'V&C Dungeon': '061846',
+  'Gold Saucer': '061820',
+  'Island Sanctuary': '061847',
+  'Wondrous Tails': '061825',
+  Venture: '061818',
+  Hunts: '061819',
+  Voyages: '061812',
+  Crafting: '061816',
+  Gathering: '061815',
+  Skybuilders: '061816',
+  Tribal: '061814',
+  Quest: '071221',
+  Achievement: '061810',
+}
+
+/** Icône du prérequis d'une source, ou null (le TypeChip suffit alors). */
+export function sourceIcon(s: { type: string; text: string; textEn: string }): string | null {
+  const hay = `${s.text} ${s.textEn}`
+  for (const [re, id] of CURRENCY_ICONS) if (re.test(hay)) return XIV_ICON(id)
+  const t = TYPE_ICONS[s.type]
+  return t ? XIV_ICON(t) : null
+}

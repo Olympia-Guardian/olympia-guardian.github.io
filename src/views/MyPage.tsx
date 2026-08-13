@@ -12,7 +12,7 @@ import {
 } from '../api'
 import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
-import { typeLabel } from '../sources'
+import { sourceIcon, typeLabel } from '../sources'
 import {
   GiCheckMark,
   GiMagnifyingGlass,
@@ -21,7 +21,7 @@ import {
   GiRoundStar,
 } from 'react-icons/gi'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
-import { Meter, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
+import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
@@ -29,7 +29,7 @@ import { Relics } from './Relics'
 const EDITABLE = HIDDEN_KINDS
 
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.
-const LIST_KINDS: Kind[] = ['emotes', 'frames']
+const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings']
 
 const ACTIVE_CHAR_KEY = 'ogs.activeChar.v1'
 
@@ -41,6 +41,23 @@ function localItemName(it: Item, lang: string): string {
 type Auth = ReturnType<typeof useAuth>
 
 /** Panneau latéral : fiche de l'objet sélectionné + ajout/retrait. */
+/** Icône du prérequis d'une source (monnaie ou type de contenu), si connue. */
+function SourceIcon({ s }: { s: { type: string; text: string; textEn: string } }) {
+  const icon = sourceIcon(s)
+  if (!icon) return null
+  return (
+    <img
+      className="src-icon"
+      src={icon}
+      alt=""
+      width={18}
+      height={18}
+      loading="lazy"
+      onError={onItemImgError}
+    />
+  )
+}
+
 function ItemPanel({
   item,
   owned,
@@ -88,7 +105,7 @@ function ItemPanel({
         <ul className="modal-sources">
           {item.sources.map((s, i) => (
             <li key={i}>
-              <TypeChip type={s.type} /> {localSource(s, lang)}
+              <TypeChip type={s.type} /> <SourceIcon s={s} /> {localSource(s, lang)}
             </li>
           ))}
         </ul>
@@ -109,18 +126,21 @@ function CatRail({
   all,
   active,
   onSelect,
+  keepOrder,
 }: {
   entries: { key: string; label: string; owned: number; total: number }[]
   /** Totaux réels pour « Tout » (un objet peut compter dans plusieurs catégories). */
   all: { owned: number; total: number }
   active: string | null
   onSelect: (key: string | null) => void
+  /** Conserver l'ordre fourni (familles fusionnées) au lieu de l'alphabétique. */
+  keepOrder?: boolean
 }) {
   const { lang, t } = useI18n()
   // Ordre alphabétique : on cherche une catégorie par son nom, pas par sa taille.
   const sorted = useMemo(
-    () => [...entries].sort((a, b) => a.label.localeCompare(b.label, lang)),
-    [entries, lang],
+    () => (keepOrder ? entries : [...entries].sort((a, b) => a.label.localeCompare(b.label, lang))),
+    [entries, lang, keepOrder],
   )
   const row = (key: string | null, label: string, owned: number, total: number) => (
     <button
@@ -223,6 +243,7 @@ function SpellBook({
                 {it.sources[0] && (
                   <>
                     {it.sources[0].type !== 'Other' && <TypeChip type={it.sources[0].type} />}
+                    <SourceIcon s={it.sources[0]} />
                     <span className="spell-src-text">{localSource(it.sources[0], lang)}</span>
                   </>
                 )}
@@ -432,12 +453,15 @@ function GroupedChecklist({
   ids,
   onItemClick,
   variant = 'orchestrion',
+  groupOrder,
 }: {
   items: Item[]
   ids: Set<number>
   onItemClick: (it: Item) => void
   /** L'orchestrion affiche le rouleau à droite ; les autres, leur propre icône à gauche. */
   variant?: 'orchestrion' | 'icon'
+  /** Ordre imposé des groupes (défaut : alphabétique). */
+  groupOrder?: string[]
 }) {
   const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
@@ -456,8 +480,14 @@ function GroupedChecklist({
       if (arr) arr.push(it)
       else map.set(g, [it])
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], lang))
-  }, [items, lang])
+    const rank = (g: string) => {
+      const i = groupOrder?.indexOf(g) ?? -1
+      return i === -1 ? Number.MAX_SAFE_INTEGER : i
+    }
+    return [...map.entries()].sort(
+      (a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0], lang),
+    )
+  }, [items, lang, groupOrder])
 
   const groups = cat ? allGroups.filter(([g]) => g === cat) : allGroups
   // Collections sans catégorie (portraits) : ni rail ni en-tête de section.
@@ -479,6 +509,7 @@ function GroupedChecklist({
           }}
           active={cat}
           onSelect={setCat}
+          keepOrder={!!groupOrder}
         />
       )}
       <div className="cat-content checklist-groups">
@@ -531,7 +562,10 @@ function GroupedChecklist({
                       {it.command && <span className="chip chip-cmd">{it.command}</span>}
                       {it.patch && <span className="chip chip-patch">{it.patch}</span>}
                       <span className="checklist-src">
-                        {it.sources[0] ? (lang === 'fr' ? it.sources[0].text : it.sources[0].textEn) : ''}
+                        {it.sources[0] && <SourceIcon s={it.sources[0]} />}
+                        <span className="checklist-src-text">
+                          {it.sources[0] ? (lang === 'fr' ? it.sources[0].text : it.sources[0].textEn) : ''}
+                        </span>
                       </span>
                       {variant === 'orchestrion' && (
                         <img
@@ -551,6 +585,138 @@ function GroupedChecklist({
           </section>
         )
       })}
+      </div>
+    </div>
+  )
+}
+
+/** Onglet « Mode » : accessoires de mode, lunettes et coiffures fusionnés en
+ *  une seule liste façon émotes, groupée par sous-collection. Les ids des
+ *  trois collections se recoupent : chacune reçoit une plage d'affichage
+ *  (rang × 1 000 000) — la sauvegarde repasse aux vrais ids, par collection. */
+const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
+const FASHION_NS = 1_000_000
+
+function FashionEditor({
+  db,
+  char,
+  onSave,
+}: {
+  db: Db
+  char: Character
+  onSave: (kind: Kind, ids: number[]) => void
+}) {
+  const { lang, t } = useI18n()
+  const [idsByKind, setIdsByKind] = useState<Partial<Record<Kind, Set<number>>>>(() =>
+    Object.fromEntries(FASHION_KINDS.map((k) => [k, new Set(char[k].ids)])),
+  )
+  const [search, setSearch] = useState('')
+  const [onlyMissing, setOnlyMissing] = useState(false)
+  const [mode, setMode] = useState<'quick' | 'inspect'>('inspect')
+  const [selected, setSelected] = useState<Item | null>(null)
+  const saveTimers = useRef<Partial<Record<Kind, ReturnType<typeof setTimeout>>>>({})
+
+  const ids = useMemo(
+    () =>
+      new Set(
+        FASHION_KINDS.flatMap((k, ki) => [...(idsByKind[k] ?? [])].map((id) => ki * FASHION_NS + id)),
+      ),
+    [idsByKind],
+  )
+
+  const all = useMemo(
+    () =>
+      FASHION_KINDS.flatMap((k, ki) =>
+        db[k].map((it) => ({
+          ...it,
+          id: ki * FASHION_NS + it.id,
+          group: kindLabel('fr', k),
+          groupEn: kindLabel('en', k),
+        })),
+      ),
+    [db],
+  )
+
+  const items = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return all.filter(
+      (it) =>
+        (!q || it.name.toLowerCase().includes(q) || it.nameEn.toLowerCase().includes(q)) &&
+        (!onlyMissing || !ids.has(it.id)),
+    )
+  }, [all, search, onlyMissing, ids])
+
+  function toggle(displayId: number) {
+    const ki = Math.floor(displayId / FASHION_NS)
+    const k = FASHION_KINDS[ki]
+    const real = displayId % FASHION_NS
+    setIdsByKind((prev) => {
+      const next = new Set(prev[k])
+      if (next.has(real)) next.delete(real)
+      else next.add(real)
+      const timers = saveTimers.current
+      if (timers[k]) clearTimeout(timers[k])
+      timers[k] = setTimeout(() => onSave(k, [...next]), 1200)
+      return { ...prev, [k]: next }
+    })
+  }
+
+  function handleItem(it: Item) {
+    if (mode === 'inspect') setSelected(it)
+    else toggle(it.id)
+  }
+
+  return (
+    <div className="mypage-editor">
+      <div className="controls editor-controls">
+        <input
+          className="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('searchIn', { what: t('fashionFamily') })}
+          spellCheck={false}
+        />
+        <button
+          className={`cat-chip ${onlyMissing ? 'is-active' : ''}`}
+          onClick={() => setOnlyMissing((v) => !v)}
+        >
+          {t('onlyMissing')}
+        </button>
+        <div className="mode-switch">
+          <button
+            className={`mode-btn ${mode === 'quick' ? 'is-active' : ''}`}
+            title={t('modeQuickTitle')}
+            onClick={() => setMode('quick')}
+          >
+            <GiPowerLightning /> {t('modeQuick')}
+          </button>
+          <button
+            className={`mode-btn ${mode === 'inspect' ? 'is-active' : ''}`}
+            title={t('modeInspectTitle')}
+            onClick={() => setMode('inspect')}
+          >
+            <GiMagnifyingGlass /> {t('modeInspect')}
+          </button>
+        </div>
+      </div>
+      <div className="editor-layout">
+        <div className="editor-body">
+          <GroupedChecklist
+            items={items}
+            ids={ids}
+            onItemClick={handleItem}
+            variant="icon"
+            groupOrder={FASHION_KINDS.map((k) => kindLabel(lang, k))}
+          />
+        </div>
+        {selected && (
+          <ItemPanel
+            item={selected}
+            owned={ids.has(selected.id)}
+            onToggle={() => toggle(selected.id)}
+            onClose={() => setSelected(null)}
+          />
+        )}
       </div>
     </div>
   )
@@ -605,11 +771,19 @@ function CollectionEditor({
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return db[kind].filter(
+    const base = db[kind].filter(
       (it) =>
         (!q || it.name.toLowerCase().includes(q) || it.nameEn.toLowerCase().includes(q)) &&
         (!onlyMissing || !ids.has(it.id)),
     )
+    // Tenues : classées par méthode d'obtention — le rail de gauche filtre.
+    if (kind === 'outfits')
+      return base.map((it) => ({
+        ...it,
+        group: typeLabel(it.sources[0]?.type ?? 'Other', 'fr'),
+        groupEn: typeLabel(it.sources[0]?.type ?? 'Other', 'en'),
+      }))
+    return base
   }, [db, kind, search, onlyMissing, ids])
 
   const visible = useMemo(() => new Set(items.map((it) => it.id)), [items])
@@ -698,9 +872,12 @@ export function MyPage({
   // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
   // onglet ici : c'est la page où l'on suit sa propre progression.
   // L'onglet vit dans le hash (#jtab=…) pour survivre aux rechargements.
-  const [kind, setKind] = useState<Kind | 'relics'>(() => {
+  const [kind, setKind] = useState<Kind | 'relics' | 'fashion'>(() => {
     const k = readHashParam('jtab')
-    if (k === 'relics' || (KINDS as string[]).includes(k ?? '')) return k as Kind | 'relics'
+    // Anciens liens vers les trois collections désormais fusionnées sous « Mode ».
+    if ((FASHION_KINDS as string[]).includes(k ?? '')) return 'fashion'
+    if (k === 'relics' || k === 'fashion' || (KINDS as string[]).includes(k ?? ''))
+      return k as Kind | 'relics' | 'fashion'
     return 'cards'
   })
   useEffect(() => {
@@ -1001,29 +1178,41 @@ export function MyPage({
           </section>
 
           <nav className="kind-bar mypage-tabs">
-            {KIND_FAMILIES.map((fam) => (
-              <span key={fam.key} className="kind-family">
-                {fam.kinds.map((k) => {
-                  const locked = !EDITABLE.includes(k)
-                  return (
-                    <button
-                      key={k}
-                      className={`kind-btn ${kind === k ? 'is-active' : ''}`}
-                      title={locked ? t('myPageReadOnly') : undefined}
-                      onClick={() => setKind(k)}
-                    >
-                      {locked && <GiPadlock className="tab-lock" />} {kindLabel(lang, k, 'short')}
-                    </button>
-                  )
-                })}
-              </span>
-            ))}
+            {KIND_FAMILIES.map((fam) =>
+              fam.merged ? (
+                <span key={fam.key} className="kind-family">
+                  <button
+                    className={`kind-btn ${kind === 'fashion' ? 'is-active' : ''}`}
+                    onClick={() => setKind('fashion')}
+                  >
+                    <TabIcon k="fashion" /> {t('fashionFamily')}
+                  </button>
+                </span>
+              ) : (
+                <span key={fam.key} className="kind-family">
+                  {fam.kinds.map((k) => {
+                    const locked = !EDITABLE.includes(k)
+                    return (
+                      <button
+                        key={k}
+                        className={`kind-btn ${kind === k ? 'is-active' : ''}`}
+                        title={locked ? t('myPageReadOnly') : undefined}
+                        onClick={() => setKind(k)}
+                      >
+                        <TabIcon k={k} />
+                        {locked && <GiPadlock className="tab-lock" />} {kindLabel(lang, k, 'short')}
+                      </button>
+                    )
+                  })}
+                </span>
+              ),
+            )}
             <span className="kind-family">
               <button
                 className={`kind-btn ${kind === 'relics' ? 'is-active' : ''}`}
                 onClick={() => setKind('relics')}
               >
-                {t('relicsTab')}
+                <TabIcon k="relics" /> {t('relicsTab')}
               </button>
             </span>
           </nav>
@@ -1040,6 +1229,8 @@ export function MyPage({
             ) : (
               <p className="muted">{t('relicsLoading')}</p>
             )
+          ) : kind === 'fashion' ? (
+            <FashionEditor key={`${verified.charId}-fashion`} db={db} char={char} onSave={save} />
           ) : (
             <CollectionEditor
               key={`${verified.charId}-${kind}`}

@@ -9,6 +9,7 @@ import { detectLang, kindLabel, persistLang, translate, LangContext, type Lang }
 import { ItemModal, type ShownItem } from './ItemModal'
 import { useRoom, type LocalState } from './room'
 import { RosterBar } from './RosterBar'
+import { TabIcon } from './ui'
 import {
   readHashParam,
   readHashRoomId,
@@ -196,8 +197,8 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <div className="brand">
-            <span className="brand-name">OGS</span>
-            <span className="brand-sub">Collect</span>
+            <span className="brand-name">Codex</span>
+            <span className="brand-sub">Olympia</span>
           </div>
           <nav className="tabs">
             {TABS.map((tb) => (
@@ -260,7 +261,7 @@ export default function App() {
                       setCollectionTab(k)
                     }}
                   >
-                    {kindLabel(lang, k, 'short')}
+                    <TabIcon k={k} /> {kindLabel(lang, k, 'short')}
                   </button>
                 ))}
               </span>

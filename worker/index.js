@@ -1,4 +1,4 @@
-// Worker OGS Collect : salons de synchro + service de personnages.
+// Worker Codex Olympia : salons de synchro + service de personnages.
 //
 // Personnages : lus directement sur le Lodestone (profil + montures +
 // mascottes, user-agent mobile → les noms sont dans le HTML), mis en cache en

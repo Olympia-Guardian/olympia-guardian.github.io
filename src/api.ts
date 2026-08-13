@@ -62,17 +62,19 @@ export const PLANNING_KINDS: Kind[] = KINDS.filter(
   (k) => k !== 'frames' && k !== 'outfits' && k !== 'armoires',
 )
 
-/** Familles d'onglets : les petites collections cousines partagent un onglet. */
-export const KIND_FAMILIES: { key: string; kinds: Kind[] }[] = [
+/** Familles d'onglets : les petites collections cousines partagent un onglet.
+ *  `merged` : la famille s'affiche comme UNE catégorie (liste groupée par
+ *  sous-collection) au lieu d'un onglet par collection. */
+export const KIND_FAMILIES: { key: string; kinds: Kind[]; merged?: boolean }[] = [
   { key: 'mounts', kinds: ['mounts'] },
   { key: 'minions', kinds: ['minions'] },
+  { key: 'orchestrions', kinds: ['orchestrions'] },
   { key: 'cards', kinds: ['cards'] },
-  { key: 'fashion', kinds: ['fashions', 'facewear', 'hairstyles'] },
-  { key: 'attire', kinds: ['outfits', 'armoires'] },
+  { key: 'fashion', kinds: ['fashions', 'facewear', 'hairstyles'], merged: true },
   { key: 'bardings', kinds: ['bardings'] },
   { key: 'emotes', kinds: ['emotes'] },
   { key: 'frames', kinds: ['frames'] },
-  { key: 'orchestrions', kinds: ['orchestrions'] },
+  { key: 'attire', kinds: ['outfits', 'armoires'] },
   { key: 'spells', kinds: ['spells'] },
 ]
 

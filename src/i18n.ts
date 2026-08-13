@@ -336,6 +336,7 @@ const STR = {
 
   // Reliques
   relicsTab: { fr: 'Reliques', en: 'Relics' },
+  fashionFamily: { fr: 'Mode', en: 'Fashion' },
   relicGlobal: { fr: 'Avancement global — toutes les reliques', en: 'Overall progress — all relics' },
   relicShapeN: { fr: '{steps} étapes × {jobs} jobs', en: '{steps} steps × {jobs} jobs' },
   relicShape1: { fr: '{jobs} jobs', en: '{jobs} jobs' },
@@ -396,7 +397,7 @@ const KIND_LABELS: Record<Kind, Record<'label' | 'one' | 'short', Record<Lang, s
   cards: {
     label: { fr: 'Cartes Triple Triad', en: 'Triple Triad Cards' },
     one: { fr: 'Carte', en: 'Card' },
-    short: { fr: 'Cartes', en: 'Cards' },
+    short: { fr: 'Triple Triad', en: 'Triple Triad' },
   },
   fashions: {
     label: { fr: 'Accessoires de mode', en: 'Fashion Accessories' },

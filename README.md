@@ -1,4 +1,4 @@
-# OGS Collect
+# Codex Olympia
 
 **🌐 App en ligne : https://olympia-guardian.github.io/**
 

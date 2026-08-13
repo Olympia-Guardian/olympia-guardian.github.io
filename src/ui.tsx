@@ -88,3 +88,31 @@ export function StatTile({ value, label }: { value: number | string; label: stri
     </div>
   )
 }
+
+/** Icônes officielles des menus du jeu (feuille MainCommand) pour les onglets
+ *  des collections — carte Triple Triad, enveloppe d'esthétique moderne et
+ *  épée pour les onglets sans menu dédié. */
+const TAB_ICONS: Record<string, string> = {
+  mounts: '000058',
+  minions: '000059',
+  cards: '027661',
+  fashion: '000086',
+  fashions: '000086',
+  facewear: '000092',
+  hairstyles: '026178',
+  outfits: '000032',
+  armoires: '000052',
+  bardings: '000049',
+  emotes: '000009',
+  frames: '000088',
+  orchestrions: '000067',
+  spells: '000078',
+  relics: '000016',
+}
+
+export function TabIcon({ k }: { k: string }) {
+  const id = TAB_ICONS[k]
+  if (!id) return null
+  const src = `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/${id.slice(0, 3)}000/${id}_hr1.tex`)}`
+  return <img className="kind-icon" src={src} alt="" width={22} height={22} loading="lazy" onError={onItemImgError} />
+}

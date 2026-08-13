@@ -1,0 +1,306 @@
+{
+ "A Relic Reborn: The Chimera": {
+  "type": "Trial",
+  "name": "A Relic Reborn: the Chimera"
+ },
+ "Akh Afah Amphitheatre (Extreme)": {
+  "type": "Trial",
+  "name": "The Akh Afah Amphitheatre (Extreme)"
+ },
+ "Alexander - The Arm of the Father": {
+  "type": "Raid",
+  "name": "Alexander - The Arm of the Father"
+ },
+ "Alexander - The Breath of the Creator": {
+  "type": "Raid",
+  "name": "Alexander - The Breath of the Creator"
+ },
+ "Alexander - The Burden of the Father": {
+  "type": "Raid",
+  "name": "Alexander - The Burden of the Father"
+ },
+ "Alexander - The Burden of the Son": {
+  "type": "Raid",
+  "name": "Alexander - The Burden of the Son"
+ },
+ "Alexander - The Cuff of the Father": {
+  "type": "Raid",
+  "name": "Alexander - The Cuff of the Father"
+ },
+ "Alexander - The Fist of the Father": {
+  "type": "Raid",
+  "name": "Alexander - The Fist of the Father"
+ },
+ "Alphascape V3.0": {
+  "type": "Raid",
+  "name": "Alphascape V3.0"
+ },
+ "Amaurot": {
+  "type": "Dungeon",
+  "name": "Amaurot"
+ },
+ "Amdapor Keep": {
+  "type": "Dungeon",
+  "name": "Amdapor Keep"
+ },
+ "Baelsar's Wall": {
+  "type": "Dungeon",
+  "name": "Baelsar's Wall"
+ },
+ "Battle in the Big Keep": {
+  "type": "Trial",
+  "name": "Battle in the Big Keep"
+ },
+ "Brayflox's Longstop (Hard)": {
+  "type": "Dungeon",
+  "name": "Brayflox's Longstop (Hard)"
+ },
+ "Castrum Fluminis": {
+  "type": "Trial",
+  "name": "Castrum Fluminis"
+ },
+ "Cinder Drift": {
+  "type": "Trial",
+  "name": "Cinder Drift"
+ },
+ "Containment Bay P1T6": {
+  "type": "Trial",
+  "name": "Containment Bay P1T6"
+ },
+ "Cutter's Cry": {
+  "type": "Dungeon",
+  "name": "Cutter's Cry"
+ },
+ "Deltascape V1.0": {
+  "type": "Raid",
+  "name": "Deltascape V1.0"
+ },
+ "Dohn Mheg": {
+  "type": "Dungeon",
+  "name": "Dohn Mheg"
+ },
+ "Doma Castle": {
+  "type": "Dungeon",
+  "name": "Doma Castle"
+ },
+ "Eden's Gate: Resurrection": {
+  "type": "Raid",
+  "name": "Eden's Gate: Resurrection"
+ },
+ "Eden's Promise: Eternity": {
+  "type": "Raid",
+  "name": "Eden's Promise: Eternity"
+ },
+ "Emanation": {
+  "type": "Trial",
+  "name": "Emanation"
+ },
+ "Haukke Manor": {
+  "type": "Dungeon",
+  "name": "Haukke Manor"
+ },
+ "Haukke Manor (Hard)": {
+  "type": "Dungeon",
+  "name": "Haukke Manor (Hard)"
+ },
+ "Hells' Kier": {
+  "type": "Trial",
+  "name": "Hells' Kier"
+ },
+ "Hells' Lid": {
+  "type": "Dungeon",
+  "name": "Hells' Lid"
+ },
+ "Kugane Castle": {
+  "type": "Dungeon",
+  "name": "Kugane Castle"
+ },
+ "Malikah's Well": {
+  "type": "Dungeon",
+  "name": "Malikah's Well"
+ },
+ "Matoya's Relict": {
+  "type": "Dungeon",
+  "name": "Matoya's Relict"
+ },
+ "Mt. Gulg": {
+  "type": "Dungeon",
+  "name": "Mt. Gulg"
+ },
+ "Neverreap": {
+  "type": "Dungeon",
+  "name": "Neverreap"
+ },
+ "Pharos Sirius": {
+  "type": "Dungeon",
+  "name": "Pharos Sirius"
+ },
+ "Pharos Sirius (Hard)": {
+  "type": "Dungeon",
+  "name": "Pharos Sirius (Hard)"
+ },
+ "Saint Mocianne's Arboretum": {
+  "type": "Dungeon",
+  "name": "Saint Mocianne's Arboretum"
+ },
+ "Saint Mocianne's Arboretum (Hard)": {
+  "type": "Dungeon",
+  "name": "Saint Mocianne's Arboretum (Hard)"
+ },
+ "Sastasha (Hard)": {
+  "type": "Dungeon",
+  "name": "Sastasha (Hard)"
+ },
+ "Shisui of the Violet Tides": {
+  "type": "Dungeon",
+  "name": "Shisui of the Violet Tides"
+ },
+ "Sigmascape V1.0": {
+  "type": "Raid",
+  "name": "Sigmascape V1.0"
+ },
+ "Sigmascape V3.0": {
+  "type": "Raid",
+  "name": "Sigmascape V3.0"
+ },
+ "Sirensong Sea": {
+  "type": "Dungeon",
+  "name": "The Sirensong Sea"
+ },
+ "Snowcloak": {
+  "type": "Dungeon",
+  "name": "Snowcloak"
+ },
+ "Temple of the Fist": {
+  "type": "Dungeon",
+  "name": "The Temple of the Fist"
+ },
+ "The Aurum Vale": {
+  "type": "Dungeon",
+  "name": "The Aurum Vale"
+ },
+ "The Binding Coil of Bahamut T1": {
+  "type": "Raid",
+  "name": "The Binding Coil of Bahamut - Turn 1"
+ },
+ "The Bowl of Embers": {
+  "type": "Trial",
+  "name": "The Bowl of Embers"
+ },
+ "The Burn (leave one head alive)": {
+  "type": "Dungeon",
+  "name": "The Burn"
+ },
+ "The Crown Of The Immaculate": {
+  "type": "Trial",
+  "name": "The Crown of the Immaculate"
+ },
+ "The Dancing Plague": {
+  "type": "Trial",
+  "name": "The Dancing Plague"
+ },
+ "The Dragon’s Neck": {
+  "type": "Trial",
+  "name": "The Dragon's Neck"
+ },
+ "The Drowned City Of Skalla": {
+  "type": "Dungeon",
+  "name": "The Drowned City of Skalla"
+ },
+ "The Dusk Vigil": {
+  "type": "Dungeon",
+  "name": "The Dusk Vigil"
+ },
+ "The Grand Cosmos": {
+  "type": "Dungeon",
+  "name": "The Grand Cosmos"
+ },
+ "The Great Gubal Library": {
+  "type": "Dungeon",
+  "name": "The Great Gubal Library"
+ },
+ "The Great Gubal Library (Final Boss 3 Orb Spawn)": {
+  "type": "Dungeon",
+  "name": "The Great Gubal Library"
+ },
+ "The Great Gubal Library (Hard)": {
+  "type": "Dungeon",
+  "name": "The Great Gubal Library (Hard)"
+ },
+ "The Heroes' Gauntlet": {
+  "type": "Dungeon",
+  "name": "The Heroes' Gauntlet"
+ },
+ "The Howling Eye (Extreme)": {
+  "type": "Trial",
+  "name": "The Howling Eye (Extreme)"
+ },
+ "The Keeper of the Lake": {
+  "type": "Dungeon",
+  "name": "The Keeper of the Lake"
+ },
+ "The Lost City of Amdapor": {
+  "type": "Dungeon",
+  "name": "The Lost City of Amdapor"
+ },
+ "The Navel (Hard)": {
+  "type": "Trial",
+  "name": "The Navel (Hard)"
+ },
+ "The Stone Vigil (Hard)": {
+  "type": "Dungeon",
+  "name": "The Stone Vigil (Hard)"
+ },
+ "The Striking Tree (Hard)": {
+  "type": "Trial",
+  "name": "The Striking Tree (Hard)"
+ },
+ "The Sunken Temple of Qarn (Hard)": {
+  "type": "Dungeon",
+  "name": "The Sunken Temple of Qarn (Hard)"
+ },
+ "The Swallow's Compass": {
+  "type": "Dungeon",
+  "name": "The Swallow's Compass"
+ },
+ "The Tam-Tara Deepcroft (Hard)": {
+  "type": "Dungeon",
+  "name": "The Tam–Tara Deepcroft (Hard)"
+ },
+ "The Tam-tara Deepcroft": {
+  "type": "Dungeon",
+  "name": "The Tam–Tara Deepcroft"
+ },
+ "The Temple Of The Fist": {
+  "type": "Dungeon",
+  "name": "The Temple of the Fist"
+ },
+ "The Vault": {
+  "type": "Dungeon",
+  "name": "The Vault"
+ },
+ "The Wanderer's Palace (Hard)": {
+  "type": "Dungeon",
+  "name": "The Wanderer's Palace (Hard)"
+ },
+ "The Wanderer’s Palace": {
+  "type": "Dungeon",
+  "name": "The Wanderer's Palace"
+ },
+ "The Whorleater": {
+  "type": "Trial",
+  "name": "The Whorleater (Hard)"
+ },
+ "The Whorleater (Hard)": {
+  "type": "Trial",
+  "name": "The Whorleater (Hard)"
+ },
+ "Thok Ast Thok": {
+  "type": "Trial",
+  "name": "Thok ast Thok (Hard)"
+ },
+ "Thornmarch (Hard)": {
+  "type": "Trial",
+  "name": "Thornmarch (Hard)"
+ }
+}

@@ -64,10 +64,13 @@ export function Matrix({
   onShowItem: (item: Item, kind: Kind) => void
   /** Vue fusionnée (« Mode ») : libellé de recherche personnalisé. */
   titleLabel?: string
-  /** Groupe online : cliquer la croix d'un AUTRE joueur lui propose l'objet. */
+  /** Groupe online : cliquer la croix d'un AUTRE joueur lui propose l'objet.
+   *  Tant que la suggestion est en attente (sentKeys), l'objet apparaît coché
+   *  de MON côté — un refus du destinataire ramène la croix. */
   suggest?: {
     /** Mes propres persos : eux passent par l'ajout direct. */
     exclude: number[]
+    sentKeys: Set<string>
     send: (charId: number, kind: Kind, itemId: number) => Promise<void>
   }
   /** Connecté : cliquer la croix de MON perso coche l'objet dans mon journal. */
@@ -79,8 +82,8 @@ export function Matrix({
   const { lang, t } = useI18n()
   // Vue fusionnée : chaque objet connaît sa collection d'origine.
   const kindFor = (item: Item): Kind => item.kindOf ?? kind
-  // Suggestions envoyées pendant la session (clé perso:collection:objet).
-  const [suggested, setSuggested] = useState<Set<string>>(new Set())
+  // Ajouts directs sur mes persos pendant la session (clé perso:collection:objet).
+  const [added, setAdded] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [onlyMissing, setOnlyMissing] = useState(true)
@@ -105,7 +108,14 @@ export function Matrix({
     const q = search.trim().toLowerCase()
     const list = items
       .map((item) => {
-        const missing = activeMembers.filter((m) => !ownedSets.get(m.id)?.[kindFor(item)].has(item.id))
+        const k = kindFor(item)
+        // Une suggestion en attente compte comme cochée de mon côté :
+        // elle sort des « manquants » (et y revient si le membre refuse).
+        const missing = activeMembers.filter(
+          (m) =>
+            !ownedSets.get(m.id)?.[k].has(item.id) &&
+            !suggest?.sentKeys.has(`${m.id}:${k}:${item.id}`),
+        )
         return { item, missing }
       })
       .filter(({ item, missing }) => {
@@ -131,7 +141,7 @@ export function Matrix({
         break
     }
     return list
-  }, [items, activeMembers, ownedSets, kind, search, typeFilter, onlyMissing, includeUnavailable, sort])
+  }, [items, activeMembers, ownedSets, kind, search, typeFilter, onlyMissing, includeUnavailable, sort, suggest?.sentKeys])
 
   return (
     <div className="view">
@@ -194,7 +204,6 @@ export function Matrix({
           </thead>
           <tbody>
             {rows.slice(0, visible).map(({ item, missing }) => {
-              const missingIds = new Set(missing.map((m) => m.id))
               const primary = item.sources[0]
               const name = localName(item, lang)
               return (
@@ -237,24 +246,30 @@ export function Matrix({
                     </div>
                   </td>
                   {activeMembers.map((m) => {
-                    const has = !missingIds.has(m.id)
                     const k = kindFor(item)
                     const cellKey = `${m.id}:${k}:${item.id}`
+                    const has = ownedSets.get(m.id)?.[k].has(item.id) ?? false
                     const mine = ownAdd?.chars.includes(m.id) ?? false
-                    const sent = suggested.has(cellKey)
-                    // Mon perso : la croix coche directement l'objet au journal
-                    // (montures/mascottes exclues — le Lodestone fait foi).
-                    if (!has && mine && ownAdd && k !== 'mounts' && k !== 'minions') {
+                    // Mon perso : la croix coche directement l'objet au journal.
+                    // Montures/mascottes : validation temporaire, la prochaine
+                    // synchro Lodestone fait foi.
+                    if (!has && mine && ownAdd) {
+                      const done = added.has(cellKey)
+                      const temp = k === 'mounts' || k === 'minions'
                       return (
                         <td
                           key={m.id}
-                          className={`cell ${sent ? 'cell-owned' : 'cell-missing cell-addable'}`}
-                          title={sent ? t('addedCell') : t('addOwnCell', { what: name })}
+                          className={`cell ${done ? 'cell-owned' : 'cell-missing cell-addable'}`}
+                          title={
+                            done
+                              ? t('addedCell')
+                              : t('addOwnCell', { what: name }) + (temp ? ` (${t('suggTemp')})` : '')
+                          }
                           onClick={() => {
-                            if (sent) return
-                            setSuggested((prev) => new Set(prev).add(cellKey))
+                            if (done) return
+                            setAdded((prev) => new Set(prev).add(cellKey))
                             void ownAdd.add(m.id, k, item.id).catch(() =>
-                              setSuggested((prev) => {
+                              setAdded((prev) => {
                                 const next = new Set(prev)
                                 next.delete(cellKey)
                                 return next
@@ -262,34 +277,35 @@ export function Matrix({
                             )
                           }}
                         >
-                          {sent ? '✓' : '✗'}
+                          {done ? '✓' : '✗'}
                         </td>
                       )
                     }
-                    // Perso d'un autre membre (groupe online) : proposer.
+                    // Perso d'un autre membre (groupe online) : suggestion en
+                    // attente = coché de mon côté ; sinon la croix propose.
                     if (!has && !mine && suggest) {
+                      const pending = suggest.sentKeys.has(cellKey)
+                      if (pending) {
+                        return (
+                          <td
+                            key={m.id}
+                            className="cell cell-pending"
+                            title={t('pendingCell', { who: m.data.name })}
+                          >
+                            ✓
+                          </td>
+                        )
+                      }
                       return (
                         <td
                           key={m.id}
-                          className={`cell cell-missing ${sent ? 'cell-suggested' : 'cell-suggestable'}`}
-                          title={
-                            sent
-                              ? t('suggestedCell', { who: m.data.name })
-                              : t('suggestCell', { what: name, who: m.data.name })
-                          }
+                          className="cell cell-missing cell-suggestable"
+                          title={t('suggestCell', { what: name, who: m.data.name })}
                           onClick={() => {
-                            if (sent) return
-                            setSuggested((prev) => new Set(prev).add(cellKey))
-                            void suggest.send(m.id, k, item.id).catch(() =>
-                              setSuggested((prev) => {
-                                const next = new Set(prev)
-                                next.delete(cellKey)
-                                return next
-                              }),
-                            )
+                            void suggest.send(m.id, k, item.id).catch(() => undefined)
                           }}
                         >
-                          {sent ? '📤' : '✗'}
+                          ✗
                         </td>
                       )
                     }

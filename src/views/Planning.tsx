@@ -206,7 +206,7 @@ export function Planning({
         for (const [type, srcs] of byType) {
           if (!PER_DUTY_TYPES.has(type)) {
             // Carte par catégorie (monnaies, zones…) : voie la plus facile.
-            const need = minNeed(srcs.map((s) => sourceGroupNeed(type, s.textEn, item.patch)))
+            const need = minNeed(srcs.map((s) => sourceGroupNeed(type, s.textEn, item.patch, kind)))
             if (compo === 'group' && need === 'solo') continue
             if (compo === 'solo' && need !== 'solo') continue
             addEntry(
@@ -225,7 +225,7 @@ export function Planning({
           const detailSrcs =
             duties.length > 0 && exchanges.length > 0 ? exchanges : undefined
           for (const src of targets) {
-            const need = sourceGroupNeed(type, src.textEn, item.patch)
+            const need = sourceGroupNeed(type, src.textEn, item.patch, kind)
             if (compo === 'group' && need === 'solo') continue
             if (compo === 'solo' && need !== 'solo') continue
             addEntry(

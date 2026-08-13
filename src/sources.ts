@@ -1,4 +1,4 @@
-import type { Item } from './api'
+import type { Item, Kind } from './api'
 import { translate, type Lang } from './i18n'
 
 // Libellés français des types de sources renvoyés par FFXIV Collect.
@@ -139,7 +139,21 @@ export function needLabel(need: GroupNeed, lang: Lang = 'fr'): string {
 /** Extension courante : son contenu à haut niveau ne se solote pas encore. */
 const CURRENT_EXPANSION = 7
 
-export function sourceGroupNeed(type: string, textEn: string, patch: string): GroupNeed {
+export function sourceGroupNeed(
+  type: string,
+  textEn: string,
+  patch: string,
+  kind?: Kind,
+): GroupNeed {
+  // Magie bleue : l'apprentissage en instance n'est garanti qu'avec 4 mages
+  // bleus dans l'équipe — seul, c'est une chance de drop, pas une certitude.
+  if (kind === 'spells' && (type === 'Dungeon' || type === 'Trial' || type === 'Raid')) {
+    return maxNeed(['advised', baseGroupNeed(type, textEn, patch)])
+  }
+  return baseGroupNeed(type, textEn, patch)
+}
+
+function baseGroupNeed(type: string, textEn: string, patch: string): GroupNeed {
   const v = parseFloat(patch) || 0
   const t = textEn.toLowerCase()
   switch (type) {

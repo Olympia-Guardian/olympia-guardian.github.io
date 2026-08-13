@@ -291,7 +291,10 @@ const STR = {
   refuseAll: { fr: 'Tout refuser', en: 'Refuse all' },
   suggestedBy: { fr: 'proposé par {name}', en: 'suggested by {name}' },
   suggestCell: { fr: 'Proposer {what} à {who}', en: 'Suggest {what} to {who}' },
-  suggestedCell: { fr: 'Proposé à {who} ✓', en: 'Suggested to {who} ✓' },
+  pendingCell: {
+    fr: 'Proposé à {who} — coché de ton côté tant que ce n’est pas refusé',
+    en: 'Suggested to {who} — checked on your side until refused',
+  },
   addOwnCell: { fr: 'Cocher {what} dans mon journal', en: 'Check {what} in my journal' },
   addedCell: { fr: 'Ajouté au journal ✓', en: 'Added to the journal ✓' },
   suggTemp: {

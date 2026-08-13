@@ -149,6 +149,20 @@ export function apiListSuggestions(token: string): Promise<{ suggestions: ApiSug
   return call('/suggestions', token)
 }
 
+/** Suggestion envoyée, en attente chez le destinataire. */
+export interface ApiSentSuggestion {
+  id: number
+  charId: number
+  kind: string
+  itemId: number
+  created: number
+}
+
+/** Mes suggestions en attente : affichées « cochées » chez le destinataire. */
+export function apiListSentSuggestions(token: string): Promise<{ sent: ApiSentSuggestion[] }> {
+  return call('/suggestions/sent', token)
+}
+
 export function apiResolveSuggestions(
   token: string,
   ids: number[],

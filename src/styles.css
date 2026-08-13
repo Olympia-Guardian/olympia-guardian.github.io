@@ -1292,6 +1292,25 @@ a.player-name:hover {
   font-size: 16px;
 }
 
+/* Cloche, compte et langue : même hauteur que « Mes Groupes »/« Mon Journal » */
+.topbar-actions .bell-btn,
+.topbar-actions .account-chip,
+.topbar-actions .lang-switch {
+  height: 37px;
+  box-sizing: border-box;
+}
+
+.topbar-actions .bell-btn {
+  width: 37px;
+  justify-content: center;
+}
+
+.topbar-actions .lang-btn {
+  height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .bell-badge {
   position: absolute;
   top: -6px;
@@ -2028,8 +2047,9 @@ a.player-name:hover {
   color: var(--gold, #c8a464);
 }
 
-.cell-suggested {
-  font-size: 12px;
+/* Suggestion en attente : cochée de mon côté, dorée tant que non tranchée */
+.cell-pending {
+  color: var(--gold, #c8a464);
   background: rgba(200, 164, 100, 0.12);
 }
 

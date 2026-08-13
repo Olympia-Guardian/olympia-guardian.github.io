@@ -627,7 +627,9 @@ async function putCollections(env, user, charId, raw) {
   }
   const rows = []
   const now = Date.now()
-  for (const kind of [...HIDDEN_KINDS, 'relics']) {
+  // Montures/mascottes acceptées aussi : validation temporaire — la prochaine
+  // synchro Lodestone réécrit ces deux collections (source lodestone).
+  for (const kind of [...ALL_KINDS, 'relics']) {
     const ids = doc?.[kind]
     if (ids === undefined) continue
     if (!validIds(ids, 6000)) return response('{"error":"invalid ids"}', 422)
@@ -1276,6 +1278,29 @@ async function listSuggestions(env, user) {
   )
 }
 
+/** GET /suggestions/sent : suggestions en attente que J'AI envoyées — le
+ *  front les affiche « cochées » chez le destinataire tant qu'il n'a pas
+ *  tranché (un refus les supprime, la croix revient). */
+async function listSentSuggestions(env, user) {
+  const rows = await env.DB.prepare(
+    'SELECT id, char_id, kind, item_id, created FROM suggestions ' +
+      'WHERE from_user_id = ?1 ORDER BY created DESC LIMIT 500',
+  )
+    .bind(user.id)
+    .all()
+  return response(
+    JSON.stringify({
+      sent: rows.results.map((r) => ({
+        id: r.id,
+        charId: r.char_id,
+        kind: r.kind,
+        itemId: r.item_id,
+        created: r.created,
+      })),
+    }),
+  )
+}
+
 /** POST /suggestions/resolve {ids, accept} : accepte (coche l'objet) ou
  *  refuse — uniquement les suggestions visant mes persos vérifiés. */
 async function resolveSuggestions(env, user, raw) {
@@ -1447,6 +1472,11 @@ export default {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return listSuggestions(env, user)
+    }
+    if (url.pathname === '/suggestions/sent' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return listSentSuggestions(env, user)
     }
     if (url.pathname === '/suggestions/resolve' && req.method === 'POST') {
       const user = await authenticate(env, req)

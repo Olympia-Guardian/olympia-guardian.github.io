@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { GiCharacter, GiRingingBell, GiThreeFriends } from 'react-icons/gi'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
 import { useAuth } from './auth'
@@ -90,9 +90,45 @@ export default function App() {
   // Suggestions reçues (cloche) : objets proposés par les groupes online.
   const sugg = useSuggestions(auth.token)
   const [bellOpen, setBellOpen] = useState(false)
-  const { members, refresh } = useMembers(grp.active?.members ?? [])
+  const { members, refresh, reload } = useMembers(grp.active?.members ?? [])
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
+
+  // Suggestion envoyée disparue du serveur = acceptée OU refusée : on recharge
+  // la fiche du perso visé pour trancher (✓ possédé ou retour de la croix).
+  // Le dernier état connu est persisté pour couvrir aussi les transitions
+  // survenues pendant que l'appli était fermée (sinon le cache de fiche fait
+  // passer une acceptation pour un refus jusqu'à son expiration).
+  const prevSentRef = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    if (!sugg.sentLoaded) {
+      prevSentRef.current = null
+      return
+    }
+    let prev = prevSentRef.current
+    if (prev === null) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('ogs.sentkeys.v1') ?? '[]')
+        prev = new Set(Array.isArray(stored) ? stored.filter((k) => typeof k === 'string') : [])
+      } catch {
+        prev = new Set()
+      }
+    }
+    prevSentRef.current = sugg.sent
+    try {
+      localStorage.setItem('ogs.sentkeys.v1', JSON.stringify([...sugg.sent]))
+    } catch {
+      // pas de persistance, pas grave
+    }
+    const gone = new Set<number>()
+    for (const key of prev) {
+      if (!sugg.sent.has(key)) gone.add(Number(key.split(':')[0]))
+    }
+    for (const id of gone) {
+      invalidateCharacter(id)
+      if (members.some((m) => m.id === id)) reload(id)
+    }
+  }, [sugg.sentLoaded, sugg.sent, members, reload])
 
   // Droits sur le groupe actif : le créateur édite, un membre gère son perso.
   // Le retrait et le rafraîchissement des membres se font dans « Mes Groupes ».
@@ -304,7 +340,15 @@ export default function App() {
                       suggestions={sugg.list}
                       db={db}
                       relicDb={relicDb}
-                      onResolve={(ids, accept) => void sugg.resolve(ids, accept)}
+                      onResolve={(ids, accept) => {
+                        const affected = new Set(
+                          sugg.list.filter((s) => ids.includes(s.id)).map((s) => s.charId),
+                        )
+                        void sugg.resolve(ids, accept).then(() => {
+                          for (const id of affected)
+                            if (members.some((m) => m.id === id)) reload(id)
+                        })
+                      }}
                       onClose={() => setBellOpen(false)}
                     />
                   )}
@@ -496,8 +540,15 @@ export default function App() {
                   auth.token && grp.active?.shared
                     ? {
                         exclude: verifiedIds,
+                        sentKeys: sugg.sent,
                         send: async (charId, kind, itemId) => {
-                          await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                          sugg.markSent(charId, kind, itemId, true)
+                          try {
+                            await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                          } catch (e) {
+                            sugg.markSent(charId, kind, itemId, false)
+                            throw e
+                          }
                         },
                       }
                     : undefined
@@ -510,7 +561,7 @@ export default function App() {
                           const cur = ownedSets.get(charId)?.[kind] ?? new Set<number>()
                           await auth.saveCollections(charId, { [kind]: [...new Set([...cur, itemId])] })
                           invalidateCharacter(charId)
-                          refresh(charId)
+                          reload(charId)
                         },
                       }
                     : undefined
@@ -534,8 +585,15 @@ export default function App() {
                   auth.token && grp.active?.shared
                     ? {
                         exclude: verifiedIds,
+                        sentKeys: sugg.sent,
                         send: async (charId, kind, itemId) => {
-                          await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                          sugg.markSent(charId, kind, itemId, true)
+                          try {
+                            await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                          } catch (e) {
+                            sugg.markSent(charId, kind, itemId, false)
+                            throw e
+                          }
                         },
                       }
                     : undefined
@@ -548,7 +606,7 @@ export default function App() {
                           const cur = ownedSets.get(charId)?.[kind] ?? new Set<number>()
                           await auth.saveCollections(charId, { [kind]: [...new Set([...cur, itemId])] })
                           invalidateCharacter(charId)
-                          refresh(charId)
+                          reload(charId)
                         },
                       }
                     : undefined

@@ -13,6 +13,44 @@ try {
   console.warn('relic-jobs.json absent — reliques sans champ jobs')
 }
 
+// Types de contenu des sources de sorts de magie bleue (cache committé, rempli
+// par resolve-spell-duties.mjs) : FFXIV Collect les type toutes « Other ».
+let SPELL_DUTIES = {}
+try {
+  SPELL_DUTIES = JSON.parse(
+    await readFile(new URL('./spell-duties.json', import.meta.url), 'utf8'),
+  )
+} catch {
+  console.warn('spell-duties.json absent — sorts sans retypage donjon/défi/raid')
+}
+
+/** Sorts : « Monstre / Contenu » typé Other → Donjon/Défi/Raid via le cache,
+ *  le texte devient le contenu seul, comme les autres collections (les cartes
+ *  du planning fusionnent alors). Zones ouvertes (coordonnées), Carnaval
+ *  masqué et totems Whalaqee restent « Other ». */
+function refineSpellSources(items) {
+  let n = 0
+  for (const it of items) {
+    it.sources = it.sources.map((s) => {
+      if (s.type !== 'Other') return s
+      const m = s.textEn.match(/^(.*?) \/ (.+)$/)
+      if (!m) return s
+      const place = m[2].trim()
+      const duty = SPELL_DUTIES[place]
+      if (!duty) return s
+      let fr = s.text.includes(' / ') ? s.text.slice(s.text.indexOf(' / ') + 3).trim() : s.text
+      // Annotation de guide retirée du nom EN (« leave one head alive ») :
+      // retirée aussi du FR — mais jamais une mention de difficulté.
+      if (place.includes('(') && !duty.name.includes('(')) {
+        fr = fr.replace(/ \((?!brutal|extrême|sadique|irréel)[^)]*\)$/i, '')
+      }
+      n++
+      return { type: duty.type, text: fr, textEn: duty.name }
+    })
+  }
+  if (n) console.log(`spells: ${n} sources retypées donjon/défi/raid`)
+}
+
 const API = 'https://ffxivcollect.com/api'
 const OUT = new URL('../public/data/', import.meta.url)
 
@@ -275,6 +313,7 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
     getJson(`${API}/${path}?limit=${PAGE_LIMIT}&language=fr`),
   ])
   const items = mergeDb(en, fr)
+  if (kind === 'spells') refineSpellSources(items)
   // Inobtenable aujourd'hui : toutes les sources sont « limited » chez
   // FFXIV Collect. L'API n'expose pas le drapeau, mais son filtre ransack
   // marche : ce qui ne ressort pas avec sources_limited_eq=false n'a plus

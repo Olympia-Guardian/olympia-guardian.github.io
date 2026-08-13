@@ -143,7 +143,20 @@ export function useMembers(ids: number[]) {
     [load],
   )
 
-  return { members, refresh }
+  // Rechargement doux : ne force PAS de scrape Lodestone côté worker (sinon il
+  // écraserait les validations temporaires montures/mascottes et grillerait la
+  // synchro quotidienne). Invalider le cache front au préalable si besoin.
+  const reload = useCallback(
+    (id: number) => {
+      setMembers((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: 'loading' as const } : m)),
+      )
+      void load(id, false)
+    },
+    [load],
+  )
+
+  return { members, refresh, reload }
 }
 
 // ---------------------------------------------------------------------------

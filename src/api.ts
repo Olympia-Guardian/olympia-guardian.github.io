@@ -209,7 +209,7 @@ const CACHE_MAX_CHARS = 300_000
 // Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
-const DB_V = 'v7' // catalogues par collection
+const DB_V = 'v8' // catalogues par collection (v8 : sorts retypés donjon/défi/raid)
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 const CHAR_V = 'v7' // fiches de personnage (v7 : profil Lodestone étendu)
 

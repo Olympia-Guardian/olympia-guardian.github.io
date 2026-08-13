@@ -897,6 +897,35 @@ a.player-name:hover {
   white-space: nowrap;
 }
 
+/* une ligne par famille : libellé à gauche, chips iconifiés qui replient */
+.relic-grand-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.relic-grand-line .relic-grand-cat {
+  flex: 0 0 76px;
+  padding-top: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.relic-grand-items {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+/* dans le grand total, la place ne manque pas : noms moins tronqués */
+.relic-grand-items .relic-mat-name {
+  max-width: 300px;
+}
+
 .relic-cat {
   border: 1px solid var(--hairline);
   border-radius: var(--radius);

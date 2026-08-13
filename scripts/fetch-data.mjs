@@ -121,7 +121,7 @@ function mergeRelics(jsonEn, jsonFr) {
       ...(RELIC_JOBS[r.name] ? { jobs: RELIC_JOBS[r.name] } : {}),
     }
   })
-  return mergeUpgradeTiers([...seriesMap.values()], relics)
+  return concatSeries(mergeUpgradeTiers([...seriesMap.values()], relics))
 }
 
 /** Rang d'amélioration d'une série : « X » → 0, « X augmentée » → 1, « X +N » → N.
@@ -138,9 +138,69 @@ const SPECIAL_TIERS = {
   "Blade's Armor": { base: 'Bozjan Armor', tier: 4 },
 }
 
-// Séries fusionnées qui méritent un nom à elles.
+// Séries fusionnées qui méritent un nom à elles, et séries reclassées :
+// les armes de rêve (donjons aux trésors) et magnifiées (donjons annexes)
+// ne sont pas des sagas de reliques — elles rejoignent la section des
+// donjons spéciaux, à la suite des donjons sans fond.
 const SERIES_RENAME = {
   'Bozjan Armor': { key: 'Resistance Armor', name: 'Armures de la Résistance', order: 0 },
+  'Figmental Weapons': { expansion: 0, order: 3 },
+  'Exquisite Weapons': { expansion: 0, order: 4 },
+}
+
+// Séries concaténées : les sept ultimates deviennent une série unique dont
+// chaque « étape » est un combat (tailles inégales → stepSizes).
+const SERIES_CONCAT = [
+  {
+    key: 'Ultimates',
+    name: 'Ultimates',
+    category: 'ultimate',
+    order: 5,
+    expansion: 0,
+    members: [
+      'The Unending Coil of Bahamut',
+      "The Weapon's Refrain",
+      'The Epic of Alexander',
+      "Dragonsong's Reprise",
+      'The Omega Protocol',
+      'Futures Rewritten',
+      'Dancing Mad',
+    ],
+  },
+]
+
+function concatSeries({ series, relics }) {
+  for (const spec of SERIES_CONCAT) {
+    const members = spec.members
+      .map((k) => series.find((x) => x.key === k))
+      .filter(Boolean)
+    if (members.length === 0) continue
+    const stepSizes = members.map((x) => x.total)
+    const total = stepSizes.reduce((a, b) => a + b, 0)
+    const offsets = new Map()
+    let off = 0
+    for (const x of members) {
+      offsets.set(x.key, off)
+      off += x.total
+    }
+    relics = relics.map((r) =>
+      offsets.has(r.series)
+        ? { ...r, series: spec.key, order: offsets.get(r.series) + r.order }
+        : r,
+    )
+    series = series.filter((x) => !offsets.has(x.key))
+    series.push({
+      key: spec.key,
+      name: spec.name,
+      category: spec.category,
+      jobs: total,
+      order: spec.order,
+      expansion: spec.expansion,
+      total,
+      stepSizes,
+    })
+  }
+  return { series, relics }
 }
 
 function upgradeTier(key) {
@@ -198,9 +258,10 @@ function mergeUpgradeTiers(series, relics) {
       return { ...renamed, jobs: renamed.total, total: renamed.total * tiers }
     })
 
-  // Les reliques suivent le renommage de leur série.
+  // Les reliques suivent le renommage de leur série (seules les entrées qui
+  // changent de clé sont concernées — un simple reclassement n'en a pas).
   for (const r of outRelics) {
-    if (SERIES_RENAME[r.series]) r.series = SERIES_RENAME[r.series].key
+    if (SERIES_RENAME[r.series]?.key) r.series = SERIES_RENAME[r.series].key
   }
 
   return { series: outSeries, relics: outRelics }

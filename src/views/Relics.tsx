@@ -24,7 +24,7 @@ const EXPANSIONS: { num: number; fr: string; en: string }[] = [
   { num: 4, fr: 'Stormblood (4.x)', en: 'Stormblood (4.x)' },
   { num: 3, fr: 'Heavensward (3.x)', en: 'Heavensward (3.x)' },
   { num: 2, fr: 'A Realm Reborn (2.x)', en: 'A Realm Reborn (2.x)' },
-  { num: 0, fr: 'Donjons sans fond & Ultimate', en: 'Deep dungeons & Ultimates' },
+  { num: 0, fr: 'Donjons spéciaux & Ultimates', en: 'Special dungeons & Ultimates' },
 ]
 
 function fmt(n: number, lang: string): string {
@@ -33,6 +33,23 @@ function fmt(n: number, lang: string): string {
 
 function matsText(mats: { qty: number; fr: string; en: string }[], lang: string): string {
   return mats.map((mat) => `${fmt(mat.qty, lang)} ${lang === 'fr' ? mat.fr : mat.en}`).join(' · ')
+}
+
+/** Chip d'objet du grand total : icône, nom court, quantité exacte — le nom
+ *  complet avec ses précisions entre parenthèses reste au survol. */
+function grandChip(mat: Material, lang: string) {
+  const full = lang === 'fr' ? mat.fr : mat.en
+  const short = full.replace(/\s*\(.*$/, '')
+  const title =
+    `${fmt(mat.qty, lang)} ${full}` +
+    (mat.from?.length ? '\n' + mat.from.map((line) => `• ${line}`).join('\n') : '')
+  return (
+    <span key={mat.key ?? mat.en} className="relic-mat-chip" title={title}>
+      {mat.icon && <img src={mat.icon} alt="" width={18} height={18} loading="lazy" onError={onItemImgError} />}
+      <span className="relic-mat-name">{short}</span>
+      <i>×{fmt(mat.qty, lang)}</i>
+    </span>
+  )
 }
 
 /** Matériaux d'une étape multipliés par le nombre d'armes manquantes. */
@@ -142,7 +159,7 @@ function RelicPanel({
 }) {
   const { lang, t } = useI18n()
   const { relic, info, step } = pick
-  const steps = Math.max(1, Math.round(info.total / info.jobs))
+  const steps = info.stepSizes?.length ?? Math.max(1, Math.round(info.total / info.jobs))
   const costs = RELIC_COSTS[info.key]
   const stepCost = costs ? effectiveSteps(costs, steps)[step] : null
   const catKey =
@@ -238,7 +255,12 @@ function SeriesCard({
   // GARO : pas d'étapes — 17 sets contigus de 5 pièces (Visage/Corps/Bras/
   // Jambes/Pieds), un par job. Le découpage total/jobs n'a aucun sens ici.
   const garoSets = info.category === 'garo' && relics.some((r) => /^The \w+ of /.test(r.nameEn))
-  const steps = garoSets ? 1 : Math.max(1, Math.round(info.total / info.jobs))
+  // Ultimates : étapes de tailles inégales, décrites par stepSizes.
+  const steps = info.stepSizes
+    ? info.stepSizes.length
+    : garoSets
+      ? 1
+      : Math.max(1, Math.round(info.total / info.jobs))
   const costs = RELIC_COSTS[info.key]
   const costSteps: StepCost[] | null = costs ? effectiveSteps(costs, steps) : null
   const name = lang === 'fr' ? info.name : info.key
@@ -350,11 +372,22 @@ function SeriesCard({
   // relics de chaque étape (l'ordre API est trié étape par étape).
   // GARO : une seule « étape » = toute la série, triée par ordre (les sets
   // de 5 pièces sont contigus).
-  const stepRelics = garoSets
-    ? [[...relics].sort((a, b) => a.order - b.order)]
-    : Array.from({ length: steps }, (_, i) =>
-        sortArmor(relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)),
-      )
+  const stepRelics = info.stepSizes
+    ? (() => {
+        const sorted = [...relics].sort((a, b) => a.order - b.order)
+        const out: Relic[][] = []
+        let off = 0
+        for (const n of info.stepSizes) {
+          out.push(sortArmor(sorted.slice(off, off + n)))
+          off += n
+        }
+        return out
+      })()
+    : garoSets
+      ? [[...relics].sort((a, b) => a.order - b.order)]
+      : Array.from({ length: steps }, (_, i) =>
+          sortArmor(relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)),
+        )
   const ownedInStep = (memberId: number, i: number) => {
     const owned = ownedSets.get(memberId)!
     return stepRelics[i].reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
@@ -379,10 +412,14 @@ function SeriesCard({
   const totalMats = (() => {
     if (!costSteps) return []
     const acc = new Map<string, Material>()
-    for (const st of costSteps) {
+    costSteps.forEach((st, i) => {
       for (const mat of st.materials) mergeMaterial(acc, mat)
-      for (const mat of st.once ?? []) mergeMaterial(acc, mat)
-    }
+      // Dès qu'une pièce du palier est cochée, sa quête « 1re arme » est
+      // forcément faite : on ne compte plus ses objets, quel que soit le mode.
+      const started =
+        ready.length === 1 && (stepRelics[i]?.length ?? 0) > 0 && ownedInStep(ready[0].id, i) > 0
+      if (!started) for (const mat of st.once ?? []) mergeMaterial(acc, mat)
+    })
     return [...acc.values()]
   })()
   const showReq = totalMats.length > 0 && totalMats.some((mat) => mat.icon)
@@ -425,9 +462,11 @@ function SeriesCard({
         <h4 className="relic-series-name">{name}</h4>
         <span className="chip chip-type">{t(catKey)}</span>
         <span className="relic-shape">
-          {steps > 1
-            ? t(isArmor ? 'relicShapeNArmor' : 'relicShapeN', { steps, jobs: info.jobs })
-            : garoSets
+          {info.stepSizes
+            ? t('relicShapeFights', { steps })
+            : steps > 1
+              ? t(isArmor ? 'relicShapeNArmor' : 'relicShapeN', { steps, jobs: info.jobs })
+              : garoSets
               ? t('relicShapeGaro', { sets: Math.round(info.total / 5) })
               : t(isArmor ? 'relicShape1Armor' : 'relicShape1', { jobs: info.jobs })}
         </span>
@@ -532,9 +571,8 @@ function SeriesCard({
                         </span>
                       )}
                       {/* « 1re arme seulement » : dès qu'une pièce du palier existe, c'est fait. */}
-                      {stepCost && stepCost.materials.length > 0 && showReq && stepCost.once && (!reqLeft || c === 0) && (
+                      {stepCost?.once && showReq && c === 0 && (
                         <span className="relic-step-mats relic-once relic-step-iconrow">
-                          <span className="relic-remaining-label">{t('relicOnce')}</span>
                           <span className="relic-req-items">{stepCost.once.map(matIcon)}</span>
                         </span>
                       )}
@@ -861,7 +899,19 @@ export function Relics({
           const inStep = relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)
           return inStep.reduce((sum, r) => sum + (owned.has(r.id) ? 0 : 1), 0)
         })
-        const rem = remainingMaterials(costs, missingPerStep, info.jobs)
+        // Provenance de chaque ligne, pour le tooltip des chips du grand total.
+        const origin = (i: number, qty: number, once: boolean) => {
+          const l = costs.stepLabels?.[i]
+          const label = l
+            ? lang === 'fr'
+              ? l.fr
+              : l.en
+            : steps > 1
+              ? t(info.category === 'armor' ? 'relicTier' : 'relicStep', { n: i + 1 })
+              : ''
+          return `${info.name}${label ? ' · ' + label : ''} : ${fmt(qty, lang)}${once ? ` (${t('relicFromOnce')})` : ''}`
+        }
+        const rem = remainingMaterials(costs, missingPerStep, info.jobs, origin)
         for (const mat of [...rem.perWeapon, ...rem.once]) mergeMaterial(acc, mat)
       }
       perPlayer.set(
@@ -870,7 +920,7 @@ export function Relics({
       )
     }
     return perPlayer
-  }, [ready, ownedSets, db, bySeries])
+  }, [ready, ownedSets, db, bySeries, lang, t])
 
   if (!detailed) {
     return (
@@ -945,7 +995,7 @@ export function Relics({
             )
           })}
         </div>
-        <details className="relic-totals relic-grand" open={ready.length === 1}>
+        <details className="relic-totals relic-grand">
           <summary>{t('relicGrandTotal')}</summary>
           {ready.map((member) => {
             const mats = grandTotals.get(member.id) ?? []
@@ -957,22 +1007,22 @@ export function Relics({
                 <p className="relic-grand-name">{member.data.name.split(' ')[0]}</p>
                 {mats.length === 0 && <p className="relic-total-line"><span className="relic-done">{t('relicDone')}</span></p>}
                 {currencies.length > 0 && (
-                  <p className="relic-total-line">
-                    <span className="relic-grand-cat">{t('relicMatCurrency')}</span>{' '}
-                    {matsText(currencies, lang)}
-                  </p>
+                  <div className="relic-grand-line">
+                    <span className="relic-grand-cat">{t('relicMatCurrency')}</span>
+                    <span className="relic-grand-items">{currencies.map((mat) => grandChip(mat, lang))}</span>
+                  </div>
                 )}
                 {items.length > 0 && (
-                  <p className="relic-total-line">
-                    <span className="relic-grand-cat">{t('relicMatItems')}</span>{' '}
-                    {matsText(items, lang)}
-                  </p>
+                  <div className="relic-grand-line">
+                    <span className="relic-grand-cat">{t('relicMatItems')}</span>
+                    <span className="relic-grand-items">{items.map((mat) => grandChip(mat, lang))}</span>
+                  </div>
                 )}
                 {drops.length > 0 && (
-                  <p className="relic-total-line">
-                    <span className="relic-grand-cat">{t('relicMatDrops')}</span>{' '}
-                    {matsText(drops, lang)}
-                  </p>
+                  <div className="relic-grand-line">
+                    <span className="relic-grand-cat">{t('relicMatDrops')}</span>
+                    <span className="relic-grand-items">{drops.map((mat) => grandChip(mat, lang))}</span>
+                  </div>
                 )}
               </div>
             )

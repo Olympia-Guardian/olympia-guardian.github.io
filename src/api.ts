@@ -399,6 +399,8 @@ export interface Relic {
 
 export interface RelicSeriesInfo {
   key: string
+  /** Étapes de tailles inégales (Ultimates) : nombre d'armes par combat. */
+  stepSizes?: number[]
   /** Nom localisé (français). */
   name: string
   category: string

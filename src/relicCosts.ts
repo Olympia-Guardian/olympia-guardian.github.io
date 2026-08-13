@@ -16,6 +16,8 @@ export interface Material {
   cat?: 'currency' | 'item' | 'drop'
   /** Icône officielle de l'objet (XIVAPI) — affichée dans le total d'en-tête. */
   icon?: string
+  /** Provenances (« Série · Étape : quantité »), cumulées à la fusion. */
+  from?: string[]
 }
 
 /** Icône d'objet servie par XIVAPI (même format que nos catalogues). */
@@ -39,6 +41,7 @@ export function mergeMaterial(acc: Map<string, Material>, mat: Material, times =
   const existing = acc.get(k)
   if (existing) {
     existing.qty += mat.qty * times
+    if (mat.from?.length) existing.from = [...(existing.from ?? []), ...mat.from]
   } else {
     const canon = mat.key ? CANON[mat.key] : undefined
     acc.set(k, { ...mat, ...(canon ?? {}), qty: mat.qty * times })
@@ -283,41 +286,45 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     steps: [
       {
         url: PHA1,
-        materials: [m(1500, 'mémoquartz allagois héliologiques (3 lunulites)', 'Tomestones of Heliometry (3 Lunulites)', 'heliometry', 'currency')],
-        once: [m(18, 'demi-âtmas (ALÉA/affrontements du Croissant occulte)', 'Demiatmas (Occult Crescent FATEs/CEs)')],
+        materials: [m(3, 'lunulites (500 mémoquartz mathématiques pièce, chez Ermina)', 'Arcanite (500 Mathematics each, from Ermina)', undefined, undefined, XIV('ui/icon/021000/021209_hr1.tex'))],
+        once: [m(18, 'demi-âtmas (3 de chaque : saphir, corail, ambre, turquoise, émeraude, améthyste — ALÉA et affrontements du Croissant occulte, ALÉA des zones de Dawntrail)', 'Demiatmas (3 of each of the 6 types — Occult Crescent FATEs/CEs, Dawntrail FATEs)', undefined, undefined, XIV('ui/icon/026000/026025_hr1.tex'))],
       },
       {
         url: PHA2,
-        materials: [m(3, 'ombralites (500 héliologiques pièce)', 'Umbralites (500 Heliometry each)')],
+        materials: [m(3, 'ombralites (500 mémoquartz mathématiques pièce, chez Ermina)', 'Waxing Arcanite (500 Mathematics each, from Ermina)', undefined, undefined, XIV('ui/icon/021000/021221_hr1.tex'))],
         once: [
-          m(1, 'colle de rroneek (300 000 gils)', 'Rroneek Glue (300,000 gil)'),
-          m(1, "fer météorique d'Ut'ohmu (600 gemmes bicolores)", "Ut'ohmu Siderite (600 bicolor gems)"),
-          m(3, 'matières sombres artificielles α/β/γ', 'Synthetic Dark Matter α/β/γ'),
+          m(1, 'colle de rroneek (300 000 gils chez Goplu)', 'Rroneek Glue (300,000 gil from Goplu)', undefined, undefined, XIV('ui/icon/022000/022607_hr1.tex')),
+          m(1, "fer météorique d'Ut'ohmu (600 gemmes bicolores chez Rral Wuruq)", "Ut'ohmu Siderite (600 bicolor gemstones from Rral Wuruq)", undefined, undefined, XIV('ui/icon/021000/021202_hr1.tex')),
+          m(3, 'matières sombres artificielles α, β et γ (recettes expertes ou hôtel des ventes)', 'Synthetic Dark Matter α, β and γ (expert recipes or Market Board)', undefined, undefined, XIV('ui/icon/021000/021465_hr1.tex')),
+          m(4, 'sphères magiques chargées (10 000 pts chacune via les roulettes : vent = donjons avancés, feu = défis, eau = raids en alliance, terre = raids normaux)', 'charged aether spheres (10,000 pts each via roulettes: wind = high-level dungeons, fire = trials, water = alliance raids, earth = normal raids)', undefined, 'drop'),
         ],
       },
       {
         url: PHA3,
-        materials: [m(3, "morceaux d'alunite (500 mathématiques pièce)", 'Alunite (500 Mathematics each)')],
+        materials: [m(3, 'alunites (500 mémoquartz mathématiques pièce, chez Ermina)', 'Waning Arcanite (500 Mathematics each, from Ermina)', undefined, undefined, XIV('ui/icon/021000/021208_hr1.tex'))],
         once: [
-          m(1, 'argile ombrale (500 000 gils)', 'Umbral Clay (500,000 gil)'),
-          m(3, 'composants additifs aspectés (craft)', 'Aspected additive components (crafted)'),
-          m(1200, 'pâtes de cristal', 'Crystal Paste'),
+          m(1, 'argile ombrale (500 000 gils chez Goplu)', 'Umbral Clay (500,000 gil from Goplu)', undefined, undefined, XIV('ui/icon/020000/020406_hr1.tex')),
+          m(3, 'additifs aspectés (alliage, composant et résine — recettes expertes ou hôtel des ventes)', 'aspected additives (Aetheroconductor, Agglomerate, Aetherocatalyst — expert recipes or Market Board)', undefined, undefined, XIV('ui/icon/026000/026125_hr1.tex')),
+          m(1200, 'pâtes de cristal (roulettes et contenus niv. 91-100)', 'Crystal Paste (roulettes and level 91-100 content)', undefined, undefined, XIV('ui/icon/021000/021494_hr1.tex')),
         ],
       },
       {
         url: PHA4,
-        materials: [m(3, "morceaux d'écliptite", 'Eclipticite', 'eclipticite')],
+        materials: [m(3, 'écliptites (500 mémoquartz mathématiques pièce, chez Ermina)', 'Ecliptic Arcanite (500 Mathematics each, from Ermina)', undefined, undefined, XIV('ui/icon/021000/021212_hr1.tex'))],
         once: [
-          m(1, 'pierre à aiguiser opaline (500 000 gils)', 'Opaline Whetstone (500,000 gil)'),
-          m(1, "lingot d'alliage atypique", 'Atypical Alloy Ingot'),
-          m(1, 'ficelle inusable', 'Everlasting Twine'),
-          m(1, 'huile de camélia', 'Camellia Oil'),
-          m(100, 'dissipateurs spirituels α', 'Phantom Dispellers α'),
-          m(100, 'dissipateurs spirituels β', 'Phantom Dispellers β'),
-          m(100, 'dissipateurs spirituels γ', 'Phantom Dispellers γ'),
+          m(1, 'pierre à aiguiser opaline (500 000 gils chez Goplu)', 'Monarch Whetstone (500,000 gil from Goplu)', undefined, undefined, XIV('ui/icon/021000/021485_hr1.tex')),
+          m(1, 'alliage atypique (recette experte ou hôtel des ventes)', 'Ancestral Alloy Ingot (expert recipe or Market Board)', undefined, undefined, XIV('ui/icon/021000/021020_hr1.tex')),
+          m(1, 'ficelle inusable (recette experte ou hôtel des ventes)', 'Ascendant Twine (expert recipe or Market Board)', undefined, undefined, XIV('ui/icon/022000/022030_hr1.tex')),
+          m(1, 'huile de camélia (recette experte ou hôtel des ventes)', 'Majestic Polish (expert recipe or Market Board)', undefined, undefined, XIV('ui/icon/022000/022671_hr1.tex')),
+          m(100, 'dissipateurs spirituels alpha (ALÉA/affrontements ou roulette donjons niv. maximum)', 'Phantom Dispellers α (FATEs/CEs or High-level Dungeons roulette)', undefined, undefined, XIV('ui/icon/026000/026229_hr1.tex')),
+          m(100, 'dissipateurs spirituels bêta (ALÉA/affrontements ou roulette défis)', 'Phantom Dispellers β (FATEs/CEs or Trials roulette)', undefined, undefined, XIV('ui/icon/026000/026231_hr1.tex')),
+          m(100, 'dissipateurs spirituels gamma (ALÉA/affrontements ou roulette raids normaux)', 'Phantom Dispellers γ (FATEs/CEs or Normal Raids roulette)', undefined, undefined, XIV('ui/icon/026000/026230_hr1.tex')),
         ],
       },
-      { url: PHA4, materials: [m(1, "morceau d'écliptite (cristal de savoir via quête)", 'Eclipticite (Knowledge Crystal via quest)', 'eclipticite')] },
+      {
+        url: PHA4,
+        materials: [m(1, "cristal de savoir rempli (mémentos martiaux, à refaire pour chaque arme : 8 sections — ALÉA rang or dans les zones de Dawntrail, donjons de l'épopée et annexes, donjons experts niv. 100, défis normaux, raids Échos de Vana'diel, raids normaux de l'Arcadion — puis remise à Gerolt avec l'arme Eclipticum)", 'filled Knowledge Crystal (martial memories, refilled for each weapon: 8 sections — gold-rank FATEs across Dawntrail zones, leveling & optional dungeons, level 100 expert dungeons, normal trials, Echoes of Vana\'diel raids, Arcadion normal raids — then turned in to Gerolt with the Eclipticum weapon)', undefined, 'drop', XIV('ui/icon/052000/052835_hr1.tex'))],
+      },
     ],
   },
 
@@ -337,6 +344,31 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     ],
   },
 
+  // ------------------------------------------------------------- Ultimates
+  // Une série unique : chaque « étape » est un combat fatidique.
+  Ultimates: {
+    urlEn: `${WIKI}/Ultimate_Raids`,
+    url: `${WIKI}/Ultimate_Raids`,
+    stepLabels: [
+      { fr: "L'Abîme infini de Bahamut", en: 'The Unending Coil of Bahamut' },
+      { fr: 'La Fantasmagorie d’Ultima', en: 'The Weapon’s Refrain' },
+      { fr: "L'Odyssée d'Alexander", en: 'The Epic of Alexander' },
+      { fr: 'La Guerre du chant des dragons', en: 'Dragonsong’s Reprise' },
+      { fr: 'Le Protocole Oméga', en: 'The Omega Protocol' },
+      { fr: 'Avenirs réécrits', en: 'Futures Rewritten' },
+      { fr: 'Danse démente', en: 'Dancing Mad' },
+    ],
+    steps: [
+      { materials: [], url: `${WIKI}/The_Unending_Coil_of_Bahamut_(Ultimate)` },
+      { materials: [], url: `${WIKI}/The_Weapon's_Refrain_(Ultimate)` },
+      { materials: [], url: `${WIKI}/The_Epic_of_Alexander_(Ultimate)` },
+      { materials: [], url: `${WIKI}/Dragonsong's_Reprise_(Ultimate)` },
+      { materials: [], url: `${WIKI}/The_Omega_Protocol_(Ultimate)` },
+      { materials: [], url: `${WIKI}/Futures_Rewritten_(Ultimate)` },
+      { materials: [], url: `${WIKI}/Dancing_Mad_(Ultimate)` },
+    ],
+  },
+
   // --------------------------------- Armes de rêve/magnifiées (donjons annexes)
   // Rien à voir avec le Croissant occulte : ces deux séries viennent des donjons
   // à embranchements et de leurs versions annexes (Aloalo, Contes du Camelot).
@@ -345,22 +377,29 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     perPiece: [
       m(
         1,
-        "coffret d'arme de rêve (Cénote Ja Ja Gural ou Le coffre d'Oneiron)",
-        'Figmental Weapon Coffer (Cenote Ja Ja Gural or Vault Oneiron)',
+        "coffret d'arme de rêve (drop des donjons aux trésors Cénote Ja Ja Gural et Le coffre d'Oneiron — l'arme correspond au job à l'ouverture)",
+        "Figmental Weapon Coffer (treasure dungeon drop, Cenote Ja Ja Gural / Vault Oneiron — opens into your current job's weapon)",
         undefined,
         'drop',
+        XIV('ui/icon/026000/026557_hr1.tex'),
       ),
     ],
   },
   'Exquisite Weapons': {
     url: `${WIKI}/Exquisite_Weapons`,
     perPiece: [
-      m(1, 'arme Credendum améliorée', 'Augmented Credendum Weapon'),
       m(
         1,
-        "agent renforçant du ciel ouvert (L'île d'Aloalo annexe sadique, ou Contes du Camelot)",
-        "Elevated Ester (Another Aloalo Island Savage, or The Merchant's Tale)",
+        'arme Credendum améliorée (arme de mémoquartz 6.55 du job, améliorée)',
+        "Augmented Credendum Weapon (job's augmented 6.55 tomestone weapon)",
+      ),
+      m(
+        1,
+        "agent renforçant du ciel ouvert (chez Trisassant, Vieille Sharlayan — contre 1 manuscrit de L'île d'Aloalo annexe sadique, 40 laitons de Corvos des Contes du Camelot avancés ou 20 manuscrits des Contes du Camelot annexes)",
+        "Elevated Ester (Trisassant, Old Sharlayan — 1 Aloalo Manuscript from Another Aloalo Island Savage, 40 Corvosi Brass from The Merchant's Tale Advanced, or 20 Corvosi Manuscripts from Another Merchant's Tale)",
         'elevated-ester',
+        undefined,
+        XIV('ui/icon/027000/027606_hr1.tex'),
       ),
     ],
   },
@@ -434,11 +473,17 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
   'Cosmic Tools': {
     url: `${WIKI}/Cosmic_Tools`,
+    stepLabels: [
+      { fr: 'Outils cosmiques', en: 'Cosmic tools' },
+      { fr: 'Outils spatiaux', en: 'Stellar tools' },
+      { fr: 'Outils hyperspatiaux', en: 'Hypertools' },
+      { fr: 'Outils des constellations', en: 'Tools of Stars' },
+    ],
     steps: [
-      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'palier de données de recherche (missions stellaires)', 'research data tier (cosmic missions)', undefined, 'drop')] },
-      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'palier de données de recherche (missions stellaires)', 'research data tier (cosmic missions)', undefined, 'drop')] },
-      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'palier de données de recherche (missions stellaires)', 'research data tier (cosmic missions)', undefined, 'drop')] },
-      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'palier de données de recherche (missions stellaires)', 'research data tier (cosmic missions)', undefined, 'drop')] },
+      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, "données de recherche de types I à III (missions stellaires de l'Exploration cosmique — les rangs or/argent multiplient les gains)", 'research data types I–III (Cosmic Exploration stellar missions — gold/silver ranks multiply rewards)', undefined, 'drop', XIV('ui/icon/026000/026153_hr1.tex'))] },
+      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'données de recherche de types I à IV (missions stellaires, remise à Researchingway)', 'research data types I–IV (stellar missions, turned in to Researchingway)', undefined, 'drop', XIV('ui/icon/026000/026153_hr1.tex'))] },
+      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'données de recherche de types I à VI (missions stellaires — les missions de classe A donnent le type VI)', 'research data types I–VI (stellar missions — class A missions grant type VI)', undefined, 'drop', XIV('ui/icon/026000/026153_hr1.tex'))] },
+      { url: `${WIKI}/Cosmic_Tools`, materials: [m(1, 'données de recherche de types I à VII (missions stellaires — débloque les répliques et un bonus global de recherche)', 'research data types I–VII (stellar missions — unlocks replicas and a global research bonus)', undefined, 'drop', XIV('ui/icon/026000/026153_hr1.tex'))] },
     ],
   },
 
@@ -556,19 +601,19 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
     steps: [
       {
         materials: [
-          m(4000, "pièces d'argent des douze cités", 'Enlightenment Silver Pieces', 'twelve-silver', 'currency'),
+          m(4000, "pièces d'argent des douze cités (antiquaire de l'expédition, South Horn)", 'Enlightenment Silver Pieces (Expedition Antiquarian, South Horn)', 'twelve-silver', 'currency', XIV('ui/icon/065000/065119_hr1.tex')),
         ],
       },
       {
         materials: [
-          m(3, 'fils magiques argentés (1 200 argent pièce)', 'Aetherspun Silver (1,200 silver each)'),
-          m(3, 'agents fixants (1 600 or pièce)', 'Aetherial Fixative (1,600 gold each)'),
+          m(3, "fils magiques argentés (1 200 pièces d'argent des douze cités pièce)", 'Aetherspun Silver (1,200 silver pieces each)', undefined, undefined, XIV('ui/icon/021000/021656_hr1.tex')),
+          m(3, "agents fixants (1 600 pièces d'or des douze cités pièce)", 'Aetherial Fixative (1,600 gold pieces each)', undefined, undefined, XIV('ui/icon/022000/022653_hr1.tex')),
         ],
       },
       {
         materials: [
-          m(3, 'fils magiques dorés', 'Aetherspun Gold'),
-          m(6, 'agents fixants X (60 sanguinites pièce)', 'X-Fixative (60 Sanguinite each)'),
+          m(3, 'fils magiques dorés (coffres au trésor bronze et argent)', 'Aetherspun Gold (bronze/silver treasure coffers)', undefined, undefined, XIV('ui/icon/021000/021657_hr1.tex')),
+          m(6, 'agents fixants X (10 gemmes mystiques de la Force pièce — la Tour fourchue : sang)', 'X-Fixative (10 Sanguinite each — the Forked Tower: Blood)', undefined, undefined, XIV('ui/icon/022000/022659_hr1.tex')),
         ],
       },
     ],
@@ -576,19 +621,19 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   'Phantom Vision': {
     url: `${WIKI}/Phantom_Armor`,
     steps: [
-      { materials: [m(4000, 'pièces de nickel des douze cités (North Horn)', 'Enlightenment Silver Obols (North Horn)', 'obols', 'currency')] },
+      { materials: [m(4000, "pièces de nickel des douze cités (antiquaire de l'expédition, North Horn)", 'Enlightenment Silver Obols (Expedition Antiquarian, North Horn)', 'obols', 'currency', XIV('ui/icon/065000/065142_hr1.tex'))] },
       {
         materials: [
-          m(3, 'agents fixants ultimes (ou échange Arcanaut +1)', "Final Fixatives (or Arcanaut's +1 trade-in)", 'final-fixative'),
+          m(3, 'agents fixants ultimes (ou échange de la pièce Arcanaute +1)', "Final Final Fixatives (or Arcanaut's +1 trade-in)", 'final-fixative', undefined, XIV('ui/icon/027000/027627_hr1.tex')),
         ],
       },
       {
         materials: [
-          m(4, 'agents fixants ultimes (ou échange Arcanaut +2)', "Final Fixatives (or Arcanaut's +2 trade-in)", 'final-fixative'),
+          m(4, 'agents fixants ultimes (ou échange de la pièce Arcanaute +2)', "Final Final Fixatives (or Arcanaut's +2 trade-in)", 'final-fixative', undefined, XIV('ui/icon/027000/027627_hr1.tex')),
         ],
       },
       {
-        materials: [m(8, 'agents fixants ultimes (Tour fourchue)', 'Final Fixatives (Forked Tower)', 'final-fixative')],
+        materials: [m(8, 'agents fixants ultimes (échanges, coffres au trésor, la Tour fourchue)', 'Final Final Fixatives (exchanges, treasure coffers, the Forked Tower)', 'final-fixative', undefined, XIV('ui/icon/027000/027627_hr1.tex'))],
       },
     ],
   },
@@ -600,6 +645,8 @@ export function remainingMaterials(
   costs: SeriesCosts,
   missingPerStep: number[],
   jobs: number,
+  /** Provenance d'une ligne (« Série · Étape : quantité ») pour les tooltips. */
+  origin?: (step: number, qty: number, once: boolean) => string,
 ): { perWeapon: Material[]; once: Material[] } {
   const acc = new Map<string, Material>()
   const onceAcc = new Map<string, Material>()
@@ -607,9 +654,15 @@ export function remainingMaterials(
   for (let i = 0; i < missingPerStep.length; i++) {
     const step = steps[i]
     if (!step || missingPerStep[i] === 0) continue
-    for (const mat of step.materials) mergeMaterial(acc, mat, missingPerStep[i])
+    for (const mat of step.materials) {
+      const src = origin ? { ...mat, from: [origin(i, mat.qty * missingPerStep[i], false)] } : mat
+      mergeMaterial(acc, src, missingPerStep[i])
+    }
     if (step.once && missingPerStep[i] === jobs) {
-      for (const mat of step.once) mergeMaterial(onceAcc, mat)
+      for (const mat of step.once) {
+        const src = origin ? { ...mat, from: [origin(i, mat.qty, true)] } : mat
+        mergeMaterial(onceAcc, src)
+      }
     }
   }
   return {

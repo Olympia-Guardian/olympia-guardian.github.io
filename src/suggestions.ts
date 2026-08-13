@@ -1,6 +1,6 @@
-// Suggestions reçues : quelqu'un d'un de mes groupes online propose un objet
-// pour un de mes persos vérifiés. La cloche de la barre du haut porte le
-// compte ; accepter coche réellement l'objet.
+// La cloche : suggestions reçues, demandes d'ami et invitations directes de
+// groupe — le tout servi par UN appel /inbox, poll 90 s + synchro au retour
+// sur l'onglet. Accepter une suggestion coche réellement l'objet.
 //
 // Suggestions envoyées : tant que le destinataire n'a pas tranché, l'objet
 // apparaît « coché » de MON côté dans les collections (un refus le décoche).
@@ -8,9 +8,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { invalidateCharacter } from './api'
 import {
-  apiListSentSuggestions,
-  apiListSuggestions,
+  apiInbox,
   apiResolveSuggestions,
+  apiRespondContact,
+  apiRespondGroupInvite,
+  type ApiFriendRequest,
+  type ApiGroupInvite,
   type ApiSuggestion,
 } from './groupsApi'
 
@@ -21,9 +24,11 @@ export function suggKey(charId: number, kind: string, itemId: number): string {
   return `${charId}:${kind}:${itemId}`
 }
 
-export function useSuggestions(token: string | null) {
+export function useInbox(token: string | null) {
   const [list, setList] = useState<ApiSuggestion[]>([])
   const [sent, setSent] = useState<Set<string>>(new Set())
+  const [friendRequests, setFriendRequests] = useState<ApiFriendRequest[]>([])
+  const [groupInvites, setGroupInvites] = useState<ApiGroupInvite[]>([])
   // Vrai après la première réponse serveur : avant, `sent` est vide par défaut
   // et ne doit pas être pris pour « plus aucune suggestion en attente ».
   const [sentLoaded, setSentLoaded] = useState(false)
@@ -35,16 +40,17 @@ export function useSuggestions(token: string | null) {
     if (!tok) {
       setList([])
       setSent(new Set())
+      setFriendRequests([])
+      setGroupInvites([])
       setSentLoaded(false)
       return
     }
     try {
-      const [mine, out] = await Promise.all([
-        apiListSuggestions(tok),
-        apiListSentSuggestions(tok),
-      ])
-      setList(mine.suggestions)
-      setSent(new Set(out.sent.map((s) => suggKey(s.charId, s.kind, s.itemId))))
+      const box = await apiInbox(tok)
+      setList(box.suggestions)
+      setSent(new Set(box.sent.map((s) => suggKey(s.charId, s.kind, s.itemId))))
+      setFriendRequests(box.friendRequests)
+      setGroupInvites(box.groupInvites)
       setSentLoaded(true)
     } catch {
       // hors-ligne : on garde l'état courant
@@ -91,5 +97,40 @@ export function useSuggestions(token: string | null) {
     [list, refresh],
   )
 
-  return { list, count: list.length, sent, sentLoaded, markSent, refresh, resolve }
+  /** Accepte ou refuse une demande d'ami. */
+  const respondFriend = useCallback(
+    async (userId: string, accept: boolean) => {
+      if (!tokenRef.current) return
+      await apiRespondContact(tokenRef.current, userId, accept)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  /** Accepte (avec le perso choisi) ou décline une invitation de groupe. */
+  const respondInvite = useCallback(
+    async (groupId: string, accept: boolean, charId?: number) => {
+      if (!tokenRef.current) return
+      await apiRespondGroupInvite(tokenRef.current, groupId, accept, charId)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  return {
+    list,
+    sent,
+    sentLoaded,
+    friendRequests,
+    groupInvites,
+    count: list.length + friendRequests.length + groupInvites.length,
+    markSent,
+    refresh,
+    resolve,
+    respondFriend,
+    respondInvite,
+  }
 }
+
+/** Ancien nom conservé : la cloche a grandi mais l'App n'a pas à le savoir. */
+export const useSuggestions = useInbox

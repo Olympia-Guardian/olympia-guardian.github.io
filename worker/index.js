@@ -767,6 +767,22 @@ async function listGroups(env, user) {
     arr.push({ userId: r.user_id, userName: r.user_name ?? '?', charId: r.char_id, created: r.created })
     reqByGroup.set(r.group_id, arr)
   }
+  // Comptes des co-membres des groupes online : sert au bouton « ajouter en
+  // contact » (visibilité limitée au cercle du groupe, pas d'annuaire).
+  const memberUsers = await env.DB.prepare(
+    'SELECT l2.group_id, l2.user_id, u.name FROM group_links l1 ' +
+      'JOIN groups g ON g.id = l1.group_id AND g.shared = 1 ' +
+      'JOIN group_links l2 ON l2.group_id = l1.group_id ' +
+      'LEFT JOIN users u ON u.id = l2.user_id WHERE l1.user_id = ?1',
+  )
+    .bind(user.id)
+    .all()
+  const usersByGroup = new Map()
+  for (const r of memberUsers.results) {
+    const arr = usersByGroup.get(r.group_id) ?? []
+    arr.push({ userId: r.user_id, name: r.name ?? '?' })
+    usersByGroup.set(r.group_id, arr)
+  }
   return response(
     JSON.stringify({
       groups: groups.results.map((g) => ({
@@ -774,6 +790,7 @@ async function listGroups(env, user) {
         ...(g.owner_user_id === user.id && reqByGroup.has(g.id)
           ? { requests: reqByGroup.get(g.id) }
           : {}),
+        ...(usersByGroup.has(g.id) ? { memberUsers: usersByGroup.get(g.id) } : {}),
       })),
     }),
   )
@@ -978,7 +995,13 @@ async function requestJoin(env, user, code, raw) {
   )
     .bind(row.id, user.id)
     .first()
-  if (!banned) {
+  // Blacklist du propriétaire : même silence que le ban de groupe.
+  const blocked = await env.DB.prepare(
+    'SELECT 1 AS x FROM blocks WHERE user_id = ?1 AND blocked_id = ?2',
+  )
+    .bind(row.owner_user_id, user.id)
+    .first()
+  if (!banned && !blocked) {
     const count = await env.DB.prepare(
       'SELECT COUNT(*) AS n FROM group_requests WHERE group_id = ?1',
     )
@@ -1230,6 +1253,16 @@ async function createSuggestions(env, user, raw) {
   if (!(await sharesOnlineGroup(env, user.id, charId)))
     return response('{"error":"not in a shared group with this character"}', 403)
 
+  // Le propriétaire du perso m'a bloqué : on répond comme si tout allait
+  // bien, mais rien n'est créé (blocage silencieux).
+  const blockedByOwner = await env.DB.prepare(
+    'SELECT 1 AS x FROM bindings b JOIN blocks k ON k.user_id = b.user_id AND k.blocked_id = ?2 ' +
+      'WHERE b.char_id = ?1 AND b.verified = 1',
+  )
+    .bind(charId, user.id)
+    .first()
+  if (blockedByOwner) return response(JSON.stringify({ ok: true, created: items.length, skipped: 0 }))
+
   // Pas de suggestion pour un objet déjà possédé par la cible.
   const owned = new Map()
   for (const kind of [...new Set(items.map((i) => i.kind))]) {
@@ -1367,6 +1400,426 @@ async function resolveSuggestions(env, user, raw) {
   )
 }
 
+// ----------------------------------------------------------------- contacts
+// Amis (consentement mutuel) + blacklist globale silencieuse + invitations
+// directes de groupe. Tables : contacts (demandeur → destinataire, pending
+// puis accepted), contact_codes (lien #c=…, révocable), blocks,
+// group_invites (acceptées depuis la cloche).
+
+const MAX_PENDING_CONTACTS = 100
+
+/** L'un des deux bloque l'autre ? (toute interaction meurt en silence) */
+async function blockedEither(env, a, b) {
+  const row = await env.DB.prepare(
+    'SELECT 1 AS x FROM blocks WHERE (user_id = ?1 AND blocked_id = ?2) OR (user_id = ?2 AND blocked_id = ?1)',
+  )
+    .bind(a, b)
+    .first()
+  return !!row
+}
+
+async function areFriends(env, a, b) {
+  const row = await env.DB.prepare(
+    "SELECT 1 AS x FROM contacts WHERE status = 'accepted' AND " +
+      '((user_id = ?1 AND friend_id = ?2) OR (user_id = ?2 AND friend_id = ?1))',
+  )
+    .bind(a, b)
+    .first()
+  return !!row
+}
+
+/** Code de contact de l'utilisateur — créé paresseusement au premier accès. */
+async function myContactCode(env, userId) {
+  const row = await env.DB.prepare('SELECT code FROM contact_codes WHERE user_id = ?1')
+    .bind(userId)
+    .first()
+  if (row) return row.code
+  const code = newInviteCode()
+  await env.DB.prepare(
+    'INSERT INTO contact_codes (user_id, code, created) VALUES (?1, ?2, ?3) ' +
+      'ON CONFLICT(user_id) DO NOTHING',
+  )
+    .bind(userId, code, Date.now())
+    .run()
+  const fresh = await env.DB.prepare('SELECT code FROM contact_codes WHERE user_id = ?1')
+    .bind(userId)
+    .first()
+  return fresh.code
+}
+
+/** GET /contacts : amis (avec persos vérifiés), demandes, bloqués, mon code. */
+async function listContacts(env, user) {
+  const [friendRows, blockRows, code] = await Promise.all([
+    env.DB.prepare(
+      'SELECT c.user_id, c.friend_id, c.status, c.created, ' +
+        'u1.name AS from_name, u1.avatar AS from_avatar, ' +
+        'u2.name AS to_name, u2.avatar AS to_avatar ' +
+        'FROM contacts c ' +
+        'LEFT JOIN users u1 ON u1.id = c.user_id ' +
+        'LEFT JOIN users u2 ON u2.id = c.friend_id ' +
+        'WHERE c.user_id = ?1 OR c.friend_id = ?1',
+    )
+      .bind(user.id)
+      .all(),
+    env.DB.prepare(
+      'SELECT b.blocked_id, u.name FROM blocks b LEFT JOIN users u ON u.id = b.blocked_id ' +
+        'WHERE b.user_id = ?1',
+    )
+      .bind(user.id)
+      .all(),
+    myContactCode(env, user.id),
+  ])
+  const friends = []
+  const pendingIn = []
+  const pendingOut = []
+  for (const r of friendRows.results) {
+    const mine = r.user_id === user.id
+    const other = mine
+      ? { userId: r.friend_id, name: r.to_name ?? '?', avatar: r.to_avatar ?? '' }
+      : { userId: r.user_id, name: r.from_name ?? '?', avatar: r.from_avatar ?? '' }
+    if (r.status === 'accepted') friends.push(other)
+    else if (mine) pendingOut.push({ ...other, created: r.created })
+    else pendingIn.push({ ...other, created: r.created })
+  }
+  // Persos vérifiés des amis : la fiche contact montre leur progression.
+  if (friends.length > 0) {
+    const marks = friends.map(() => '?').join(',')
+    const chars = await env.DB.prepare(
+      `SELECT user_id, char_id FROM bindings WHERE verified = 1 AND user_id IN (${marks})`,
+    )
+      .bind(...friends.map((f) => f.userId))
+      .all()
+    const byUser = new Map()
+    for (const c of chars.results) {
+      if (!byUser.has(c.user_id)) byUser.set(c.user_id, [])
+      byUser.get(c.user_id).push(c.char_id)
+    }
+    for (const f of friends) f.chars = byUser.get(f.userId) ?? []
+  }
+  return response(
+    JSON.stringify({
+      friends,
+      pendingIn,
+      pendingOut,
+      blocked: blockRows.results.map((r) => ({ userId: r.blocked_id, name: r.name ?? '?' })),
+      code,
+    }),
+  )
+}
+
+/** POST /contacts/rotate : nouveau code — l'ancien lien de contact meurt. */
+async function rotateContactCode(env, user) {
+  const code = newInviteCode()
+  await env.DB.prepare(
+    'INSERT INTO contact_codes (user_id, code, created) VALUES (?1, ?2, ?3) ' +
+      'ON CONFLICT(user_id) DO UPDATE SET code = ?2, created = ?3',
+  )
+    .bind(user.id, code, Date.now())
+    .run()
+  return response(JSON.stringify({ code }))
+}
+
+/** GET /contact/:code : aperçu du bandeau (nom + état vis-à-vis de moi). */
+async function contactPreview(env, code, caller) {
+  const row = await env.DB.prepare(
+    'SELECT c.user_id, u.name, u.avatar FROM contact_codes c ' +
+      'LEFT JOIN users u ON u.id = c.user_id WHERE c.code = ?1',
+  )
+    .bind(code)
+    .first()
+  if (!row) return response('{"error":"no such contact"}', 404)
+  let status = 'none'
+  if (caller) {
+    if (caller.id === row.user_id) status = 'self'
+    else if (await blockedEither(env, caller.id, row.user_id)) status = 'none' // silence
+    else if (await areFriends(env, caller.id, row.user_id)) status = 'friend'
+    else {
+      const pending = await env.DB.prepare(
+        "SELECT user_id FROM contacts WHERE status = 'pending' AND " +
+          '((user_id = ?1 AND friend_id = ?2) OR (user_id = ?2 AND friend_id = ?1))',
+      )
+        .bind(caller.id, row.user_id)
+        .first()
+      if (pending) status = pending.user_id === caller.id ? 'pending' : 'pendingIn'
+    }
+  }
+  return response(JSON.stringify({ name: row.name ?? '?', avatar: row.avatar ?? '', status }))
+}
+
+/** Cœur d'une demande d'ami (par code ou par membre de groupe commun). */
+async function contactRequestCore(env, me, targetId) {
+  if (me === targetId) return response('{"status":"self"}')
+  // Bloqué (dans un sens ou l'autre) : on répond « envoyé » sans rien créer.
+  if (await blockedEither(env, me, targetId)) return response('{"status":"pending"}')
+  if (await areFriends(env, me, targetId)) return response('{"status":"friend"}')
+  const now = Date.now()
+  // Il m'avait déjà demandé : accord mutuel immédiat.
+  const reverse = await env.DB.prepare(
+    "SELECT 1 AS x FROM contacts WHERE user_id = ?1 AND friend_id = ?2 AND status = 'pending'",
+  )
+    .bind(targetId, me)
+    .first()
+  if (reverse) {
+    await env.DB.prepare(
+      "UPDATE contacts SET status = 'accepted', created = ?3 WHERE user_id = ?1 AND friend_id = ?2",
+    )
+      .bind(targetId, me, now)
+      .run()
+    return response('{"status":"friend"}')
+  }
+  const count = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM contacts WHERE user_id = ?1 AND status = 'pending'",
+  )
+    .bind(me)
+    .first()
+  if (count.n >= MAX_PENDING_CONTACTS) return response('{"error":"too many requests"}', 429)
+  await env.DB.prepare(
+    "INSERT INTO contacts (user_id, friend_id, status, created) VALUES (?1, ?2, 'pending', ?3) " +
+      'ON CONFLICT(user_id, friend_id) DO NOTHING',
+  )
+    .bind(me, targetId, now)
+    .run()
+  return response('{"status":"pending"}')
+}
+
+/** POST /contacts/request {code} OU {userId} (membre d'un groupe online commun). */
+async function requestContact(env, user, raw) {
+  let body
+  try {
+    body = JSON.parse(raw || '{}')
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (typeof body.code === 'string') {
+    const row = await env.DB.prepare('SELECT user_id FROM contact_codes WHERE code = ?1')
+      .bind(body.code)
+      .first()
+    if (!row) return response('{"error":"no such contact"}', 404)
+    return contactRequestCore(env, user.id, row.user_id)
+  }
+  if (typeof body.userId === 'string') {
+    // Réservé aux co-membres d'un groupe online : pas d'annuaire public.
+    const shared = await env.DB.prepare(
+      'SELECT 1 AS x FROM group_links l1 JOIN group_links l2 ON l2.group_id = l1.group_id ' +
+        'JOIN groups g ON g.id = l1.group_id AND g.shared = 1 ' +
+        'WHERE l1.user_id = ?1 AND l2.user_id = ?2',
+    )
+      .bind(user.id, body.userId)
+      .first()
+    if (!shared) return response('{"error":"not in a common group"}', 403)
+    return contactRequestCore(env, user.id, body.userId)
+  }
+  return response('{"error":"invalid body"}', 422)
+}
+
+/** POST /contacts/respond {userId, accept} : accepter/refuser une demande reçue. */
+async function respondContact(env, user, raw) {
+  let body
+  try {
+    body = JSON.parse(raw || '{}')
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (typeof body.userId !== 'string') return response('{"error":"invalid body"}', 422)
+  if (body.accept) {
+    await env.DB.prepare(
+      "UPDATE contacts SET status = 'accepted' WHERE user_id = ?1 AND friend_id = ?2 AND status = 'pending'",
+    )
+      .bind(body.userId, user.id)
+      .run()
+  } else {
+    await env.DB.prepare(
+      "DELETE FROM contacts WHERE user_id = ?1 AND friend_id = ?2 AND status = 'pending'",
+    )
+      .bind(body.userId, user.id)
+      .run()
+  }
+  return response('{"ok":true}')
+}
+
+/** DELETE /contacts/:userId : retirer un ami (ou annuler ma demande). */
+async function removeContact(env, user, targetId) {
+  await env.DB.prepare(
+    'DELETE FROM contacts WHERE (user_id = ?1 AND friend_id = ?2) OR (user_id = ?2 AND friend_id = ?1)',
+  )
+    .bind(user.id, targetId)
+    .run()
+  return response('{"ok":true}')
+}
+
+/** POST /blocks {userId} : blocage global — purge amitié, demandes en cours,
+ *  invitations, demandes d'entrée sur MES groupes et suggestions vers MES
+ *  persos. Le bloqué ne reçoit aucun signal. */
+async function setBlock(env, user, raw) {
+  let targetId
+  try {
+    targetId = JSON.parse(raw || '{}')?.userId
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (typeof targetId !== 'string' || targetId === user.id)
+    return response('{"error":"invalid body"}', 422)
+  await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO blocks (user_id, blocked_id, created) VALUES (?1, ?2, ?3) ' +
+        'ON CONFLICT(user_id, blocked_id) DO NOTHING',
+    ).bind(user.id, targetId, Date.now()),
+    env.DB.prepare(
+      'DELETE FROM contacts WHERE (user_id = ?1 AND friend_id = ?2) OR (user_id = ?2 AND friend_id = ?1)',
+    ).bind(user.id, targetId),
+    env.DB.prepare(
+      'DELETE FROM group_invites WHERE (from_user_id = ?1 AND to_user_id = ?2) OR (from_user_id = ?2 AND to_user_id = ?1)',
+    ).bind(user.id, targetId),
+    env.DB.prepare(
+      'DELETE FROM group_requests WHERE user_id = ?2 AND group_id IN (SELECT id FROM groups WHERE owner_user_id = ?1)',
+    ).bind(user.id, targetId),
+    env.DB.prepare(
+      'DELETE FROM suggestions WHERE from_user_id = ?2 AND char_id IN ' +
+        '(SELECT char_id FROM bindings WHERE user_id = ?1 AND verified = 1)',
+    ).bind(user.id, targetId),
+  ])
+  return response('{"ok":true}')
+}
+
+/** DELETE /blocks/:userId : débloquer. */
+async function removeBlock(env, user, targetId) {
+  await env.DB.prepare('DELETE FROM blocks WHERE user_id = ?1 AND blocked_id = ?2')
+    .bind(user.id, targetId)
+    .run()
+  return response('{"ok":true}')
+}
+
+/** POST /group/:id/invite {userId} : le propriétaire invite un AMI dans son
+ *  groupe online — il acceptera depuis sa cloche (pas de validation en plus :
+ *  les deux consentements sont déjà là). */
+async function inviteToGroup(env, user, groupId, raw) {
+  const row = await groupRow(env, groupId)
+  if (!row || row.owner_user_id !== user.id) return response('{"error":"no such group"}', 404)
+  if (!row.shared) return response('{"error":"not a shared group"}', 403)
+  let targetId
+  try {
+    targetId = JSON.parse(raw || '{}')?.userId
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (typeof targetId !== 'string') return response('{"error":"invalid body"}', 422)
+  if (!(await areFriends(env, user.id, targetId))) return response('{"error":"not friends"}', 403)
+  if (await hasLink(env, targetId, groupId)) return response('{"status":"member"}')
+  await env.DB.prepare(
+    'INSERT INTO group_invites (group_id, from_user_id, to_user_id, created) VALUES (?1, ?2, ?3, ?4) ' +
+      'ON CONFLICT(group_id, to_user_id) DO UPDATE SET from_user_id = ?2, created = ?4',
+  )
+    .bind(groupId, user.id, targetId, Date.now())
+    .run()
+  return response('{"status":"invited"}')
+}
+
+/** POST /group-invites/respond {groupId, accept, charId} : accepter (avec le
+ *  perso vérifié choisi) ou décliner une invitation directe. */
+async function respondGroupInvite(env, user, raw) {
+  let body
+  try {
+    body = JSON.parse(raw || '{}')
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const invite = await env.DB.prepare(
+    'SELECT from_user_id FROM group_invites WHERE group_id = ?1 AND to_user_id = ?2',
+  )
+    .bind(body.groupId, user.id)
+    .first()
+  if (!invite) return response('{"error":"no such invite"}', 404)
+  if (!body.accept) {
+    await env.DB.prepare('DELETE FROM group_invites WHERE group_id = ?1 AND to_user_id = ?2')
+      .bind(body.groupId, user.id)
+      .run()
+    return response('{"ok":true}')
+  }
+  if (!validCharId(body.charId)) return response('{"error":"invalid charId"}', 422)
+  if (!(await verifiedBinding(env, user.id, body.charId)))
+    return response('{"error":"not the verified owner"}', 403)
+  const now = Date.now()
+  if (!(await insertMember(env, body.groupId, body.charId, user.id, now)))
+    return response('{"error":"group full"}', 409)
+  await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO group_links (user_id, group_id, added) VALUES (?1, ?2, ?3) ' +
+        'ON CONFLICT DO NOTHING',
+    ).bind(user.id, body.groupId, now),
+    env.DB.prepare('DELETE FROM group_invites WHERE group_id = ?1 AND to_user_id = ?2').bind(
+      body.groupId,
+      user.id,
+    ),
+  ])
+  return response('{"ok":true}')
+}
+
+/** GET /inbox : tout ce que porte la cloche en UN appel — suggestions reçues,
+ *  clés de mes suggestions envoyées, demandes d'ami, invitations de groupe. */
+async function inbox(env, user) {
+  const [sugg, sent, friendReqs, invites] = await Promise.all([
+    env.DB.prepare(
+      'SELECT s.id, s.char_id, s.kind, s.item_id, s.created, u.name AS from_name ' +
+        'FROM suggestions s JOIN bindings b ON b.char_id = s.char_id AND b.verified = 1 AND b.user_id = ?1 ' +
+        'LEFT JOIN users u ON u.id = s.from_user_id ORDER BY s.created DESC LIMIT 500',
+    )
+      .bind(user.id)
+      .all(),
+    env.DB.prepare(
+      'SELECT id, char_id, kind, item_id, created FROM suggestions ' +
+        'WHERE from_user_id = ?1 ORDER BY created DESC LIMIT 500',
+    )
+      .bind(user.id)
+      .all(),
+    env.DB.prepare(
+      "SELECT c.user_id, c.created, u.name, u.avatar FROM contacts c " +
+        'LEFT JOIN users u ON u.id = c.user_id ' +
+        "WHERE c.friend_id = ?1 AND c.status = 'pending' ORDER BY c.created DESC LIMIT 100",
+    )
+      .bind(user.id)
+      .all(),
+    env.DB.prepare(
+      'SELECT i.group_id, i.created, g.name AS group_name, u.name AS from_name ' +
+        'FROM group_invites i JOIN groups g ON g.id = i.group_id ' +
+        'LEFT JOIN users u ON u.id = i.from_user_id ' +
+        'WHERE i.to_user_id = ?1 ORDER BY i.created DESC LIMIT 100',
+    )
+      .bind(user.id)
+      .all(),
+  ])
+  return response(
+    JSON.stringify({
+      suggestions: sugg.results.map((r) => ({
+        id: r.id,
+        charId: r.char_id,
+        kind: r.kind,
+        itemId: r.item_id,
+        from: r.from_name ?? '?',
+        created: r.created,
+      })),
+      sent: sent.results.map((r) => ({
+        id: r.id,
+        charId: r.char_id,
+        kind: r.kind,
+        itemId: r.item_id,
+        created: r.created,
+      })),
+      friendRequests: friendReqs.results.map((r) => ({
+        userId: r.user_id,
+        name: r.name ?? '?',
+        avatar: r.avatar ?? '',
+        created: r.created,
+      })),
+      groupInvites: invites.results.map((r) => ({
+        groupId: r.group_id,
+        groupName: r.group_name,
+        from: r.from_name ?? '?',
+        created: r.created,
+      })),
+    }),
+  )
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -1490,6 +1943,66 @@ export default {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return resolveSuggestions(env, user, await req.text())
+    }
+
+    // --- contacts : amis, blacklist, invitations directes, boîte de réception
+    if (url.pathname === '/inbox' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return inbox(env, user)
+    }
+    if (url.pathname === '/contacts' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return listContacts(env, user)
+    }
+    if (url.pathname === '/contacts/rotate' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return rotateContactCode(env, user)
+    }
+    if (url.pathname === '/contacts/request' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return requestContact(env, user, await req.text())
+    }
+    if (url.pathname === '/contacts/respond' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return respondContact(env, user, await req.text())
+    }
+    const contactDel = url.pathname.match(/^\/contacts\/([\w:.@%-]{1,240})$/)
+    if (contactDel && req.method === 'DELETE') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return removeContact(env, user, decodeURIComponent(contactDel[1]))
+    }
+    if (url.pathname === '/blocks' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return setBlock(env, user, await req.text())
+    }
+    const blockDel = url.pathname.match(/^\/blocks\/([\w:.@%-]{1,240})$/)
+    if (blockDel && req.method === 'DELETE') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return removeBlock(env, user, decodeURIComponent(blockDel[1]))
+    }
+    const contactView = url.pathname.match(/^\/contact\/([a-z0-9]{6,40})$/)
+    if (contactView && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      return contactPreview(env, contactView[1], user)
+    }
+    const groupInvite = url.pathname.match(/^\/group\/([\w-]+)\/invite$/)
+    if (groupInvite && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return inviteToGroup(env, user, groupInvite[1], await req.text())
+    }
+    if (url.pathname === '/group-invites/respond' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return respondGroupInvite(env, user, await req.text())
     }
 
     // --- groupes : voir la section « groupes » plus haut

@@ -46,6 +46,8 @@ export interface Group {
   inviteCode?: string
   /** Demandes d'adhésion en attente — propriétaire uniquement. */
   requests?: ApiGroupRequest[]
+  /** Comptes des co-membres (groupes online) — « ajouter en contact ». */
+  memberUsers?: { userId: string; name: string }[]
 }
 
 export interface PendingInvite {
@@ -113,6 +115,7 @@ function apiToGroup(g: ApiGroup): Group {
     members: g.members,
     inviteCode: g.inviteCode,
     requests: g.requests,
+    memberUsers: g.memberUsers,
   }
 }
 

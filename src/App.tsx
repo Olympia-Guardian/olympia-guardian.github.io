@@ -20,6 +20,7 @@ import {
   useRelicDb,
 } from './store'
 import { apiSuggest } from './groupsApi'
+import { useContactInvite, useContacts } from './contacts'
 import { NotificationsPanel } from './Notifications'
 import { useSuggestions } from './suggestions'
 import { GroupCreateDialog, GroupsPage } from './views/Groups'
@@ -87,9 +88,12 @@ export default function App() {
     [auth.bindings],
   )
   const grp = useGroups(auth.token, verifiedIds)
-  // Suggestions reçues (cloche) : objets proposés par les groupes online.
+  // La cloche : suggestions reçues, demandes d'ami, invitations de groupe.
   const sugg = useSuggestions(auth.token)
   const [bellOpen, setBellOpen] = useState(false)
+  // Contacts (amis / blacklist) + bandeau d'un lien de contact ouvert (#c=…).
+  const contacts = useContacts(auth.token)
+  const cinv = useContactInvite(auth.token)
   const { members, refresh, reload } = useMembers(grp.active?.members ?? [])
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
@@ -338,6 +342,9 @@ export default function App() {
                   {bellOpen && (
                     <NotificationsPanel
                       suggestions={sugg.list}
+                      friendRequests={sugg.friendRequests}
+                      groupInvites={sugg.groupInvites}
+                      verifiedIds={verifiedIds}
                       db={db}
                       relicDb={relicDb}
                       onResolve={(ids, accept) => {
@@ -349,6 +356,12 @@ export default function App() {
                             if (members.some((m) => m.id === id)) reload(id)
                         })
                       }}
+                      onRespondFriend={(userId, accept) =>
+                        void sugg.respondFriend(userId, accept).then(() => contacts.refresh())
+                      }
+                      onRespondInvite={(groupId, accept, charId) =>
+                        void sugg.respondInvite(groupId, accept, charId).then(() => grp.refreshServer())
+                      }
                       onClose={() => setBellOpen(false)}
                     />
                   )}
@@ -505,6 +518,63 @@ export default function App() {
                 </button>
               </div>
             )}
+            {cinv.invite && cinv.invite.status !== 'self' && (
+              <div className="notice join-banner">
+                {cinv.invite.status === 'friend' ? (
+                  <span>{t('contactAlready', { name: cinv.invite.name })}</span>
+                ) : cinv.invite.status === 'pending' ? (
+                  <span>⏳ {t('contactPending', { name: cinv.invite.name })}</span>
+                ) : cinv.invite.status === 'pendingIn' ? (
+                  <>
+                    <span>{t('contactPendingIn', { name: cinv.invite.name })}</span>
+                    <button
+                      className="btn btn-primary btn-mini"
+                      onClick={() =>
+                        void sugg
+                          .respondFriend(
+                            sugg.friendRequests.find((f) => f.name === cinv.invite!.name)?.userId ?? '',
+                            true,
+                          )
+                          .then(() => {
+                            contacts.refresh()
+                            cinv.dismiss()
+                          })
+                      }
+                    >
+                      ✓ {t('requestApprove')}
+                    </button>
+                  </>
+                ) : !auth.token ? (
+                  <>
+                    <span>{t('contactGuest', { name: cinv.invite.name })}</span>
+                    <button className="btn btn-primary btn-mini" onClick={auth.login}>
+                      {t('joinLogin')}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>{t('contactAsk', { name: cinv.invite.name })}</span>
+                    <button
+                      className="btn btn-primary btn-mini"
+                      onClick={() =>
+                        void contacts
+                          .request({ code: cinv.invite!.code })
+                          .then((status) => {
+                            if (status === 'friend') cinv.dismiss()
+                            else cinv.markPending()
+                          })
+                          .catch((e) => alert(e instanceof Error ? e.message : String(e)))
+                      }
+                    >
+                      {t('contactSend')}
+                    </button>
+                  </>
+                )}
+                <button className="icon-btn" onClick={cinv.dismiss} title={t('dismiss')}>
+                  ×
+                </button>
+              </div>
+            )}
             {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
             {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}
 
@@ -620,7 +690,14 @@ export default function App() {
                 <p className="empty">{t('relicsLoading')}</p>
               ))}
             {tab === 'groups' && (
-              <GroupsPage grp={grp} verifiedIds={verifiedIds} canOnline={!!auth.token} />
+              <GroupsPage
+                grp={grp}
+                verifiedIds={verifiedIds}
+                canOnline={!!auth.token}
+                contacts={contacts}
+                token={auth.token}
+                myUserId={auth.user?.id ?? null}
+              />
             )}
             {db && tab === 'mypage' && (
               <MyPage

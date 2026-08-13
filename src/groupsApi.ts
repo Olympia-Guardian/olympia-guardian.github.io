@@ -22,6 +22,8 @@ export interface ApiGroup {
   inviteCode?: string
   /** Demandes d'adhésion en attente — propriétaire uniquement. */
   requests?: ApiGroupRequest[]
+  /** Comptes des co-membres (groupes online) — sert à « ajouter en contact ». */
+  memberUsers?: { userId: string; name: string }[]
 }
 
 export type InviteStatus = 'none' | 'pending' | 'member'
@@ -161,6 +163,118 @@ export interface ApiSentSuggestion {
 /** Mes suggestions en attente : affichées « cochées » chez le destinataire. */
 export function apiListSentSuggestions(token: string): Promise<{ sent: ApiSentSuggestion[] }> {
   return call('/suggestions/sent', token)
+}
+
+// ---------------------------------------------------------------- contacts
+
+export interface ApiContact {
+  userId: string
+  name: string
+  avatar: string
+  /** Persos vérifiés (amis seulement — la fiche contact montre leur avancée). */
+  chars?: number[]
+  created?: number
+}
+
+export interface ApiContacts {
+  friends: ApiContact[]
+  pendingIn: ApiContact[]
+  pendingOut: ApiContact[]
+  blocked: { userId: string; name: string }[]
+  /** Mon code de contact (lien #c=…). */
+  code: string
+}
+
+export interface ApiFriendRequest {
+  userId: string
+  name: string
+  avatar: string
+  created: number
+}
+
+export interface ApiGroupInvite {
+  groupId: string
+  groupName: string
+  from: string
+  created: number
+}
+
+/** Tout ce que porte la cloche, en un appel. */
+export interface ApiInbox {
+  suggestions: ApiSuggestion[]
+  sent: ApiSentSuggestion[]
+  friendRequests: ApiFriendRequest[]
+  groupInvites: ApiGroupInvite[]
+}
+
+export function apiInbox(token: string): Promise<ApiInbox> {
+  return call('/inbox', token)
+}
+
+export function apiContacts(token: string): Promise<ApiContacts> {
+  return call('/contacts', token)
+}
+
+export function apiRotateContactCode(token: string): Promise<{ code: string }> {
+  return call('/contacts/rotate', token, { method: 'POST', body: {} })
+}
+
+export type ContactStatus = 'none' | 'pending' | 'pendingIn' | 'friend' | 'self'
+
+export function apiContactPreview(
+  code: string,
+  token: string | null,
+): Promise<{ name: string; avatar: string; status: ContactStatus }> {
+  return call(`/contact/${encodeURIComponent(code)}`, token)
+}
+
+/** Demande d'ami — par code de contact OU par compte d'un groupe online commun. */
+export function apiRequestContact(
+  token: string,
+  target: { code: string } | { userId: string },
+): Promise<{ status: string }> {
+  return call('/contacts/request', token, { method: 'POST', body: target })
+}
+
+export function apiRespondContact(
+  token: string,
+  userId: string,
+  accept: boolean,
+): Promise<{ ok: true }> {
+  return call('/contacts/respond', token, { method: 'POST', body: { userId, accept } })
+}
+
+export function apiRemoveContact(token: string, userId: string): Promise<{ ok: true }> {
+  return call(`/contacts/${encodeURIComponent(userId)}`, token, { method: 'DELETE' })
+}
+
+export function apiBlock(token: string, userId: string): Promise<{ ok: true }> {
+  return call('/blocks', token, { method: 'POST', body: { userId } })
+}
+
+export function apiUnblock(token: string, userId: string): Promise<{ ok: true }> {
+  return call(`/blocks/${encodeURIComponent(userId)}`, token, { method: 'DELETE' })
+}
+
+/** Invitation directe d'un ami dans un de mes groupes online. */
+export function apiGroupInvite(
+  token: string,
+  groupId: string,
+  userId: string,
+): Promise<{ status: string }> {
+  return call(`/group/${groupId}/invite`, token, { method: 'POST', body: { userId } })
+}
+
+export function apiRespondGroupInvite(
+  token: string,
+  groupId: string,
+  accept: boolean,
+  charId?: number,
+): Promise<{ ok: true }> {
+  return call('/group-invites/respond', token, {
+    method: 'POST',
+    body: { groupId, accept, ...(charId ? { charId } : {}) },
+  })
 }
 
 export function apiResolveSuggestions(

@@ -4,8 +4,10 @@
 // la bascule rapide ; tout le reste se gère ici.
 
 import { useEffect, useState, type FormEvent } from 'react'
-import { fetchCharacter, parseLodestoneId, type Character } from '../api'
+import { fetchCharacter, parseLodestoneId, KINDS, type Character } from '../api'
+import type { ContactsController } from '../contacts'
 import type { GroupsController, Group } from '../groups'
+import { apiGroupInvite, type ApiContact } from '../groupsApi'
 import { useI18n } from '../i18n'
 import { onAvatarImgError } from '../ui'
 
@@ -154,6 +156,250 @@ function MemberChip({ charId, onRemove }: { charId: number; onRemove?: () => voi
   )
 }
 
+/** Perso d'un ami : nom, avatar et complétion globale de ses collections. */
+function FriendCharChip({ charId }: { charId: number }) {
+  const char = useChar(charId)
+  let pct: number | null = null
+  if (char) {
+    let count = 0
+    let total = 0
+    for (const k of KINDS) {
+      if (!char[k].isPublic) continue
+      count += char[k].count
+      total += char[k].total
+    }
+    pct = total > 0 ? Math.round((count / total) * 100) : null
+  }
+  return (
+    <span className="member-chip">
+      {char?.avatar && (
+        <img src={char.avatar} alt="" width={24} height={24} onError={onAvatarImgError} />
+      )}
+      <span className="member-chip-name">{char?.name ?? `#${charId}`}</span>
+      {pct !== null && <span className="chip chip-type">{pct} %</span>}
+    </span>
+  )
+}
+
+/** Carte d'un ami : persos vérifiés + inviter dans un groupe / retirer / bloquer. */
+function FriendCard({
+  friend,
+  grp,
+  contacts,
+  token,
+}: {
+  friend: ApiContact
+  grp: GroupsController
+  contacts: ContactsController
+  token: string | null
+}) {
+  const { t } = useI18n()
+  const myOnlineGroups = grp.groups.filter((g) => g.mine === 'owner' && g.shared)
+  const [inviteGroup, setInviteGroup] = useState('')
+  const [invited, setInvited] = useState(false)
+  return (
+    <div className="contact-card">
+      <div className="contact-id">
+        {friend.avatar && <img src={friend.avatar} alt="" width={32} height={32} />}
+        <b>{friend.name}</b>
+      </div>
+      <div className="group-members contact-chars">
+        {(friend.chars ?? []).map((id) => (
+          <FriendCharChip key={id} charId={id} />
+        ))}
+        {(friend.chars ?? []).length === 0 && (
+          <span className="modal-muted">{t('contactNoChars')}</span>
+        )}
+      </div>
+      <div className="contact-actions">
+        {myOnlineGroups.length > 0 && token && (
+          <>
+            <select value={inviteGroup} onChange={(e) => setInviteGroup(e.target.value)}>
+              <option value="">{t('contactInvite')}</option>
+              {myOnlineGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="btn btn-primary btn-mini"
+              disabled={!inviteGroup || invited}
+              onClick={() =>
+                void apiGroupInvite(token, inviteGroup, friend.userId)
+                  .then(() => setInvited(true))
+                  .catch((e) => alert(e instanceof Error ? e.message : String(e)))
+              }
+            >
+              {invited ? t('contactInvited') : '🎟'}
+            </button>
+          </>
+        )}
+        <button
+          className="btn btn-ghost btn-mini"
+          onClick={() => {
+            if (confirm(t('contactRemoveConfirm', { name: friend.name })))
+              void contacts.remove(friend.userId)
+          }}
+        >
+          {t('contactRemove')}
+        </button>
+        <button
+          className="btn btn-ghost btn-mini contact-block"
+          onClick={() => {
+            if (confirm(t('contactBlockConfirm', { name: friend.name })))
+              void contacts.block(friend.userId)
+          }}
+        >
+          🚫 {t('contactBlock')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Section « Contacts » : mon lien, mes amis, demandes en cours, bloqués. */
+function ContactsSection({
+  grp,
+  contacts,
+  token,
+}: {
+  grp: GroupsController
+  contacts: ContactsController
+  token: string | null
+}) {
+  const { t } = useI18n()
+  const [copied, setCopied] = useState(false)
+  const d = contacts.data
+  if (!d) return null
+  return (
+    <>
+      <div className="groups-head contacts-head">
+        <h2 className="groups-title">{t('contactsTitle')}</h2>
+      </div>
+      <section className="relic-series group-card">
+        <header className="relic-series-head">
+          <h4 className="relic-series-name">🔗 {t('contactLinkTitle')}</h4>
+        </header>
+        <div className="contact-link-row">
+          <input className="search contact-link-input" readOnly value={contacts.link ?? ''} />
+          <button
+            className="btn btn-primary btn-mini"
+            onClick={() => {
+              void navigator.clipboard?.writeText(contacts.link ?? '').then(() => {
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              })
+            }}
+          >
+            {copied ? '✓' : t('contactCopy')}
+          </button>
+          <button
+            className="btn btn-ghost btn-mini"
+            title={t('contactRotateTitle')}
+            onClick={() => {
+              if (confirm(t('contactRotateConfirm'))) void contacts.rotate()
+            }}
+          >
+            ♻️
+          </button>
+        </div>
+      </section>
+
+      {d.pendingIn.length > 0 && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">📥 {t('contactPendingInTitle', { n: d.pendingIn.length })}</h4>
+          </header>
+          <div className="contact-rows">
+            {d.pendingIn.map((p) => (
+              <div key={p.userId} className="contact-row">
+                {p.avatar && <img src={p.avatar} alt="" width={24} height={24} />}
+                <b>{p.name}</b>
+                <span className="contact-row-actions">
+                  <button
+                    className="btn btn-primary btn-mini"
+                    onClick={() => void contacts.respond(p.userId, true)}
+                  >
+                    ✓ {t('requestApprove')}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-mini"
+                    onClick={() => void contacts.respond(p.userId, false)}
+                  >
+                    ✗ {t('requestReject')}
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="relic-series group-card">
+        <header className="relic-series-head">
+          <h4 className="relic-series-name">👥 {t('contactFriendsTitle', { n: d.friends.length })}</h4>
+        </header>
+        {d.friends.length === 0 ? (
+          <p className="modal-muted contact-empty">{t('contactFriendsEmpty')}</p>
+        ) : (
+          <div className="contact-rows">
+            {d.friends.map((f) => (
+              <FriendCard key={f.userId} friend={f} grp={grp} contacts={contacts} token={token} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {d.pendingOut.length > 0 && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">📤 {t('contactPendingOutTitle', { n: d.pendingOut.length })}</h4>
+          </header>
+          <div className="contact-rows">
+            {d.pendingOut.map((p) => (
+              <div key={p.userId} className="contact-row">
+                <b>{p.name}</b>
+                <span className="contact-row-actions">
+                  <button
+                    className="btn btn-ghost btn-mini"
+                    onClick={() => void contacts.remove(p.userId)}
+                  >
+                    {t('contactCancel')}
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {d.blocked.length > 0 && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">🚫 {t('contactBlockedTitle', { n: d.blocked.length })}</h4>
+          </header>
+          <div className="contact-rows">
+            {d.blocked.map((b) => (
+              <div key={b.userId} className="contact-row">
+                <b>{b.name}</b>
+                <span className="contact-row-actions">
+                  <button
+                    className="btn btn-ghost btn-mini"
+                    onClick={() => void contacts.unblock(b.userId)}
+                  >
+                    {t('contactUnblock')}
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  )
+}
+
 /** Ligne d'une demande d'adhésion, côté créateur. */
 function RequestRow({
   charId,
@@ -202,11 +448,15 @@ function GroupCard({
   grp,
   verifiedIds,
   isActive,
+  contacts,
+  myUserId,
 }: {
   g: Group
   grp: GroupsController
   verifiedIds: number[]
   isActive: boolean
+  contacts: ContactsController
+  myUserId: string | null
 }) {
   const { t } = useI18n()
   const [input, setInput] = useState('')
@@ -311,6 +561,42 @@ function GroupCard({
         ))}
       </div>
 
+      {/* Comptes du groupe online : ajout en contact des co-membres */}
+      {g.shared && (g.memberUsers?.some((u) => u.userId !== myUserId) ?? false) && (
+        <div className="group-accounts">
+          <span className="group-invite-label">{t('groupAccounts')}</span>
+          {g.memberUsers!
+            .filter((u) => u.userId !== myUserId)
+            .map((u) => {
+              const isFriend = contacts.data?.friends.some((f) => f.userId === u.userId) ?? false
+              const isPending =
+                contacts.data?.pendingOut.some((p) => p.userId === u.userId) ?? false
+              return (
+                <span key={u.userId} className="member-chip">
+                  <span className="member-chip-name">{u.name}</span>
+                  {isFriend ? (
+                    <span title={t('contactAlreadyChip')}>👥</span>
+                  ) : isPending ? (
+                    <span title={t('contactPendingChip')}>⏳</span>
+                  ) : (
+                    <button
+                      className="icon-btn"
+                      title={t('contactAddFromGroup', { name: u.name })}
+                      onClick={() =>
+                        void contacts
+                          .request({ userId: u.userId })
+                          .catch((e) => alert(e instanceof Error ? e.message : String(e)))
+                      }
+                    >
+                      ➕
+                    </button>
+                  )}
+                </span>
+              )
+            })}
+        </div>
+      )}
+
       {/* Hors ligne (créateur) : ajout libre par ID/URL Lodestone */}
       {!g.shared && canEdit && (
         <form className="group-add-form" onSubmit={addManual}>
@@ -363,10 +649,16 @@ export function GroupsPage({
   grp,
   verifiedIds,
   canOnline,
+  contacts,
+  token,
+  myUserId,
 }: {
   grp: GroupsController
   verifiedIds: number[]
   canOnline: boolean
+  contacts: ContactsController
+  token: string | null
+  myUserId: string | null
 }) {
   const { t } = useI18n()
   const [creating, setCreating] = useState(false)
@@ -397,8 +689,18 @@ export function GroupsPage({
 
       {grp.groups.length === 0 && <p className="empty">{t('groupsEmpty')}</p>}
       {grp.groups.map((g) => (
-        <GroupCard key={g.id} g={g} grp={grp} verifiedIds={verifiedIds} isActive={g.id === grp.activeId} />
+        <GroupCard
+          key={g.id}
+          g={g}
+          grp={grp}
+          verifiedIds={verifiedIds}
+          isActive={g.id === grp.activeId}
+          contacts={contacts}
+          myUserId={myUserId}
+        />
       ))}
+
+      {token && <ContactsSection grp={grp} contacts={contacts} token={token} />}
 
       {creating && (
         <GroupCreateDialog

@@ -1,9 +1,9 @@
-// Panneau de la cloche : suggestions reçues, à accepter (l'objet est coché)
-// ou refuser — unitairement ou en masse.
+// Panneau de la cloche : invitations de groupe, demandes d'ami et suggestions
+// reçues — chacune à accepter ou refuser (les suggestions aussi en masse).
 
 import { useEffect, useState } from 'react'
 import { fetchCharacter, type Kind, type RelicDb } from './api'
-import type { ApiSuggestion } from './groupsApi'
+import type { ApiFriendRequest, ApiGroupInvite, ApiSuggestion } from './groupsApi'
 import { kindLabel, useI18n } from './i18n'
 import type { Db } from './store'
 import { onItemImgError } from './ui'
@@ -67,33 +67,141 @@ function SuggestionRow({
   )
 }
 
+/** Invitation directe dans un groupe : accepter avec un perso vérifié. */
+function GroupInviteRow({
+  invite,
+  verifiedIds,
+  onRespond,
+}: {
+  invite: ApiGroupInvite
+  verifiedIds: number[]
+  onRespond: (accept: boolean, charId?: number) => void
+}) {
+  const { t } = useI18n()
+  const [charId, setCharId] = useState(verifiedIds[0] ?? 0)
+  return (
+    <div className="notif-row">
+      <span className="notif-text">
+        <b>{invite.groupName}</b>
+        <small>{t('groupInviteBy', { name: invite.from })}</small>
+      </span>
+      <span className="notif-actions">
+        {verifiedIds.length > 1 && (
+          <select value={charId} onChange={(e) => setCharId(Number(e.target.value))}>
+            {verifiedIds.map((id) => (
+              <InviteCharOption key={id} charId={id} />
+            ))}
+          </select>
+        )}
+        <button
+          className="btn btn-primary btn-mini"
+          title={t('requestApprove')}
+          disabled={verifiedIds.length === 0}
+          onClick={() => onRespond(true, charId)}
+        >
+          ✓
+        </button>
+        <button className="btn btn-ghost btn-mini" title={t('requestReject')} onClick={() => onRespond(false)}>
+          ✗
+        </button>
+      </span>
+    </div>
+  )
+}
+
+function InviteCharOption({ charId }: { charId: number }) {
+  const name = useCharName(charId)
+  return <option value={charId}>{name ?? `#${charId}`}</option>
+}
+
 export function NotificationsPanel({
   suggestions,
+  friendRequests,
+  groupInvites,
+  verifiedIds,
   db,
   relicDb,
   onResolve,
+  onRespondFriend,
+  onRespondInvite,
   onClose,
 }: {
   suggestions: ApiSuggestion[]
+  friendRequests: ApiFriendRequest[]
+  groupInvites: ApiGroupInvite[]
+  verifiedIds: number[]
   db: Db | null
   relicDb: RelicDb | null
   onResolve: (ids: number[], accept: boolean) => void
+  onRespondFriend: (userId: string, accept: boolean) => void
+  onRespondInvite: (groupId: string, accept: boolean, charId?: number) => void
   onClose: () => void
 }) {
   const { t } = useI18n()
   const showChar = new Set(suggestions.map((s) => s.charId)).size > 1
+  const total = suggestions.length + friendRequests.length + groupInvites.length
   return (
     <div className="notif-panel">
       <div className="notif-head">
-        <b>{t('suggestionsTitle', { n: suggestions.length })}</b>
+        <b>{t('bellPanelTitle', { n: total })}</b>
         <button className="icon-btn" title={t('close')} onClick={onClose}>
           ×
         </button>
       </div>
-      {suggestions.length === 0 ? (
-        <p className="notif-empty">{t('suggestionsEmpty')}</p>
-      ) : (
+      {groupInvites.length > 0 && (
         <>
+          <p className="notif-section">{t('groupInvitesTitle')}</p>
+          <div className="notif-list">
+            {groupInvites.map((inv) => (
+              <GroupInviteRow
+                key={inv.groupId}
+                invite={inv}
+                verifiedIds={verifiedIds}
+                onRespond={(accept, charId) => onRespondInvite(inv.groupId, accept, charId)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+      {friendRequests.length > 0 && (
+        <>
+          <p className="notif-section">{t('friendRequestsTitle')}</p>
+          <div className="notif-list">
+            {friendRequests.map((fr) => (
+              <div className="notif-row" key={fr.userId}>
+                {fr.avatar && <img src={fr.avatar} alt="" width={28} height={28} className="notif-avatar" />}
+                <span className="notif-text">
+                  <b>{fr.name}</b>
+                  <small>{t('friendRequestWants')}</small>
+                </span>
+                <span className="notif-actions">
+                  <button
+                    className="btn btn-primary btn-mini"
+                    title={t('requestApprove')}
+                    onClick={() => onRespondFriend(fr.userId, true)}
+                  >
+                    ✓
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-mini"
+                    title={t('requestReject')}
+                    onClick={() => onRespondFriend(fr.userId, false)}
+                  >
+                    ✗
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {total === 0 ? (
+        <p className="notif-empty">{t('suggestionsEmpty')}</p>
+      ) : suggestions.length === 0 ? null : (
+        <>
+          {(friendRequests.length > 0 || groupInvites.length > 0) && (
+            <p className="notif-section">{t('suggestionsSection')}</p>
+          )}
           <div className="notif-bulk">
             <button
               className="btn btn-primary btn-mini"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { KIND_INFO, type Character, type Item, type Kind } from './api'
 import { localName, localSource, useI18n } from './i18n'
 import type { Member } from './store'
@@ -11,30 +11,19 @@ export interface ShownItem {
   kind: Kind
 }
 
-/** Capacité « proposer cet objet » (groupes online) fournie par l'app. */
-export interface SuggestCapability {
-  /** Mes propres persos : on ne se propose rien à soi-même. */
-  exclude: number[]
-  send: (charIds: number[], kind: Kind, itemId: number) => Promise<number>
-}
-
 export function ItemModal({
   shown,
   ready,
   ownedSets,
-  suggest,
   onClose,
 }: {
   shown: ShownItem
   ready: Ready[]
   ownedSets: Map<number, Record<Kind, Set<number>>>
-  suggest?: SuggestCapability
   onClose: () => void
 }) {
   const { lang, t } = useI18n()
   const { item, kind } = shown
-  const [sending, setSending] = useState(false)
-  const [sentTo, setSentTo] = useState<number | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -114,34 +103,6 @@ export function ItemModal({
                 <span className="modal-muted">{t('missingBy', { n: missing.length })}</span>
                 {missing.length > 0 && <AvatarStack chars={missing.map((m) => m.data)} size={26} />}
               </div>
-              {(() => {
-                // Proposer l'objet aux membres qui ne l'ont pas (groupe online).
-                // Montures/mascottes : l'acceptation est une validation
-                // temporaire, confirmée par la synchro Lodestone suivante.
-                if (!suggest) return null
-                const targets = missing.filter((m) => !suggest.exclude.includes(m.id)).map((m) => m.id)
-                if (targets.length === 0) return null
-                return (
-                  <button
-                    className="btn btn-ghost btn-mini modal-suggest"
-                    disabled={sending || sentTo !== null}
-                    onClick={() => {
-                      setSending(true)
-                      suggest
-                        .send(targets, kind, item.id)
-                        .then((n) => setSentTo(n))
-                        .catch(() => setSentTo(0))
-                        .finally(() => setSending(false))
-                    }}
-                  >
-                    {sentTo !== null
-                      ? t('proposeSent', { n: sentTo })
-                      : sending
-                        ? '…'
-                        : '📤 ' + t('proposeToMissing', { n: targets.length })}
-                  </button>
-                )
-              })()}
             </div>
           </>
         )}

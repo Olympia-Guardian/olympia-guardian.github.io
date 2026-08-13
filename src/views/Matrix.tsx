@@ -54,6 +54,8 @@ export function Matrix({
   ownedSets,
   onShowItem,
   titleLabel,
+  suggest,
+  ownAdd,
 }: {
   kind: Kind
   items: Item[]
@@ -62,10 +64,23 @@ export function Matrix({
   onShowItem: (item: Item, kind: Kind) => void
   /** Vue fusionnée (« Mode ») : libellé de recherche personnalisé. */
   titleLabel?: string
+  /** Groupe online : cliquer la croix d'un AUTRE joueur lui propose l'objet. */
+  suggest?: {
+    /** Mes propres persos : eux passent par l'ajout direct. */
+    exclude: number[]
+    send: (charId: number, kind: Kind, itemId: number) => Promise<void>
+  }
+  /** Connecté : cliquer la croix de MON perso coche l'objet dans mon journal. */
+  ownAdd?: {
+    chars: number[]
+    add: (charId: number, kind: Kind, itemId: number) => Promise<void>
+  }
 }) {
   const { lang, t } = useI18n()
   // Vue fusionnée : chaque objet connaît sa collection d'origine.
   const kindFor = (item: Item): Kind => item.kindOf ?? kind
+  // Suggestions envoyées pendant la session (clé perso:collection:objet).
+  const [suggested, setSuggested] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [onlyMissing, setOnlyMissing] = useState(true)
@@ -223,6 +238,61 @@ export function Matrix({
                   </td>
                   {activeMembers.map((m) => {
                     const has = !missingIds.has(m.id)
+                    const k = kindFor(item)
+                    const cellKey = `${m.id}:${k}:${item.id}`
+                    const mine = ownAdd?.chars.includes(m.id) ?? false
+                    const sent = suggested.has(cellKey)
+                    // Mon perso : la croix coche directement l'objet au journal
+                    // (montures/mascottes exclues — le Lodestone fait foi).
+                    if (!has && mine && ownAdd && k !== 'mounts' && k !== 'minions') {
+                      return (
+                        <td
+                          key={m.id}
+                          className={`cell ${sent ? 'cell-owned' : 'cell-missing cell-addable'}`}
+                          title={sent ? t('addedCell') : t('addOwnCell', { what: name })}
+                          onClick={() => {
+                            if (sent) return
+                            setSuggested((prev) => new Set(prev).add(cellKey))
+                            void ownAdd.add(m.id, k, item.id).catch(() =>
+                              setSuggested((prev) => {
+                                const next = new Set(prev)
+                                next.delete(cellKey)
+                                return next
+                              }),
+                            )
+                          }}
+                        >
+                          {sent ? '✓' : '✗'}
+                        </td>
+                      )
+                    }
+                    // Perso d'un autre membre (groupe online) : proposer.
+                    if (!has && !mine && suggest) {
+                      return (
+                        <td
+                          key={m.id}
+                          className={`cell cell-missing ${sent ? 'cell-suggested' : 'cell-suggestable'}`}
+                          title={
+                            sent
+                              ? t('suggestedCell', { who: m.data.name })
+                              : t('suggestCell', { what: name, who: m.data.name })
+                          }
+                          onClick={() => {
+                            if (sent) return
+                            setSuggested((prev) => new Set(prev).add(cellKey))
+                            void suggest.send(m.id, k, item.id).catch(() =>
+                              setSuggested((prev) => {
+                                const next = new Set(prev)
+                                next.delete(cellKey)
+                                return next
+                              }),
+                            )
+                          }}
+                        >
+                          {sent ? '📤' : '✗'}
+                        </td>
+                      )
+                    }
                     return (
                       <td
                         key={m.id}

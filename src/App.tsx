@@ -9,7 +9,7 @@ import { detectLang, kindLabel, persistLang, translate, useI18n, LangContext, ty
 import { ItemModal, type ShownItem } from './ItemModal'
 import { RosterBar } from './RosterBar'
 import { TabIcon } from './ui'
-import { fetchCharacter } from './api'
+import { fetchCharacter, invalidateCharacter } from './api'
 import {
   readHashParam,
   setHashParam,
@@ -492,6 +492,29 @@ export default function App() {
                 ready={activeReady}
                 ownedSets={ownedSets}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
+                suggest={
+                  auth.token && grp.active?.shared
+                    ? {
+                        exclude: verifiedIds,
+                        send: async (charId, kind, itemId) => {
+                          await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                        },
+                      }
+                    : undefined
+                }
+                ownAdd={
+                  auth.token && verifiedIds.length > 0
+                    ? {
+                        chars: verifiedIds,
+                        add: async (charId, kind, itemId) => {
+                          const cur = ownedSets.get(charId)?.[kind] ?? new Set<number>()
+                          await auth.saveCollections(charId, { [kind]: [...new Set([...cur, itemId])] })
+                          invalidateCharacter(charId)
+                          refresh(charId)
+                        },
+                      }
+                    : undefined
+                }
               />
             )}
             {db &&
@@ -507,6 +530,29 @@ export default function App() {
                 ready={activeReady}
                 ownedSets={ownedSets}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
+                suggest={
+                  auth.token && grp.active?.shared
+                    ? {
+                        exclude: verifiedIds,
+                        send: async (charId, kind, itemId) => {
+                          await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                        },
+                      }
+                    : undefined
+                }
+                ownAdd={
+                  auth.token && verifiedIds.length > 0
+                    ? {
+                        chars: verifiedIds,
+                        add: async (charId, kind, itemId) => {
+                          const cur = ownedSets.get(charId)?.[kind] ?? new Set<number>()
+                          await auth.saveCollections(charId, { [kind]: [...new Set([...cur, itemId])] })
+                          invalidateCharacter(charId)
+                          refresh(charId)
+                        },
+                      }
+                    : undefined
+                }
               />
             )}
             {db && activeReady.length > 0 && tab === 'relics' &&
@@ -550,19 +596,6 @@ export default function App() {
             shown={shownItem}
             ready={ready}
             ownedSets={ownedSets}
-            suggest={
-              auth.token && grp.active?.shared
-                ? {
-                    exclude: verifiedIds,
-                    send: async (charIds, kind, itemId) => {
-                      const results = await Promise.all(
-                        charIds.map((cid) => apiSuggest(auth.token!, cid, [{ kind, itemId }])),
-                      )
-                      return results.reduce((sum, r) => sum + r.created, 0)
-                    },
-                  }
-                : undefined
-            }
             onClose={() => setShownItem(null)}
           />
         )}

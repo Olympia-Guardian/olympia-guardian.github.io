@@ -2016,6 +2016,23 @@ a.player-name:hover {
   background: rgba(208, 59, 59, 0.08);
 }
 
+/* Croix cliquables : proposer à un membre / cocher sur mon propre perso */
+.cell-suggestable,
+.cell-addable {
+  cursor: pointer;
+}
+
+.cell-suggestable:hover,
+.cell-addable:hover {
+  background: rgba(200, 164, 100, 0.22);
+  color: var(--gold, #c8a464);
+}
+
+.cell-suggested {
+  font-size: 12px;
+  background: rgba(200, 164, 100, 0.12);
+}
+
 
 /* ------------------------------------------------------------------- hero */
 

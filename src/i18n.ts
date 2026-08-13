@@ -290,11 +290,10 @@ const STR = {
   acceptAll: { fr: 'Tout accepter', en: 'Accept all' },
   refuseAll: { fr: 'Tout refuser', en: 'Refuse all' },
   suggestedBy: { fr: 'proposé par {name}', en: 'suggested by {name}' },
-  proposeToMissing: {
-    fr: 'Proposer aux manquants ({n})',
-    en: 'Suggest to those missing it ({n})',
-  },
-  proposeSent: { fr: 'Proposé ✓ ({n})', en: 'Suggested ✓ ({n})' },
+  suggestCell: { fr: 'Proposer {what} à {who}', en: 'Suggest {what} to {who}' },
+  suggestedCell: { fr: 'Proposé à {who} ✓', en: 'Suggested to {who} ✓' },
+  addOwnCell: { fr: 'Cocher {what} dans mon journal', en: 'Check {what} in my journal' },
+  addedCell: { fr: 'Ajouté au journal ✓', en: 'Added to the journal ✓' },
   suggTemp: {
     fr: 'temporaire, confirmé à la prochaine synchro Lodestone',
     en: 'temporary, confirmed at the next Lodestone sync',

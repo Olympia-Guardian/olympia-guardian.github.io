@@ -23,8 +23,28 @@ export const onItemImgError = fallbackTo(ITEM_FALLBACK)
 export const onAvatarImgError = fallbackTo(AVATAR_FALLBACK)
 
 /** Jauge fine : progression d'une collection. La valeur est toujours écrite en toutes lettres à côté. */
-export function Meter({ label, count, total }: { label: string; count: number; total: number }) {
+export function Meter({
+  label,
+  count,
+  total,
+  colored,
+}: {
+  label: string
+  count: number
+  total: number
+  /** Couleur par palier d'avancement (rouge → orange → bleu → vert). */
+  colored?: boolean
+}) {
   const pct = total > 0 ? (count / total) * 100 : 0
+  const lvl = !colored
+    ? ''
+    : total > 0 && count >= total
+      ? 'is-done'
+      : pct < 100 / 3
+        ? 'lvl-low'
+        : pct < 200 / 3
+          ? 'lvl-mid'
+          : 'lvl-high'
   return (
     <div className="meter">
       <div className="meter-head">
@@ -35,7 +55,7 @@ export function Meter({ label, count, total }: { label: string; count: number; t
         </span>
       </div>
       <div className="meter-track" role="img" aria-label={`${label}: ${count}/${total}`}>
-        <div className="meter-fill" style={{ width: `${pct}%` }} />
+        <div className={`meter-fill ${lvl}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )

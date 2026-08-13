@@ -149,7 +149,11 @@ export interface CharProfile {
   guardian: string | null
   city: string | null
   grandCompany: string | null
+  /** Icône de la grande compagnie (Lodestone). */
+  gcIcon?: string | null
   freeCompany: string | null
+  /** Blason de la compagnie libre : calques à superposer. */
+  fcCrest?: string[]
   title: string | null
   activeLevel: number | null
   jobs: CharJob[]

@@ -18,6 +18,8 @@ import {
   GiCheckMark,
   GiMagnifyingGlass,
   GiPadlock,
+  GiBreakingChain,
+  GiCrystalCluster,
   GiPowerLightning,
   GiRoundStar,
 } from 'react-icons/gi'
@@ -42,70 +44,33 @@ function localItemName(it: Item, lang: string): string {
 type Auth = ReturnType<typeof useAuth>
 
 /** Panneau latéral : fiche de l'objet sélectionné + ajout/retrait. */
-/** Rôles de la page Class/Job du Lodestone → libellés localisés. */
-const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
-  Tank: { fr: 'Tanks', en: 'Tanks' },
-  Healer: { fr: 'Soigneurs', en: 'Healers' },
-  'Melee DPS': { fr: 'DPS de mêlée', en: 'Melee DPS' },
-  'Physical Ranged DPS': { fr: 'DPS physique à distance', en: 'Physical Ranged DPS' },
-  'Magical Ranged DPS': { fr: 'DPS magique', en: 'Magical Ranged DPS' },
-  'Disciples of the Hand': { fr: 'Artisans', en: 'Disciples of the Hand' },
-  'Disciples of the Land': { fr: 'Récolteurs', en: 'Disciples of the Land' },
-}
-
-/** Stats du personnage scrappées du Lodestone : état civil éorzéen + niveaux
- *  de toutes les classes, groupés par rôle. */
+/** Niveaux de toutes les classes, groupés visuellement par rôle — les icônes
+ *  du Lodestone parlent d'elles-mêmes, pas de libellés. */
 function CharStats({ profile }: { profile: CharProfile }) {
-  const { lang, t } = useI18n()
-  const facts: { label: string; value: string | null }[] = [
-    { label: t('factRace'), value: profile.race },
-    { label: t('factNameday'), value: profile.nameday },
-    { label: t('factGuardian'), value: profile.guardian },
-    { label: t('factCity'), value: profile.city },
-    { label: t('factGC'), value: profile.grandCompany },
-    { label: t('factFC'), value: profile.freeCompany },
-  ]
+  const { t } = useI18n()
   const roles: { role: string; jobs: CharProfile['jobs'] }[] = []
   for (const job of profile.jobs) {
     const entry = roles.find((r) => r.role === job.role)
     if (entry) entry.jobs.push(job)
     else roles.push({ role: job.role, jobs: [job] })
   }
+  if (profile.jobs.length === 0) return null
   return (
-    <div className="char-stats">
-      <div className="char-facts">
-        {facts
-          .filter((f) => f.value)
-          .map((f) => (
-            <span key={f.label} className="char-fact">
-              <span className="char-fact-label">{f.label}</span>
-              <span className="char-fact-value">{f.value}</span>
+    <div className="char-jobs">
+      {roles.map(({ role, jobs }) => (
+        <span key={role} className="char-jobs-row">
+          {jobs.map((j) => (
+            <span
+              key={j.name}
+              className={`job-tile ${j.level >= 100 ? 'is-max' : ''} ${j.level === 0 ? 'is-none' : ''}`}
+              title={`${j.name} — ${j.level > 0 ? t('jobLevel', { n: j.level }) : t('jobLocked')}`}
+            >
+              <img src={j.icon} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
+              <i>{j.level > 0 ? j.level : '—'}</i>
             </span>
           ))}
-      </div>
-      {profile.jobs.length > 0 && (
-        <div className="char-jobs">
-          {roles.map(({ role, jobs }) => (
-            <div key={role} className="char-jobs-role">
-              <span className="char-fact-label">
-                {ROLE_LABELS[role]?.[lang === 'fr' ? 'fr' : 'en'] ?? role}
-              </span>
-              <span className="char-jobs-row">
-                {jobs.map((j) => (
-                  <span
-                    key={j.name}
-                    className={`job-tile ${j.level >= 100 ? 'is-max' : ''} ${j.level === 0 ? 'is-none' : ''}`}
-                    title={`${j.name} — ${j.level > 0 ? t('jobLevel', { n: j.level }) : t('jobLocked')}`}
-                  >
-                    <img src={j.icon} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
-                    <i>{j.level > 0 ? j.level : '—'}</i>
-                  </span>
-                ))}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+        </span>
+      ))}
     </div>
   )
 }
@@ -1224,62 +1189,117 @@ export function MyPage({
       {verified && char && (
         <>
           <section className="relic-series mypage-char">
-            <div className="player-head mypage-char-head">
-              <img className="player-avatar mypage-char-avatar" src={char.avatar} alt="" width={48} height={48} />
-              <div className="player-id">
-                <span className="player-name mypage-char-name">
-                  {char.name}
-                  <span className="chip chip-owned">
-                    <GiCheckMark /> {t('bindVerifiedChip')}
+            <div className="mypage-char-layout">
+              <img
+                className="mypage-portrait"
+                src={char.portrait || char.avatar}
+                alt=""
+                onError={onAvatarImgError}
+              />
+              <div className="mypage-char-main">
+                <div className="player-head mypage-char-head">
+                  <div className="player-id">
+                    <span className="player-name mypage-char-name">
+                      {char.name}
+                      {char.profile?.title && (
+                        <span className="char-title">« {char.profile.title} »</span>
+                      )}
+                      <span className="chip chip-owned">
+                        <GiCheckMark /> {t('bindVerifiedChip')}
+                      </span>
+                      {char.profile?.grandCompany && (
+                        <span className="char-org" title={t('factGC')}>
+                          {char.profile.gcIcon && (
+                            <img src={char.profile.gcIcon} alt="" width={20} height={20} />
+                          )}
+                          {char.profile.grandCompany}
+                        </span>
+                      )}
+                      {char.profile?.freeCompany && (
+                        <span className="char-org" title={t('factFC')}>
+                          {(char.profile.fcCrest?.length ?? 0) > 0 && (
+                            <span className="fc-crest">
+                              {char.profile.fcCrest!.map((u) => (
+                                <img key={u} src={u} alt="" />
+                              ))}
+                            </span>
+                          )}
+                          {char.profile.freeCompany}
+                        </span>
+                      )}
+                    </span>
+                    <span className="player-server">
+                      {char.dataCenter ? `${char.dataCenter} — ` : ''}
+                      {char.server}
+                    </span>
+                  </div>
+                  <span className="mypage-char-actions">
+                    <a
+                      className="btn btn-ghost btn-mini btn-icon-only"
+                      href={`https://eu.finalfantasyxiv.com/lodestone/character/${char.id}/`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={t('viewOnLodestone')}
+                    >
+                      <GiCrystalCluster />
+                    </a>
+                    <button
+                      className="btn btn-ghost btn-mini"
+                      disabled={syncing || Date.now() < char.nextForceAt}
+                      title={
+                        Date.now() < char.nextForceAt
+                          ? t('syncForceCooldown', {
+                              h: Math.max(1, Math.ceil((char.nextForceAt - Date.now()) / 3_600_000)),
+                            })
+                          : t('syncForceTitle')
+                      }
+                      onClick={() => void forceSync()}
+                    >
+                      {syncing ? '…' : '⟳ ' + t('syncForce')}
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-mini mypage-unbind"
+                      onClick={() => doUnbind(char.id, char.name)}
+                    >
+                      <GiBreakingChain /> {t('unbindChar')}
+                    </button>
                   </span>
-                </span>
-                <span className="player-server">
-                  {char.server}
-                  {char.profile?.title ? ` — « ${char.profile.title} »` : ''}
-                </span>
+                </div>
+                {char.profile && <CharStats profile={char.profile} />}
+                <div className="meter-grid mypage-meters">
+                  {KINDS.filter((k) => k !== 'facewear' && k !== 'hairstyles').map((k) => {
+                    // « Mode » : accessoires + lunettes + coiffures fusionnés.
+                    const merged = k === 'fashions'
+                    const count = merged
+                      ? char.fashions.count + char.facewear.count + char.hairstyles.count
+                      : char[k].count
+                    const total = merged
+                      ? char.fashions.total + char.facewear.total + char.hairstyles.total
+                      : char[k].total
+                    return (
+                      <Meter
+                        key={k}
+                        label={merged ? t('fashionFamily') : kindLabel(lang, k, 'short')}
+                        count={count}
+                        total={total}
+                        colored
+                      />
+                    )
+                  })}
+                  {relicDb && (
+                    <Meter
+                      label={t('relicsTab')}
+                      count={char.relicIds.length}
+                      total={relicDb.relics.length}
+                      colored
+                    />
+                  )}
+                </div>
+                <p className="mypage-note">
+                  <GiPadlock /> {t('myPageAutoNote')}
+                </p>
               </div>
-              <button
-                className="btn btn-ghost btn-mini"
-                disabled={syncing || Date.now() < char.nextForceAt}
-                title={
-                  Date.now() < char.nextForceAt
-                    ? t('syncForceCooldown', {
-                        h: Math.max(1, Math.ceil((char.nextForceAt - Date.now()) / 3_600_000)),
-                      })
-                    : t('syncForceTitle')
-                }
-                onClick={() => void forceSync()}
-              >
-                {syncing ? '…' : '⟳ ' + t('syncForce')}
-              </button>
-              <button
-                className="btn btn-ghost btn-mini mypage-unbind"
-                onClick={() => doUnbind(char.id, char.name)}
-              >
-                {t('unbindChar')}
-              </button>
             </div>
-            {char.profile && <CharStats profile={char.profile} />}
-            <div className="meter-grid mypage-meters">
-              {KINDS.map((k) => (
-                <Meter
-                  key={k}
-                  label={kindLabel(lang, k, 'short')}
-                  count={char[k].count}
-                  total={char[k].total}
-                />
-              ))}
-              {relicDb && (
-                <Meter
-                  label={t('relicsTab')}
-                  count={char.relicIds.length}
-                  total={relicDb.relics.length}
-                />
-              )}
-            </div>
-            <p className="mypage-note">
-              <GiPadlock /> {t('myPageAutoNote')}
-            </p>
           </section>
 
           <nav className="kind-bar mypage-tabs">

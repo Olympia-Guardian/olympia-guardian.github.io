@@ -283,6 +283,7 @@ const STR = {
   factFC: { fr: 'Compagnie libre', en: 'Free Company' },
   jobLevel: { fr: 'niveau {n}', en: 'level {n}' },
   jobLocked: { fr: 'non débloqué', en: 'not unlocked' },
+  viewOnLodestone: { fr: 'Voir sur le Lodestone', en: 'View on the Lodestone' },
   invite: { fr: 'Inviter', en: 'Invite' },
   inviteTitle: {
     fr: "Copier le lien d'invitation du groupe",

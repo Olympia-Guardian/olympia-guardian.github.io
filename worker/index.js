@@ -165,6 +165,17 @@ async function scrapeCharacter(id) {
   const fcName = decodeEntities(
     extract(profile, /character__freecompany__name"[^>]*>[\s\S]*?<h4>([^<]+)<\/h4>/) ?? '',
   )
+  // Icône de la grande compagnie (l'image du bloc) et blason de la compagnie
+  // libre (superposition de calques transparents, à empiler côté front).
+  const gcIcon =
+    extract(
+      profile,
+      /<img src="([^"]+)"[^>]*>\s*<div class="character-block__box">\s*<p class="character-block__name">Grand Company/,
+    ) ?? null
+  const crestBlock = profile.match(/character__freecompany__crest__image">([\s\S]*?)<\/div>/)
+  const fcCrest = crestBlock
+    ? [...crestBlock[1].matchAll(/<img src="([^"]+)"/g)].map((m) => m[1])
+    : []
 
   // ------- niveaux de classes/jobs (page dédiée, groupés par rôle)
   const jobsHtml = await lodestoneGet(`/character/${id}/class_job/`)
@@ -193,7 +204,9 @@ async function scrapeCharacter(id) {
     guardian: blockVal('Guardian'),
     city: blockVal('City-state'),
     grandCompany: blockVal('Grand Company'),
+    gcIcon,
     freeCompany: fcName || null,
+    fcCrest,
     title: title || null,
     activeLevel: activeLevel ? Number(activeLevel) : null,
     jobs,

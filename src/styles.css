@@ -1263,6 +1263,80 @@ a.player-name:hover {
   gap: 8px;
 }
 
+/* ---------------------------------------------- stats Lodestone du journal */
+
+.char-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.char-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+
+.char-fact {
+  display: flex;
+  flex-direction: column;
+}
+
+.char-fact-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.char-fact-value {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.char-jobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+}
+
+.char-jobs-role {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.char-jobs-row {
+  display: flex;
+  gap: 6px;
+}
+
+.job-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.job-tile i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.job-tile.is-max i {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.job-tile.is-none {
+  opacity: 0.35;
+}
+
 /* ------------------------------------------------------- page « Groupes » */
 
 .groups-page {

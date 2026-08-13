@@ -261,6 +261,28 @@ const STR = {
   inviteLinkLabel: { fr: 'Lien d’invitation', en: 'Invite link' },
   copyShort: { fr: 'Copier', en: 'Copy' },
   pendingSentTitle: { fr: 'Demandes envoyées', en: 'Requests sent' },
+  syncForce: { fr: 'Synchroniser', en: 'Sync' },
+  syncForceTitle: {
+    fr: 'Re-scraper la fiche Lodestone maintenant (une fois par jour maximum)',
+    en: 'Re-scrape the Lodestone profile now (once per day at most)',
+  },
+  syncForceCooldown: {
+    fr: 'Déjà synchronisé aujourd’hui — possible à nouveau dans ~{h} h',
+    en: 'Already synced today — available again in ~{h}h',
+  },
+  syncForceDone: { fr: 'Fiche Lodestone actualisée ✓', en: 'Lodestone profile refreshed ✓' },
+  syncForceAlready: {
+    fr: 'Synchro déjà utilisée aujourd’hui — données du cache.',
+    en: 'Sync already used today — cached data.',
+  },
+  factRace: { fr: 'Race / Clan', en: 'Race / Clan' },
+  factNameday: { fr: 'Anniversaire', en: 'Nameday' },
+  factGuardian: { fr: 'Divinité gardienne', en: 'Guardian' },
+  factCity: { fr: 'Cité de départ', en: 'City-state' },
+  factGC: { fr: 'Grande compagnie', en: 'Grand Company' },
+  factFC: { fr: 'Compagnie libre', en: 'Free Company' },
+  jobLevel: { fr: 'niveau {n}', en: 'level {n}' },
+  jobLocked: { fr: 'non débloqué', en: 'not unlocked' },
   invite: { fr: 'Inviter', en: 'Invite' },
   inviteTitle: {
     fr: "Copier le lien d'invitation du groupe",

@@ -6,6 +6,7 @@ import {
   fetchCharacter,
   invalidateCharacter,
   type Character,
+  type CharProfile,
   type Item,
   type Kind,
   type RelicDb,
@@ -41,6 +42,74 @@ function localItemName(it: Item, lang: string): string {
 type Auth = ReturnType<typeof useAuth>
 
 /** Panneau latéral : fiche de l'objet sélectionné + ajout/retrait. */
+/** Rôles de la page Class/Job du Lodestone → libellés localisés. */
+const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
+  Tank: { fr: 'Tanks', en: 'Tanks' },
+  Healer: { fr: 'Soigneurs', en: 'Healers' },
+  'Melee DPS': { fr: 'DPS de mêlée', en: 'Melee DPS' },
+  'Physical Ranged DPS': { fr: 'DPS physique à distance', en: 'Physical Ranged DPS' },
+  'Magical Ranged DPS': { fr: 'DPS magique', en: 'Magical Ranged DPS' },
+  'Disciples of the Hand': { fr: 'Artisans', en: 'Disciples of the Hand' },
+  'Disciples of the Land': { fr: 'Récolteurs', en: 'Disciples of the Land' },
+}
+
+/** Stats du personnage scrappées du Lodestone : état civil éorzéen + niveaux
+ *  de toutes les classes, groupés par rôle. */
+function CharStats({ profile }: { profile: CharProfile }) {
+  const { lang, t } = useI18n()
+  const facts: { label: string; value: string | null }[] = [
+    { label: t('factRace'), value: profile.race },
+    { label: t('factNameday'), value: profile.nameday },
+    { label: t('factGuardian'), value: profile.guardian },
+    { label: t('factCity'), value: profile.city },
+    { label: t('factGC'), value: profile.grandCompany },
+    { label: t('factFC'), value: profile.freeCompany },
+  ]
+  const roles: { role: string; jobs: CharProfile['jobs'] }[] = []
+  for (const job of profile.jobs) {
+    const entry = roles.find((r) => r.role === job.role)
+    if (entry) entry.jobs.push(job)
+    else roles.push({ role: job.role, jobs: [job] })
+  }
+  return (
+    <div className="char-stats">
+      <div className="char-facts">
+        {facts
+          .filter((f) => f.value)
+          .map((f) => (
+            <span key={f.label} className="char-fact">
+              <span className="char-fact-label">{f.label}</span>
+              <span className="char-fact-value">{f.value}</span>
+            </span>
+          ))}
+      </div>
+      {profile.jobs.length > 0 && (
+        <div className="char-jobs">
+          {roles.map(({ role, jobs }) => (
+            <div key={role} className="char-jobs-role">
+              <span className="char-fact-label">
+                {ROLE_LABELS[role]?.[lang === 'fr' ? 'fr' : 'en'] ?? role}
+              </span>
+              <span className="char-jobs-row">
+                {jobs.map((j) => (
+                  <span
+                    key={j.name}
+                    className={`job-tile ${j.level >= 100 ? 'is-max' : ''} ${j.level === 0 ? 'is-none' : ''}`}
+                    title={`${j.name} — ${j.level > 0 ? t('jobLevel', { n: j.level }) : t('jobLocked')}`}
+                  >
+                    <img src={j.icon} alt="" width={26} height={26} loading="lazy" onError={onItemImgError} />
+                    <i>{j.level > 0 ? j.level : '—'}</i>
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** Icône du prérequis d'une source (monnaie ou type de contenu), si connue. */
 function SourceIcon({ s }: { s: { type: string; text: string; textEn: string } }) {
   const icon = sourceIcon(s)
@@ -867,6 +936,8 @@ export function MyPage({
   const { lang, t } = useI18n()
   const [bindInput, setBindInput] = useState('')
   const [busy, setBusy] = useState(false)
+  // Synchro Lodestone forcée (déclaré ici : MyPage a des retours anticipés).
+  const [syncing, setSyncing] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [char, setChar] = useState<Character | null>(null)
   // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
@@ -974,6 +1045,22 @@ export function MyPage({
     } finally {
       setBusy(false)
     }
+  }
+
+  // Synchro forcée depuis le Lodestone : au plus une fois par jour (le worker
+  // fait respecter la limite — le bouton se grise selon nextForceAt).
+  async function forceSync() {
+    if (!verified) return
+    setSyncing(true)
+    try {
+      const before = char?.nextForceAt ?? 0
+      const fresh = await fetchCharacter(verified.charId, true)
+      setChar(fresh)
+      showToast(t(fresh.nextForceAt > before ? 'syncForceDone' : 'syncForceAlready'))
+    } catch {
+      setNotice(t('saveError'))
+    }
+    setSyncing(false)
   }
 
   async function doUnbind(charId: number, name: string) {
@@ -1146,8 +1233,25 @@ export function MyPage({
                     <GiCheckMark /> {t('bindVerifiedChip')}
                   </span>
                 </span>
-                <span className="player-server">{char.server}</span>
+                <span className="player-server">
+                  {char.server}
+                  {char.profile?.title ? ` — « ${char.profile.title} »` : ''}
+                </span>
               </div>
+              <button
+                className="btn btn-ghost btn-mini"
+                disabled={syncing || Date.now() < char.nextForceAt}
+                title={
+                  Date.now() < char.nextForceAt
+                    ? t('syncForceCooldown', {
+                        h: Math.max(1, Math.ceil((char.nextForceAt - Date.now()) / 3_600_000)),
+                      })
+                    : t('syncForceTitle')
+                }
+                onClick={() => void forceSync()}
+              >
+                {syncing ? '…' : '⟳ ' + t('syncForce')}
+              </button>
               <button
                 className="btn btn-ghost btn-mini mypage-unbind"
                 onClick={() => doUnbind(char.id, char.name)}
@@ -1155,6 +1259,7 @@ export function MyPage({
                 {t('unbindChar')}
               </button>
             </div>
+            {char.profile && <CharStats profile={char.profile} />}
             <div className="meter-grid mypage-meters">
               {KINDS.map((k) => (
                 <Meter

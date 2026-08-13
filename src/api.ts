@@ -134,6 +134,27 @@ export interface CharCollection {
   ids: number[]
 }
 
+/** Niveau d'une classe/job, scrappé de la page Class/Job du Lodestone. */
+export interface CharJob {
+  role: string
+  name: string
+  level: number
+  icon: string
+}
+
+/** Profil étendu du Lodestone (fiche « Mon Journal »). */
+export interface CharProfile {
+  race: string | null
+  nameday: string | null
+  guardian: string | null
+  city: string | null
+  grandCompany: string | null
+  freeCompany: string | null
+  title: string | null
+  activeLevel: number | null
+  jobs: CharJob[]
+}
+
 /** Une entrée par kind : le type suit automatiquement l'ajout d'une collection. */
 export type Character = { [K in Kind]: CharCollection } & {
   id: number
@@ -145,6 +166,10 @@ export type Character = { [K in Kind]: CharCollection } & {
   lastParsed: string
   /** IDs de reliques possédées, toutes catégories confondues (armes, ultimate, armures, outils). */
   relicIds: number[]
+  /** Profil Lodestone étendu (absent tant que la fiche n'a pas été re-scrapée). */
+  profile: CharProfile | null
+  /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
+  nextForceAt: number
 }
 
 const DB_TTL = 24 * 3600 * 1000 // la base d'objets bouge à chaque patch, pas plus
@@ -178,7 +203,7 @@ const CACHE_MAX_CHARS = 300_000
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v7' // catalogues par collection
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
-const CHAR_V = 'v6' // fiches de personnage
+const CHAR_V = 'v7' // fiches de personnage (v7 : profil Lodestone étendu)
 
 /** Purge les caches des versions précédentes : ils ne servent plus et
  *  encombrent un localStorage déjà juste. */
@@ -307,6 +332,8 @@ function mapCharacter(r: any): Character {
     avatar: r.avatar,
     portrait: r.portrait,
     lastParsed: r.last_parsed,
+    profile: r.profile ?? null,
+    nextForceAt: r.next_force_at ?? 0,
     ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??

@@ -143,7 +143,63 @@ async function scrapeCharacter(id) {
   const mounts = mapNames(mountHtml, 'mount', maps.mounts)
   const minions = mapNames(minionHtml, 'minion', maps.minions)
 
-  return { id, name, server, dc, avatar, portrait, mounts, minions }
+  // ------- profil étendu (blocs « character-block » de la fiche Lodestone)
+  const blockVal = (label) => {
+    const m = profile.match(
+      new RegExp(
+        `character-block__name">${label}</p>\\s*<p class="character-block__(?:profile|birth)[^"]*">(.*?)</p>`,
+        's',
+      ),
+    )
+    if (!m) return null
+    return decodeEntities(
+      m[1]
+        .replace(/<br\s*\/?>/g, ' — ')
+        .replace(/<[^>]+>/g, '')
+        .trim(),
+    )
+  }
+  const title = decodeEntities(extract(profile, /frame__chara__title[^>]*>([^<]+)</) ?? '')
+  const activeLevel =
+    extract(profile, /character__class__data[^>]*>\s*<p>\s*LEVEL\s*(\d+)/) ?? null
+  const fcName = decodeEntities(
+    extract(profile, /character__freecompany__name"[^>]*>[\s\S]*?<h4>([^<]+)<\/h4>/) ?? '',
+  )
+
+  // ------- niveaux de classes/jobs (page dédiée, groupés par rôle)
+  const jobsHtml = await lodestoneGet(`/character/${id}/class_job/`)
+  const jobs = []
+  if (jobsHtml) {
+    const sections = jobsHtml.split(/character__job__icon__title">/).slice(1)
+    for (const sec of sections) {
+      const role = sec.match(/^([^<]+)</)?.[1]?.trim() ?? ''
+      for (const m of sec.matchAll(
+        /<li><i class="character__job__icon"><img src="([^"]+)"[^>]*><\/i><div class="character__job__level">([^<]*)<\/div><div class="character__job__name">([^<]*)<\/div>/g,
+      )) {
+        const level = parseInt(m[2], 10)
+        jobs.push({
+          role,
+          icon: m[1],
+          name: decodeEntities(m[3].trim()),
+          level: Number.isFinite(level) ? level : 0,
+        })
+      }
+    }
+  }
+
+  const extended = {
+    race: blockVal('Race/Clan/Gender'),
+    nameday: blockVal('Nameday'),
+    guardian: blockVal('Guardian'),
+    city: blockVal('City-state'),
+    grandCompany: blockVal('Grand Company'),
+    freeCompany: fcName || null,
+    title: title || null,
+    activeLevel: activeLevel ? Number(activeLevel) : null,
+    jobs,
+  }
+
+  return { id, name, server, dc, avatar, portrait, mounts, minions, extended }
 }
 
 // ------------------------------------------------- amorçage FFXIV Collect
@@ -197,18 +253,23 @@ async function applySeed(env, id, raw) {
 
 // -------------------------------------------------------------- personnages
 
+// Le bouton « Synchroniser » du journal force un re-scrape immédiat, mais au
+// plus une fois par jour et par personnage (le TTL d'une heure fait le reste).
+const FORCE_COOLDOWN = 86_400_000
+
 async function getCharacter(env, id, force) {
   const row = await env.DB.prepare('SELECT * FROM characters WHERE id = ?1').bind(id).first()
   const fresh = row && Date.now() - row.updated < CHAR_TTL
+  const allowForce = force && (!row || Date.now() - (row.forced_at ?? 0) >= FORCE_COOLDOWN)
 
-  if (!fresh || force) {
+  if (!fresh || allowForce) {
     const scraped = await scrapeCharacter(id)
     if (!scraped && !row) return null
     if (scraped) {
       await env.DB.prepare(
-        'INSERT INTO characters (id, name, server, dc, avatar, portrait, public_mounts, public_minions, updated) ' +
-          'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) ' +
-          'ON CONFLICT(id) DO UPDATE SET name=?2, server=?3, dc=?4, avatar=?5, portrait=?6, public_mounts=?7, public_minions=?8, updated=?9',
+        'INSERT INTO characters (id, name, server, dc, avatar, portrait, public_mounts, public_minions, updated, profile, forced_at) ' +
+          'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11) ' +
+          'ON CONFLICT(id) DO UPDATE SET name=?2, server=?3, dc=?4, avatar=?5, portrait=?6, public_mounts=?7, public_minions=?8, updated=?9, profile=?10, forced_at=?11',
       )
         .bind(
           id,
@@ -220,6 +281,8 @@ async function getCharacter(env, id, force) {
           scraped.mounts.isPublic ? 1 : 0,
           scraped.minions.isPublic ? 1 : 0,
           Date.now(),
+          JSON.stringify(scraped.extended ?? null),
+          allowForce ? Date.now() : (row?.forced_at ?? null),
         )
         .run()
       const now = Date.now()
@@ -253,6 +316,13 @@ async function getCharacter(env, id, force) {
     ids: byKind[kind] ?? [],
   })
 
+  let extended = null
+  try {
+    extended = char.profile ? JSON.parse(char.profile) : null
+  } catch {
+    // profil illisible : tant pis
+  }
+
   return {
     id: char.id,
     name: char.name,
@@ -261,6 +331,9 @@ async function getCharacter(env, id, force) {
     avatar: char.avatar,
     portrait: char.portrait,
     last_parsed: new Date(char.updated).toISOString(),
+    profile: extended,
+    // Prochaine synchro forcée possible (le bouton du journal s'y cale).
+    next_force_at: (char.forced_at ?? 0) + FORCE_COOLDOWN,
     mounts: block('mounts', !!char.public_mounts),
     minions: block('minions', !!char.public_minions),
     ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),

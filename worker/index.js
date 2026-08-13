@@ -356,7 +356,14 @@ async function getCharacter(env, id, force) {
     .bind(id)
     .all()
   const byKind = Object.fromEntries(colRows.results.map((r) => [r.kind, JSON.parse(r.ids)]))
-  const needsSeed = colRows.results.some((r) => r.source === 'empty')
+  // Collection apparue APRÈS l'amorçage de ce perso (ex. succès) : sa ligne
+  // n'existe pas du tout — on pose le placeholder manquant et on redemande
+  // un seed au navigateur, sinon les anciens persos n'en auraient jamais.
+  const present = new Set(colRows.results.map((r) => r.kind))
+  const missingKinds = [...HIDDEN_KINDS, 'relics'].filter((k) => !present.has(k))
+  if (missingKinds.length > 0) await seedPlaceholders(env, id)
+  const needsSeed =
+    missingKinds.length > 0 || colRows.results.some((r) => r.source === 'empty')
   const { totals } = await catalogs()
 
   const block = (kind, isPublic = true) => ({

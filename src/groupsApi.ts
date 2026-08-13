@@ -4,6 +4,13 @@
 import { WORKER_API } from './api'
 import { authHeaders } from './auth'
 
+export interface ApiGroupRequest {
+  userId: string
+  userName: string
+  charId: number
+  created: number
+}
+
 export interface ApiGroup {
   id: string
   name: string
@@ -11,7 +18,13 @@ export interface ApiGroup {
   updated: number
   mine: 'owner' | 'member' | 'guest'
   members: number[]
+  /** Code du lien d'invitation — présent pour le propriétaire uniquement. */
+  inviteCode?: string
+  /** Demandes d'adhésion en attente — propriétaire uniquement. */
+  requests?: ApiGroupRequest[]
 }
+
+export type InviteStatus = 'none' | 'pending' | 'member'
 
 async function call<T>(
   path: string,
@@ -78,4 +91,36 @@ export function apiAddMember(token: string, id: string, charId: number): Promise
 
 export function apiRemoveMember(token: string, id: string, charId: number): Promise<ApiGroup> {
   return call(`/group/${id}/member/${charId}`, token, { method: 'DELETE' })
+}
+
+/** Ce que voit un porteur du lien : le nom du groupe et son propre statut. */
+export function apiGetInvite(
+  code: string,
+  token: string | null,
+): Promise<{ name: string; status: InviteStatus }> {
+  return call(`/invite/${code}`, token)
+}
+
+export function apiRequestJoin(
+  token: string,
+  code: string,
+  charId: number,
+): Promise<{ status: InviteStatus }> {
+  return call(`/invite/${code}/request`, token, { method: 'POST', body: { charId } })
+}
+
+export function apiHandleRequest(
+  token: string,
+  groupId: string,
+  userId: string,
+  action: 'approve' | 'reject' | 'ban',
+): Promise<{ ok: true }> {
+  return call(`/group/${groupId}/requests/${encodeURIComponent(userId)}`, token, {
+    method: 'POST',
+    body: { action },
+  })
+}
+
+export function apiRotateInvite(token: string, groupId: string): Promise<{ inviteCode: string }> {
+  return call(`/group/${groupId}/rotate`, token, { method: 'POST' })
 }

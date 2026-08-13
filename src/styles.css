@@ -1182,6 +1182,50 @@ a.player-name:hover {
   margin-left: auto;
 }
 
+/* demandes d'adhésion (côté créateur, dans le panneau latéral) */
+.requests-box {
+  border-top: 1px solid var(--hairline);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.requests-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.request-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.request-who {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.request-user {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.request-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.request-ban {
+  color: var(--critical);
+}
+
 .notice {
   margin: 0;
   font-size: 12px;

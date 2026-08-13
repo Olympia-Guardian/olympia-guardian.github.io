@@ -5,9 +5,11 @@
 //  - privé : une liste de persos assemblée pour soi. Vit dans le navigateur
 //    (id « loc-… ») tant qu'on n'est pas connecté, monte dans le compte
 //    (id « grp-… », shared=0) dès la connexion — et suit alors partout.
-//  - synchronisé : en base, partagé par lien d'invitation (#j=grp-…). Le
-//    créateur gère tout ; un membre connecté rejoint avec son perso vérifié
-//    et peut se retirer ; quiconque a le lien regarde.
+//  - synchronisé : en base, partagé par un lien d'invitation (#j=inv-…) dont
+//    le code est distinct de l'identité du groupe et révocable. L'adhésion se
+//    fait SUR VALIDATION : le clic crée une demande, le créateur approuve,
+//    refuse, ou bannit. Avant validation, l'invité ne voit que le nom du
+//    groupe et « demande en attente ».
 //
 // Un groupe privé devient synchronisé au premier clic sur « Inviter ».
 // Anciens formats (r=salon, g=ids en dur, registre ogs.groups.v1) : convertis
@@ -19,13 +21,17 @@ import {
   apiAddMember,
   apiCreateGroup,
   apiDeleteGroup,
-  apiGetGroup,
-  apiJoinGroup,
+  apiGetInvite,
+  apiHandleRequest,
   apiListGroups,
   apiPatchGroup,
   apiQuitGroup,
   apiRemoveMember,
+  apiRequestJoin,
+  apiRotateInvite,
   type ApiGroup,
+  type ApiGroupRequest,
+  type InviteStatus,
 } from './groupsApi'
 import { WORKER_API } from './api'
 import { readHashParam, setHashParam } from './store'
@@ -36,10 +42,26 @@ export interface Group {
   shared: boolean
   mine: 'owner' | 'member' | 'guest'
   members: number[]
+  /** Code du lien d'invitation — propriétaire uniquement. */
+  inviteCode?: string
+  /** Demandes d'adhésion en attente — propriétaire uniquement. */
+  requests?: ApiGroupRequest[]
+}
+
+export interface PendingInvite {
+  code: string
+  name: string
+}
+
+/** Invitation ouverte via #j=… : nom du groupe + statut du visiteur. */
+export interface OpenInvite {
+  code: string
+  name: string
+  status: InviteStatus
 }
 
 const LOCAL_KEY = 'ogs.localgroups.v1'
-const FOLLOWED_KEY = 'ogs.followed.v1'
+const PENDING_KEY = 'ogs.pendinginvites.v1'
 const ACTIVE_KEY = 'ogs.activegroup.v1'
 // Anciens formats
 const LEGACY_GROUPS_KEY = 'ogs.groups.v1'
@@ -72,16 +94,34 @@ function readLocalGroups(): LocalGroup[] {
   )
 }
 
+function readPending(): PendingInvite[] {
+  return readJson<PendingInvite[]>(PENDING_KEY, []).filter(
+    (p) => p && typeof p.code === 'string' && typeof p.name === 'string',
+  )
+}
+
 function localToGroup(g: LocalGroup): Group {
   return { id: g.id, name: g.name, shared: false, mine: 'owner', members: g.members }
 }
 
 function apiToGroup(g: ApiGroup): Group {
-  return { id: g.id, name: g.name, shared: g.shared, mine: g.mine, members: g.members }
+  return {
+    id: g.id,
+    name: g.name,
+    shared: g.shared,
+    mine: g.mine,
+    members: g.members,
+    inviteCode: g.inviteCode,
+    requests: g.requests,
+  }
 }
 
 function newLocalId(): string {
   return 'loc-' + crypto.randomUUID()
+}
+
+function inviteLink(code: string): string {
+  return `${location.origin}${location.pathname}#j=${code}`
 }
 
 // ------------------------------------------------------ migration des legacy
@@ -175,12 +215,13 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     return readLocalGroups()
   })
   const [server, setServer] = useState<ApiGroup[]>([])
-  const [followed, setFollowed] = useState<ApiGroup[]>([])
+  // Demandes d'adhésion envoyées, en attente de validation par les créateurs.
+  const [pending, setPending] = useState<PendingInvite[]>(readPending)
   const [activeId, setActiveId] = useState<string | null>(() =>
     localStorage.getItem(ACTIVE_KEY),
   )
-  // Invitation en cours (#j=…) : bandeau « rejoindre avec son perso »
-  const [invite, setInvite] = useState<ApiGroup | null>(null)
+  // Invitation ouverte (#j=…) : pilote le bandeau (demander / en attente / membre).
+  const [invite, setInvite] = useState<OpenInvite | null>(null)
   const [error, setError] = useState<string | null>(null)
   const tokenRef = useRef(token)
   tokenRef.current = token
@@ -188,6 +229,11 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
   const persistLocals = useCallback((next: LocalGroup[]) => {
     setLocals(next)
     writeJson(LOCAL_KEY, next)
+  }, [])
+
+  const persistPending = useCallback((next: PendingInvite[]) => {
+    setPending(next)
+    writeJson(PENDING_KEY, next)
   }, [])
 
   const setActive = useCallback((id: string | null) => {
@@ -218,6 +264,26 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     }
   }, [])
 
+  /** Re-vérifie mes demandes en attente ; une acceptation fait apparaître le
+   *  groupe, un code mort (rotation, suppression) nettoie l'entrée. */
+  const checkPending = useCallback(async () => {
+    const list = readPending()
+    if (list.length === 0) return
+    const keep: PendingInvite[] = []
+    let joined = false
+    for (const p of list) {
+      try {
+        const inv = await apiGetInvite(p.code, tokenRef.current)
+        if (inv.status === 'member') joined = true
+        else keep.push({ code: p.code, name: inv.name })
+      } catch {
+        // lien mort : on oublie la demande
+      }
+    }
+    if (keep.length !== list.length || joined) persistPending(keep)
+    if (joined) await refreshServer()
+  }, [persistPending, refreshServer])
+
   // Conversion des anciens salons (une fois par session)
   useEffect(() => {
     if (roomConversionStarted) return
@@ -240,8 +306,8 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     })()
   }, [persistLocals, setActive])
 
-  // Connexion : les groupes privés locaux montent dans le compte, les groupes
-  // suivis en invité sont rattachés, puis la liste serveur fait foi.
+  // Connexion : les groupes privés locaux montent dans le compte, puis la
+  // liste serveur fait foi.
   useEffect(() => {
     if (!token) {
       setServer([])
@@ -263,39 +329,32 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
             uploadStarted = null
           }
         }
-        const followedIds = readJson<string[]>(FOLLOWED_KEY, [])
-        for (const id of followedIds) {
-          try {
-            await apiJoinGroup(token, id)
-          } catch {
-            // groupe disparu : on l'oublie
-          }
-        }
-        writeJson(FOLLOWED_KEY, [])
-        setFollowed([])
       }
       await refreshServer()
+      await checkPending()
     })()
-  }, [token, refreshServer, setActive])
+  }, [token, refreshServer, checkPending, setActive])
 
-  // Invitation #j=… : le groupe s'ajoute à la liste, on bascule dessus.
+  // Invitation #j=… : on affiche le bandeau selon le statut du visiteur.
   useEffect(() => {
-    const id = readHashParam('j')
-    if (!id || !/^grp-[\w-]{10,80}$/.test(id)) return
+    const code = readHashParam('j')
+    if (!code) return
     setHashParam('j', null)
+    if (!/^([a-z0-9]{10,20}|inv-[\w-]{10,80})$/.test(code) || code.startsWith('grp-')) {
+      // ancien format (#j=grp-…) ou lien corrompu
+      setError('invite')
+      return
+    }
     void (async () => {
       try {
-        const g = await apiGetGroup(id, tokenRef.current)
-        if (tokenRef.current) {
-          await apiJoinGroup(tokenRef.current, id)
-          await refreshServer()
-        } else {
-          const ids = readJson<string[]>(FOLLOWED_KEY, [])
-          if (!ids.includes(id)) writeJson(FOLLOWED_KEY, [...ids, id])
-          setFollowed((prev) => (prev.some((x) => x.id === id) ? prev : [...prev, g]))
+        const inv = await apiGetInvite(code, tokenRef.current)
+        setInvite({ code, name: inv.name, status: inv.status })
+        if (inv.status === 'pending') {
+          const list = readPending()
+          if (!list.some((p) => p.code === code))
+            persistPending([...list, { code, name: inv.name }])
         }
-        setActive(id)
-        setInvite(g)
+        if (inv.status === 'member') void refreshServer()
       } catch {
         setError('invite')
       }
@@ -303,50 +362,25 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Groupes suivis en invité (sans compte) : lecture au chargement.
+  // Sans compte : vérifier quand même les demandes en attente au chargement
+  // (elles ont pu être acceptées depuis un autre appareil… ou expirer).
   useEffect(() => {
-    if (token) return
-    const ids = readJson<string[]>(FOLLOWED_KEY, [])
-    if (ids.length === 0) return
-    void (async () => {
-      const found: ApiGroup[] = []
-      const alive: string[] = []
-      for (const id of ids) {
-        try {
-          found.push(await apiGetGroup(id, null))
-          alive.push(id)
-        } catch {
-          // groupe supprimé
-        }
-      }
-      writeJson(FOLLOWED_KEY, alive)
-      setFollowed(found)
-    })()
-  }, [token])
+    if (!token) void checkPending()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Rafraîchissement périodique : la liste du compte, ou le groupe suivi actif.
+  // Rafraîchissement périodique : liste du compte + demandes en attente.
   useEffect(() => {
     const timer = setInterval(() => {
       if (tokenRef.current) void refreshServer()
-      else {
-        const ids = readJson<string[]>(FOLLOWED_KEY, [])
-        for (const id of ids) {
-          void apiGetGroup(id, null)
-            .then((g) => setFollowed((prev) => prev.map((x) => (x.id === g.id ? g : x))))
-            .catch(() => undefined)
-        }
-      }
+      void checkPending()
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [refreshServer])
+  }, [refreshServer, checkPending])
 
   // ---------------------------------------------------------------- lecture
 
-  const groups: Group[] = [
-    ...server.map(apiToGroup),
-    ...followed.filter((f) => !server.some((s) => s.id === f.id)).map(apiToGroup),
-    ...locals.map(localToGroup),
-  ]
+  const groups: Group[] = [...server.map(apiToGroup), ...locals.map(localToGroup)]
   const active = groups.find((g) => g.id === activeId) ?? groups[0] ?? null
 
   // --------------------------------------------------------------- écritures
@@ -380,7 +414,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     [persistLocals],
   )
 
-  /** Supprime (créateur) ou quitte (membre/invité) un groupe. */
+  /** Supprime (créateur) ou quitte (membre) un groupe. */
   const drop = useCallback(
     async (id: string) => {
       if (id.startsWith('loc-')) {
@@ -390,12 +424,6 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
         if (g?.mine === 'owner') await apiDeleteGroup(tokenRef.current, id)
         else await apiQuitGroup(tokenRef.current, id)
         setServer((prev) => prev.filter((x) => x.id !== id))
-      } else {
-        writeJson(
-          FOLLOWED_KEY,
-          readJson<string[]>(FOLLOWED_KEY, []).filter((x) => x !== id),
-        )
-        setFollowed((prev) => prev.filter((x) => x.id !== id))
       }
       if (localStorage.getItem(ACTIVE_KEY) === id) setActive(null)
     },
@@ -414,7 +442,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
         )
       } else if (tokenRef.current) {
         const g = await apiAddMember(tokenRef.current, id, charId)
-        setServer((prev) => prev.map((x) => (x.id === id ? g : x)))
+        setServer((prev) => prev.map((x) => (x.id === id ? { ...x, ...g } : x)))
       }
     },
     [persistLocals],
@@ -430,59 +458,88 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
         )
       } else if (tokenRef.current) {
         const g = await apiRemoveMember(tokenRef.current, id, charId)
-        setServer((prev) => prev.map((x) => (x.id === id ? g : x)))
+        setServer((prev) => prev.map((x) => (x.id === id ? { ...x, ...g } : x)))
       }
     },
     [persistLocals],
   )
 
-  /** « Inviter » : convertit si besoin (privé → synchronisé) et rend le lien.
-   *  Nécessite d'être connecté — l'appelant gère le cas contraire. */
+  /** « Inviter » : convertit si besoin (privé → synchronisé) et rend le lien
+   *  d'invitation. Réservé au créateur — le code ne sort que pour lui. */
   const share = useCallback(
     async (id: string): Promise<string> => {
       const tok = tokenRef.current
       if (!tok) throw new Error('login required')
-      let gid = id
       if (id.startsWith('loc-')) {
         const local = readLocalGroups().find((g) => g.id === id)
         if (!local) throw new Error('no such group')
         const created = await apiCreateGroup(tok, local.name, local.members, true)
         persistLocals(readLocalGroups().filter((g) => g.id !== id))
         setServer((prev) => [...prev, created])
-        gid = created.id
-        setActive(gid)
-      } else {
-        const g = await apiPatchGroup(tok, id, { shared: true })
-        setServer((prev) => prev.map((x) => (x.id === id ? g : x)))
+        setActive(created.id)
+        if (!created.inviteCode) throw new Error('no invite code')
+        return inviteLink(created.inviteCode)
       }
-      return `${location.origin}${location.pathname}#j=${gid}`
+      const existing = server.find((x) => x.id === id)
+      if (existing?.inviteCode) return inviteLink(existing.inviteCode)
+      const g = await apiPatchGroup(tok, id, { shared: true })
+      setServer((prev) => prev.map((x) => (x.id === id ? g : x)))
+      if (!g.inviteCode) throw new Error('no invite code')
+      return inviteLink(g.inviteCode)
     },
-    [persistLocals, setActive],
+    [persistLocals, server, setActive],
   )
 
-  /** Rejoindre le groupe actif avec un de ses persos vérifiés. */
-  const joinWithChar = useCallback(
-    async (id: string, charId: number) => {
+  /** Régénère le code d'invitation — l'ancien lien meurt immédiatement. */
+  const rotateInvite = useCallback(
+    async (id: string): Promise<string> => {
       if (!tokenRef.current) throw new Error('login required')
-      const g = await apiJoinGroup(tokenRef.current, id, charId)
-      setServer((prev) => (prev.some((x) => x.id === id) ? prev.map((x) => (x.id === id ? g : x)) : [...prev, g]))
-      setInvite(null)
+      const { inviteCode } = await apiRotateInvite(tokenRef.current, id)
+      setServer((prev) => prev.map((x) => (x.id === id ? { ...x, inviteCode } : x)))
+      return inviteLink(inviteCode)
     },
     [],
   )
 
-  /** Persos vérifiés de l'utilisateur absents du groupe actif (pour le bandeau). */
-  const joinableChars = active?.shared
-    ? verifiedCharIds.filter((c) => !active.members.includes(c))
-    : []
+  /** Demande d'adhésion (bandeau d'invitation) avec un perso vérifié. */
+  const requestJoin = useCallback(
+    async (code: string, charId: number) => {
+      if (!tokenRef.current) throw new Error('login required')
+      const res = await apiRequestJoin(tokenRef.current, code, charId)
+      if (res.status === 'member') {
+        // Déjà validé (ou re-demande d'un membre) : le groupe est accessible.
+        persistPending(readPending().filter((p) => p.code !== code))
+        setInvite((prev) => (prev && prev.code === code ? { ...prev, status: 'member' } : prev))
+        await refreshServer()
+      } else {
+        setInvite((prev) => (prev && prev.code === code ? { ...prev, status: 'pending' } : prev))
+        const list = readPending()
+        const name = invite?.name ?? ''
+        if (!list.some((p) => p.code === code)) persistPending([...list, { code, name }])
+      }
+    },
+    [invite, persistPending, refreshServer],
+  )
+
+  /** Traitement d'une demande par le créateur. */
+  const handleRequest = useCallback(
+    async (groupId: string, userId: string, action: 'approve' | 'reject' | 'ban') => {
+      if (!tokenRef.current) return
+      await apiHandleRequest(tokenRef.current, groupId, userId, action)
+      await refreshServer()
+    },
+    [refreshServer],
+  )
 
   return {
     groups,
     active,
     activeId: active?.id ?? null,
+    pending,
     invite,
     dismissInvite: () => setInvite(null),
     error,
+    dismissError: () => setError(null),
     setActive,
     create,
     rename,
@@ -490,8 +547,10 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     addMember,
     removeMember,
     share,
-    joinWithChar,
-    joinableChars,
+    rotateInvite,
+    requestJoin,
+    handleRequest,
+    verifiedCharIds,
     refreshServer,
   }
 }

@@ -25,9 +25,8 @@ import { Relics } from './views/Relics'
 
 type Tab = 'planning' | Kind | 'relics' | 'mypage'
 
-/** Bouton « Rejoindre avec {perso} » du bandeau d'invitation : le nom du
- *  perso vérifié se charge tout seul (fiche déjà en cache la plupart du temps). */
-function JoinChip({ charId, onJoin }: { charId: number; onJoin: () => void }) {
+/** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
+function useCharName(charId: number): string | null {
   const [name, setName] = useState<string | null>(null)
   useEffect(() => {
     let alive = true
@@ -38,11 +37,56 @@ function JoinChip({ charId, onJoin }: { charId: number; onJoin: () => void }) {
       alive = false
     }
   }, [charId])
+  return name
+}
+
+/** Bouton « Demander avec {perso} » du bandeau d'invitation. */
+function JoinChip({ charId, onJoin }: { charId: number; onJoin: () => void }) {
+  const name = useCharName(charId)
   const { t } = useI18n()
   return (
     <button className="btn btn-primary btn-mini" onClick={onJoin}>
       {t('joinWith', { name: name ?? '…' })}
     </button>
+  )
+}
+
+/** Ligne d'une demande d'adhésion, côté créateur : perso + compte + actions. */
+function RequestRow({
+  charId,
+  userName,
+  onAction,
+}: {
+  charId: number
+  userName: string
+  onAction: (action: 'approve' | 'reject' | 'ban') => void
+}) {
+  const name = useCharName(charId)
+  const { t } = useI18n()
+  return (
+    <div className="request-row">
+      <span className="request-who">
+        <b>{name ?? '…'}</b>
+        <span className="request-user">{userName}</span>
+      </span>
+      <span className="request-actions">
+        <button className="btn btn-primary btn-mini" onClick={() => onAction('approve')}>
+          ✓ {t('requestApprove')}
+        </button>
+        <button className="btn btn-ghost btn-mini" onClick={() => onAction('reject')}>
+          ✗ {t('requestReject')}
+        </button>
+        <button
+          className="btn btn-ghost btn-mini request-ban"
+          title={t('requestBanTitle')}
+          onClick={() => {
+            if (confirm(t('requestBanConfirm', { name: userName }))) onAction('ban')
+          }}
+        >
+          🚫
+        </button>
+      </span>
+    </div>
   )
 }
 
@@ -138,6 +182,20 @@ export default function App() {
         ? t('groupDeleteConfirm', { name: grp.active.name })
         : t('groupLeaveConfirm', { name: grp.active.name })
       if (confirm(msg)) void grp.drop(grp.active.id)
+    } else if (value === '__rotate') {
+      if (!grp.active || !confirm(t('rotateConfirm'))) return
+      void grp
+        .rotateInvite(grp.active.id)
+        .then(async (link) => {
+          try {
+            await navigator.clipboard.writeText(link)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+          } catch {
+            prompt(t('copyPrompt'), link)
+          }
+        })
+        .catch((e) => alert(e instanceof Error ? e.message : String(e)))
     } else if (value) {
       grp.setActive(value)
     }
@@ -209,10 +267,9 @@ export default function App() {
       return
     }
     try {
-      // Déjà synchronisé : le lien suffit. Sinon, conversion (propriétaire).
-      const link = grp.active.shared
-        ? `${location.origin}${location.pathname}#j=${grp.active.id}`
-        : await grp.share(grp.active.id)
+      // share() convertit si besoin et rend le lien bâti sur le code
+      // d'invitation (révocable) — jamais sur l'id du groupe.
+      const link = await grp.share(grp.active.id)
       try {
         await navigator.clipboard.writeText(link)
         setCopied(true)
@@ -347,10 +404,19 @@ export default function App() {
                   {grp.groups.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.shared ? '🔗' : '📁'} {g.name}
+                      {g.requests?.length ? ` (${g.requests.length} ⏳)` : ''}
+                    </option>
+                  ))}
+                  {grp.pending.map((p) => (
+                    <option key={p.code} value="" disabled>
+                      ⏳ {t('pendingEntry', { name: p.name })}
                     </option>
                   ))}
                   <option value="__create">{t('groupNew')}</option>
                   {grp.active && canEditGroup && <option value="__rename">{t('groupRename')}</option>}
+                  {grp.active && canEditGroup && grp.active.shared && (
+                    <option value="__rotate">{t('rotateLink')}</option>
+                  )}
                   {grp.active && (
                     <option value="__drop">
                       {canEditGroup ? t('groupDelete') : t('groupLeave')}
@@ -372,12 +438,27 @@ export default function App() {
                   </select>
                 )}
                 <div className="sidebar-controls-row">
-                  {grp.active && (canEditGroup || grp.active.shared) && (
+                  {grp.active && canEditGroup && (
                     <button className="btn btn-ghost btn-mini" onClick={inviteToGroup} title={t('inviteTitle')}>
                       {copied ? t('copied') : '🔗 ' + t('invite')}
                     </button>
                   )}
                 </div>
+                {grp.active && canEditGroup && (grp.active.requests?.length ?? 0) > 0 && (
+                  <div className="requests-box">
+                    <p className="requests-title">
+                      {t('requestsTitle', { n: grp.active.requests!.length })}
+                    </p>
+                    {grp.active.requests!.map((r) => (
+                      <RequestRow
+                        key={r.userId}
+                        charId={r.charId}
+                        userName={r.userName}
+                        onAction={(action) => void grp.handleRequest(grp.active!.id, r.userId, action)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             }
             focusId={focusId}
@@ -394,19 +475,40 @@ export default function App() {
           )}
 
           <main className="main">
+            {grp.error === 'invite' && (
+              <div className="notice join-banner">
+                <span>{t('inviteInvalid')}</span>
+                <button className="icon-btn" onClick={grp.dismissError} title={t('dismiss')}>
+                  ×
+                </button>
+              </div>
+            )}
             {grp.invite && (
               <div className="notice join-banner">
-                <span>
-                  {t(auth.token ? 'joinBannerMember' : 'joinBannerGuest', { name: grp.invite.name })}
-                </span>
-                {auth.token ? (
-                  grp.joinableChars.map((id) => (
-                    <JoinChip key={id} charId={id} onJoin={() => void grp.joinWithChar(grp.invite!.id, id)} />
-                  ))
+                {grp.invite.status === 'pending' ? (
+                  <span>⏳ {t('invitePending', { name: grp.invite.name })}</span>
+                ) : grp.invite.status === 'member' ? (
+                  <span>{t('inviteAlreadyMember', { name: grp.invite.name })}</span>
+                ) : !auth.token ? (
+                  <>
+                    <span>{t('inviteGuest', { name: grp.invite.name })}</span>
+                    <button className="btn btn-primary btn-mini" onClick={auth.login}>
+                      {t('joinLogin')}
+                    </button>
+                  </>
+                ) : verifiedIds.length === 0 ? (
+                  <span>{t('inviteNeedChar', { name: grp.invite.name })}</span>
                 ) : (
-                  <button className="btn btn-primary btn-mini" onClick={auth.login}>
-                    {t('joinLogin')}
-                  </button>
+                  <>
+                    <span>{t('inviteAsk', { name: grp.invite.name })}</span>
+                    {verifiedIds.map((id) => (
+                      <JoinChip
+                        key={id}
+                        charId={id}
+                        onJoin={() => void grp.requestJoin(grp.invite!.code, id)}
+                      />
+                    ))}
+                  </>
                 )}
                 <button className="icon-btn" onClick={grp.dismissInvite} title={t('dismiss')}>
                   ×

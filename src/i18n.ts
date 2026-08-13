@@ -225,16 +225,49 @@ const STR = {
     fr: 'Pour inviter, connecte-toi avec Discord : le groupe montera dans ton compte et deviendra partageable. Se connecter maintenant ?',
     en: 'To invite, sign in with Discord: the group will move to your account and become shareable. Sign in now?',
   },
-  joinBannerMember: {
-    fr: 'Le groupe « {name} » a été ajouté à ta liste.',
-    en: 'The group “{name}” has been added to your list.',
-  },
-  joinBannerGuest: {
-    fr: 'Tu suis le groupe « {name} » (lecture seule). Connecte-toi pour le rejoindre avec ton perso.',
-    en: 'You are following the group “{name}” (read-only). Sign in to join with your character.',
-  },
-  joinWith: { fr: '✋ Rejoindre avec {name}', en: '✋ Join with {name}' },
+  joinWith: { fr: '✋ Demander avec {name}', en: '✋ Request with {name}' },
   joinLogin: { fr: 'Se connecter avec Discord', en: 'Sign in with Discord' },
+  inviteAsk: {
+    fr: 'Rejoindre le groupe « {name} » ? Le créateur validera ta demande.',
+    en: 'Join the group “{name}”? The creator will review your request.',
+  },
+  invitePending: {
+    fr: 'Demande en attente d’acceptation — « {name} ». Tu verras le groupe dès que le créateur accepte.',
+    en: 'Request pending approval — “{name}”. You will see the group once the creator accepts.',
+  },
+  inviteAlreadyMember: {
+    fr: 'Tu es déjà membre du groupe « {name} ».',
+    en: 'You are already a member of “{name}”.',
+  },
+  inviteGuest: {
+    fr: 'Invitation au groupe « {name} » — connecte-toi avec Discord pour demander à le rejoindre.',
+    en: 'Invitation to “{name}” — sign in with Discord to request to join.',
+  },
+  inviteNeedChar: {
+    fr: 'Invitation au groupe « {name} » — vérifie d’abord un personnage dans « Mon Journal » pour pouvoir demander.',
+    en: 'Invitation to “{name}” — verify a character in “My Journal” first to request to join.',
+  },
+  inviteInvalid: {
+    fr: 'Ce lien d’invitation n’est plus valide (périmé ou révoqué). Demande un nouveau lien au créateur du groupe.',
+    en: 'This invite link is no longer valid (expired or revoked). Ask the group creator for a new link.',
+  },
+  pendingEntry: { fr: '{name} (en attente)', en: '{name} (pending)' },
+  requestsTitle: { fr: 'Demandes d’adhésion ({n})', en: 'Join requests ({n})' },
+  requestApprove: { fr: 'Accepter', en: 'Approve' },
+  requestReject: { fr: 'Refuser', en: 'Reject' },
+  requestBanTitle: {
+    fr: 'Bannir : refuse et bloque définitivement ce compte',
+    en: 'Ban: reject and permanently block this account',
+  },
+  requestBanConfirm: {
+    fr: 'Bannir « {name} » ? Son compte ne pourra plus jamais demander à rejoindre ce groupe.',
+    en: 'Ban “{name}”? Their account will never be able to request to join this group again.',
+  },
+  rotateLink: { fr: '♻️ Régénérer le lien…', en: '♻️ Regenerate link…' },
+  rotateConfirm: {
+    fr: 'Régénérer le lien d’invitation ? L’ancien lien cessera immédiatement de fonctionner (le nouveau sera copié).',
+    en: 'Regenerate the invite link? The old link will stop working immediately (the new one will be copied).',
+  },
   groupsTitle: {
     fr: 'Tes groupes enregistrés sur ce navigateur — bascule de l\'un à l\'autre',
     en: 'Groups saved on this browser — switch between them',

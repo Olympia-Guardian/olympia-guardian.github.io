@@ -37,6 +37,7 @@ const ALL_KINDS = [
   'frames',
   'orchestrions',
   'spells',
+  'achievements',
 ]
 const HIDDEN_KINDS = ALL_KINDS.filter((k) => k !== 'mounts' && k !== 'minions')
 const MAX_DOC_BYTES = 16_384

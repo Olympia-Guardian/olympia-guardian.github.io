@@ -127,6 +127,7 @@ const TAB_ICONS: Record<string, string> = {
   frames: '000088',
   orchestrions: '000067',
   spells: '000078',
+  achievements: '000060',
   relics: '000016',
 }
 

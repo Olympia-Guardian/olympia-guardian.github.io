@@ -68,6 +68,7 @@ const KIND_PATHS = {
   frames: 'frames',
   outfits: 'outfits',
   armoires: 'armoires',
+  achievements: 'achievements',
 }
 
 // L'armoire compte ~3500 entrées : la limite par défaut ne suffit plus.
@@ -115,6 +116,20 @@ function mergeDb(jsonEn, jsonFr) {
         : {}),
       // Émotes : la commande de chat (/lookback) fait partie de l'identité de l'émote.
       ...(r.command ? { command: r.command } : {}),
+      // Succès : points, type (Bataille, Quêtes…) et récompense (titre ou objet).
+      ...(r.points !== undefined ? { points: r.points } : {}),
+      ...(r.points !== undefined && r.type?.name
+        ? { achType: fr?.type?.name ?? r.type.name, achTypeEn: r.type.name }
+        : {}),
+      ...(r.reward && (r.reward.title?.name || r.reward.item?.name)
+        ? {
+            reward:
+              fr?.reward?.title?.name ?? fr?.reward?.item?.name ??
+              r.reward.title?.name ?? r.reward.item?.name,
+            rewardEn: r.reward.title?.name ?? r.reward.item?.name,
+            rewardType: r.reward.type,
+          }
+        : {}),
       // Portraits : le vrai nom affiché est celui du kit d'encadrement.
       ...(r.item_name ? { itemName: fr?.item_name ?? r.item_name, itemNameEn: r.item_name } : {}),
       // Tenues : les pièces qui composent l'ensemble.
@@ -314,6 +329,10 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   ])
   const items = mergeDb(en, fr)
   if (kind === 'spells') refineSpellSources(items)
+  // Succès « Legacy » (ère 1.0) : plus obtenables depuis 2012.
+  if (kind === 'achievements') {
+    for (const it of items) if (it.achTypeEn === 'Legacy') it.unobtainable = true
+  }
   // Inobtenable aujourd'hui : toutes les sources sont « limited » chez
   // FFXIV Collect. L'API n'expose pas le drapeau, mais son filtre ransack
   // marche : ce qui ne ressort pas avec sources_limited_eq=false n'a plus

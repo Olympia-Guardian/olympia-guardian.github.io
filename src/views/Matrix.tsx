@@ -86,6 +86,7 @@ export function Matrix({
   const [added, setAdded] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [groupFilter, setGroupFilter] = useState('all')
   const [onlyMissing, setOnlyMissing] = useState(true)
   const [includeUnavailable, setIncludeUnavailable] = useState(false)
   const [sort, setSort] = useState<SortMode>('missing')
@@ -104,6 +105,17 @@ export function Matrix({
     return [...types].sort((a, b) => typeLabel(a, lang).localeCompare(typeLabel(b, lang), lang))
   }, [items, lang])
 
+  // Succès (pas de sources) : le filtre porte sur la catégorie du jeu.
+  const presentGroups = useMemo(() => {
+    if (presentTypes.length > 0) return []
+    const seen = new Map<string, string>()
+    for (const item of items) {
+      const key = item.groupEn ?? item.group
+      if (key) seen.set(key, (lang === 'fr' ? item.group : item.groupEn) ?? key)
+    }
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], lang))
+  }, [items, presentTypes, lang])
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = items
@@ -121,10 +133,13 @@ export function Matrix({
       .filter(({ item, missing }) => {
         if (q && !item.name.toLowerCase().includes(q) &&
             !item.nameEn.toLowerCase().includes(q) &&
+            !item.description.toLowerCase().includes(q) &&
+            !item.descriptionEn.toLowerCase().includes(q) &&
             !item.sources.some(
               (s) => s.text.toLowerCase().includes(q) || s.textEn.toLowerCase().includes(q),
             )) return false
         if (typeFilter !== 'all' && !item.sources.some((s) => s.type === typeFilter)) return false
+        if (groupFilter !== 'all' && (item.groupEn ?? item.group) !== groupFilter) return false
         if (!includeUnavailable && !itemStillObtainable(item)) return false
         if (onlyMissing && missing.length === 0) return false
         return true
@@ -141,7 +156,7 @@ export function Matrix({
         break
     }
     return list
-  }, [items, activeMembers, ownedSets, kind, search, typeFilter, onlyMissing, includeUnavailable, sort, suggest?.sentKeys])
+  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, suggest?.sentKeys])
 
   return (
     <div className="view">
@@ -153,14 +168,25 @@ export function Matrix({
           placeholder={t('searchIn', { what: titleLabel ?? kindLabel(lang, kind) })}
           spellCheck={false}
         />
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-          <option value="all">{t('allSources')}</option>
-          {presentTypes.map((ty) => (
-            <option key={ty} value={ty}>
-              {typeLabel(ty, lang)}
-            </option>
-          ))}
-        </select>
+        {presentGroups.length > 1 ? (
+          <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+            <option value="all">{t('allCategories')}</option>
+            {presentGroups.map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="all">{t('allSources')}</option>
+            {presentTypes.map((ty) => (
+              <option key={ty} value={ty}>
+                {typeLabel(ty, lang)}
+              </option>
+            ))}
+          </select>
+        )}
         <select value={sort} onChange={(e) => setSort(e.target.value as SortMode)}>
           <option value="missing">{t('sortMissing')}</option>
           <option value="recent">{t('sortRecent')}</option>
@@ -235,13 +261,28 @@ export function Matrix({
                               HV
                             </span>
                           )}
+                          {item.points !== undefined && (
+                            <span className="chip chip-type" title={t('achPoints', { n: item.points })}>
+                              {item.points} pts
+                            </span>
+                          )}
+                          {item.reward && (
+                            <span className="chip chip-hv" title={t('achReward')}>
+                              🏆 {lang === 'fr' ? item.reward : item.rewardEn}
+                            </span>
+                          )}
                         </span>
-                        {primary && (
+                        {primary ? (
                           <span className="item-source">
                             <TypeChip type={primary.type} /> {localSource(primary, lang)}
                             {item.sources.length > 1 && <SourcesTip sources={item.sources} />}
                           </span>
-                        )}
+                        ) : item.description ? (
+                          // Succès : le descriptif EST la voie d'obtention.
+                          <span className="item-source">
+                            {lang === 'fr' ? item.description : item.descriptionEn}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </td>

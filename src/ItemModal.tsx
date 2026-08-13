@@ -75,7 +75,18 @@ export function ItemModal({
         {description && <p className="modal-desc">{description}</p>}
 
         <h3 className="modal-h">{t('obtention')}</h3>
-        {item.sources.length === 0 ? (
+        {kind === 'achievements' ? (
+          // Succès : le descriptif fait office de méthode ; ici les à-côtés.
+          <ul className="modal-sources">
+            {item.points !== undefined && <li>{t('achPoints', { n: item.points })}</li>}
+            {item.group && <li>{lang === 'fr' ? item.group : item.groupEn ?? item.group}</li>}
+            {item.reward && (
+              <li>
+                {t('achReward')} : 🏆 {lang === 'fr' ? item.reward : item.rewardEn}
+              </li>
+            )}
+          </ul>
+        ) : item.sources.length === 0 ? (
           <p className="modal-muted">{t('unknownSource')}</p>
         ) : (
           <ul className="modal-sources">

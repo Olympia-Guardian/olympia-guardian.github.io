@@ -34,7 +34,7 @@ import { Relics } from './Relics'
 const EDITABLE = HIDDEN_KINDS
 
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.
-const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings', 'mounts', 'minions']
+const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings', 'mounts', 'minions', 'achievements']
 
 /** L'armoire mélange armes esthétiques et pièces d'armure : les icônes du jeu
  *  rangent les armes/outils dans les planches 030000-039999. */
@@ -890,7 +890,11 @@ function CollectionEditor({
     const q = search.trim().toLowerCase()
     const base = db[kind].filter(
       (it) =>
-        (!q || it.name.toLowerCase().includes(q) || it.nameEn.toLowerCase().includes(q)) &&
+        (!q ||
+          it.name.toLowerCase().includes(q) ||
+          it.nameEn.toLowerCase().includes(q) ||
+          it.description.toLowerCase().includes(q) ||
+          it.descriptionEn.toLowerCase().includes(q)) &&
         (!onlyMissing || !ids.has(it.id)),
     )
     // Tenues, bardes, montures, mascottes : classées par méthode d'obtention —
@@ -901,8 +905,28 @@ function CollectionEditor({
         group: typeLabel(it.sources[0]?.type ?? 'Other', 'fr'),
         groupEn: typeLabel(it.sources[0]?.type ?? 'Other', 'en'),
       }))
+    // Succès : le rail regroupe par type (Bataille, Quêtes…), la catégorie
+    // fine (74 entrées) resterait illisible.
+    if (kind === 'achievements')
+      return base.map((it) => ({
+        ...it,
+        group: it.achType ?? 'Autre',
+        groupEn: it.achTypeEn ?? 'Other',
+      }))
     return base
   }, [db, kind, search, onlyMissing, ids])
+
+  // Points de succès : possédés / total, calculés depuis le catalogue.
+  const achPts = useMemo(() => {
+    if (kind !== 'achievements') return null
+    let own = 0
+    let tot = 0
+    for (const it of db.achievements) {
+      tot += it.points ?? 0
+      if (ids.has(it.id)) own += it.points ?? 0
+    }
+    return { own, tot }
+  }, [db, kind, ids])
 
   const visible = useMemo(() => new Set(items.map((it) => it.id)), [items])
 
@@ -922,6 +946,11 @@ function CollectionEditor({
         >
           {t('onlyMissing')}
         </button>
+        {achPts && (
+          <span className="chip chip-type ach-points" title={t('achPoints', { n: achPts.own })}>
+            🏆 {t('achPointsChip', { a: achPts.own.toLocaleString(lang), b: achPts.tot.toLocaleString(lang) })}
+          </span>
+        )}
         {!readOnly && (
           <div className="mode-switch">
             <button
@@ -996,6 +1025,8 @@ export function MyPage({
   const [busy, setBusy] = useState(false)
   // Synchro Lodestone forcée (déclaré ici : MyPage a des retours anticipés).
   const [syncing, setSyncing] = useState(false)
+  // Import FFXIV Collect à la demande (même contrainte de déclaration).
+  const [importing, setImporting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [char, setChar] = useState<Character | null>(null)
   // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
@@ -1130,6 +1161,27 @@ export function MyPage({
       setNotice(t('saveError'))
     }
     setSyncing(false)
+  }
+
+  // Import FFXIV Collect à la demande : rapatrie ce qui est coché là-bas
+  // (union côté worker, ne retire jamais rien). Utile après coup — p. ex.
+  // récupérer ses succès sur un perso vérifié avant leur arrivée ici.
+  async function collectImport() {
+    if (!verified || !auth.token) return
+    setImporting(true)
+    try {
+      const found = await fetchCollectDoc(verified.charId)
+      if (!found || found.total === 0) {
+        showToast(t('collectNone'))
+      } else {
+        const added = await pushCollectSync(verified.charId, found.doc, auth.token)
+        showToast(added > 0 ? t('collectSynced', { n: added }) : t('collectNothingNew'))
+        if (added > 0) setChar(await fetchCharacter(verified.charId))
+      }
+    } catch {
+      setNotice(t('saveError'))
+    }
+    setImporting(false)
   }
 
   async function doUnbind(charId: number, name: string) {
@@ -1363,6 +1415,14 @@ export function MyPage({
                       onClick={() => void forceSync()}
                     >
                       {syncing ? '…' : '⟳ ' + t('syncForce')}
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-mini"
+                      disabled={importing}
+                      title={t('collectImportTitle')}
+                      onClick={() => void collectImport()}
+                    >
+                      {importing ? '…' : '⬇ Collect'}
                     </button>
                     <button
                       className="btn btn-ghost btn-mini mypage-unbind"

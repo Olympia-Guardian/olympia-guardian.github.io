@@ -446,6 +446,19 @@ const STR = {
   tileFashions: { fr: 'accessoires à récupérer', en: 'accessories to get' },
   tileOrchestrions: { fr: 'rouleaux à récupérer', en: 'rolls to get' },
   tileSpells: { fr: 'sorts à apprendre', en: 'spells to learn' },
+  tileAchievements: { fr: 'succès à décrocher', en: 'achievements to earn' },
+  achPoints: { fr: '{n} points de succès', en: '{n} achievement points' },
+  achReward: { fr: 'Récompense', en: 'Reward' },
+  achPointsChip: { fr: '{a} / {b} pts', en: '{a} / {b} pts' },
+  allCategories: { fr: 'Toutes les catégories', en: 'All categories' },
+  collectImportTitle: {
+    fr: 'Importer ce qui est coché sur FFXIV Collect (fusion — ne retire jamais rien)',
+    en: 'Import what is checked on FFXIV Collect (merge — never removes anything)',
+  },
+  collectNone: {
+    fr: 'Aucune fiche FFXIV Collect trouvée pour ce perso.',
+    en: 'No FFXIV Collect profile found for this character.',
+  },
   tileFacewear: { fr: 'lunettes à récupérer', en: 'facewear to get' },
   tileHairstyles: { fr: 'coiffures à récupérer', en: 'hairstyles to get' },
   tileOutfits: { fr: 'tenues à récupérer', en: 'outfits to get' },
@@ -622,6 +635,11 @@ const KIND_LABELS: Record<Kind, Record<'label' | 'one' | 'short', Record<Lang, s
     label: { fr: 'Magie bleue', en: 'Blue Magic' },
     one: { fr: 'Sort', en: 'Spell' },
     short: { fr: 'Magie bleue', en: 'Blue Magic' },
+  },
+  achievements: {
+    label: { fr: 'Succès', en: 'Achievements' },
+    one: { fr: 'Succès', en: 'Achievement' },
+    short: { fr: 'Succès', en: 'Achievements' },
   },
 }
 

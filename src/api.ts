@@ -17,6 +17,7 @@ export type Kind =
   | 'frames'
   | 'orchestrions'
   | 'spells'
+  | 'achievements'
 
 export const KINDS: Kind[] = [
   'mounts',
@@ -32,6 +33,7 @@ export const KINDS: Kind[] = [
   'frames',
   'orchestrions',
   'spells',
+  'achievements',
 ]
 
 export const KIND_INFO: Record<Kind, { path: string }> = {
@@ -48,6 +50,7 @@ export const KIND_INFO: Record<Kind, { path: string }> = {
   frames: { path: 'frames' },
   orchestrions: { path: 'orchestrions' },
   spells: { path: 'spells' },
+  achievements: { path: 'achievements' },
 }
 
 /** Collections que le Lodestone n'expose pas : elles se cochent à la main dans
@@ -59,7 +62,7 @@ export const HIDDEN_KINDS: Kind[] = KINDS.filter((k) => k !== 'mounts' && k !== 
  *  Les portraits (kits d'encadrement), tenues et armoire en sont exclus — ce
  *  sont des listes de complétion, pas du contenu à organiser en groupe. */
 export const PLANNING_KINDS: Kind[] = KINDS.filter(
-  (k) => k !== 'frames' && k !== 'outfits' && k !== 'armoires',
+  (k) => k !== 'frames' && k !== 'outfits' && k !== 'armoires' && k !== 'achievements',
 )
 
 /** Familles d'onglets : les petites collections cousines partagent un onglet.
@@ -76,6 +79,7 @@ export const KIND_FAMILIES: { key: string; kinds: Kind[]; merged?: boolean }[] =
   { key: 'frames', kinds: ['frames'] },
   { key: 'attire', kinds: ['outfits', 'armoires'] },
   { key: 'spells', kinds: ['spells'] },
+  { key: 'achievements', kinds: ['achievements'] },
 ]
 
 export interface Source {
@@ -121,6 +125,13 @@ export interface Item {
   /** Portraits : nom du kit d'encadrement (le « name » n'est qu'un libellé court). */
   itemName?: string
   itemNameEn?: string
+  /** Succès : points, type (Bataille, Quêtes…) et récompense (titre ou objet). */
+  points?: number
+  achType?: string
+  achTypeEn?: string
+  reward?: string
+  rewardEn?: string
+  rewardType?: string
   /** Tenues : pièces qui composent l'ensemble. */
   pieces?: string[]
   /** type = enum anglais stable de l'API (la logique de catégories s'appuie dessus) ; text = français. */
@@ -209,7 +220,7 @@ const CACHE_MAX_CHARS = 300_000
 // Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
-const DB_V = 'v8' // catalogues par collection (v8 : sorts retypés donjon/défi/raid)
+const DB_V = 'v9' // catalogues par collection (v9 : succès)
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 const CHAR_V = 'v7' // fiches de personnage (v7 : profil Lodestone étendu)
 

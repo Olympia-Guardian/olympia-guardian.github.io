@@ -56,6 +56,7 @@ const TILE_KEYS: Record<Kind, StrKey> = {
   frames: 'tileFrames',
   orchestrions: 'tileOrchestrions',
   spells: 'tileSpells',
+  achievements: 'tileAchievements',
 }
 
 function NeedChip({ need }: { need: GroupNeed }) {

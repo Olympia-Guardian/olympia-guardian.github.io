@@ -250,11 +250,29 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   'Manderville Weapons': {
     urlEn: `${WIKI}/Manderville_Weapons`,
     stepLabels: [{ fr: 'Manderville', en: 'Manderville' },{ fr: 'Éblouissante', en: 'Amazing' },{ fr: 'Majestueuse', en: 'Majestic' },{ fr: 'Manderveilleuse', en: 'Mandervillous' }],
+    // Chaque palier se débloque par une quête à Radz-at-Han (une seule fois) ;
+    // les armes suivantes s'échangent directement contre les objets.
     steps: [
-      { url: MAND, materials: [m(3, 'météorites rarissimes (500 poétiques pièce)', 'Manderium Meteorites (500 poetics each)')] },
-      { url: MAND, materials: [m(3, 'chondrites rarissimes (500 poétiques pièce)', 'Complementary Chondrites (500 poetics each)')] },
-      { url: MAND, materials: [m(3, 'achondrites rarissimes (500 poétiques pièce)', 'Amplifying Achondrites (500 poetics each)')] },
-      { url: MAND, materials: [m(3, 'cristallites cosmiques (500 poétiques pièce)', 'Cosmic Crystallites (500 poetics each)')] },
+      {
+        url: MAND,
+        materials: [m(3, 'météorites rarissimes (500 poétiques pièce)', 'Manderium Meteorites (500 poetics each)', undefined, undefined, XIV('ui/icon/021000/021225_hr1.tex'))],
+        once: [m(1, "quête « Le secret ancestral des Manderville » (Radz-at-Han — niv. 90, épopée Endwalker et saga Hildibrand jusqu'à « Une armée de gentilshommes » terminées, puis apporter les 3 météorites rarissimes)", 'quest "Make It a Manderville" (Radz-at-Han — lv. 90, Endwalker MSQ and Hildibrand questline through "The Imperfect Gentleman", then hand in the 3 Manderium Meteorites)', undefined, 'drop', XIV('ui/icon/071000/071141_hr1.tex'))],
+      },
+      {
+        url: MAND,
+        materials: [m(3, 'chondrites rarissimes (500 poétiques pièce)', 'Complementary Chondrites (500 poetics each)', undefined, undefined, XIV('ui/icon/021000/021243_hr1.tex'))],
+        once: [m(1, "quête « Les armes éblouissantes des Manderville » (Radz-at-Han — quête Hildibrand « Tel gentilhomme, tel gentilhomme » terminée, puis apporter les 3 chondrites rarissimes)", 'quest "The Next Mander-level" (Radz-at-Han — Hildibrand quest "Generational Bonding" complete, then hand in the 3 Complementary Chondrites)', undefined, 'drop', XIV('ui/icon/071000/071141_hr1.tex'))],
+      },
+      {
+        url: MAND,
+        materials: [m(3, 'achondrites rarissimes (500 poétiques pièce)', 'Amplifying Achondrites (500 poetics each)', undefined, undefined, XIV('ui/icon/021000/021210_hr1.tex'))],
+        once: [m(1, "quête « Les armes majestueuses des Manderville » (Radz-at-Han — quête Hildibrand « Un visiteur, venu d'ailleurs » terminée, puis apporter les 3 achondrites rarissimes)", 'quest "In Need of Adjustment" (Radz-at-Han — Hildibrand quest "Not from Around Here" complete, then hand in the 3 Amplifying Achondrites)', undefined, 'drop', XIV('ui/icon/071000/071141_hr1.tex'))],
+      },
+      {
+        url: MAND,
+        materials: [m(3, 'cristallites cosmiques (500 poétiques pièce)', 'Cosmic Crystallites (500 poetics each)', undefined, undefined, XIV('ui/icon/021000/021228_hr1.tex'))],
+        once: [m(1, "quête « Les armes manderveilleuses des Manderville » (Radz-at-Han — quête Hildibrand « Le cadeau des Dieux » terminée, puis apporter les 3 cristallites cosmiques)", 'quest "Positively Mandervillous" (Radz-at-Han — Hildibrand quest "Gentlemen at Heart" complete, then hand in the 3 Cosmic Crystallites)', undefined, 'drop', XIV('ui/icon/071000/071141_hr1.tex'))],
+      },
     ],
   },
 
@@ -395,8 +413,17 @@ export const RELIC_COSTS: Record<string, SeriesCosts> = {
   },
   'Splendorous Tools': {
     url: `${WIKI}/Splendorous_Tools`,
+    stepLabels: [
+      { fr: 'Merveilles', en: 'Splendorous' },
+      { fr: 'Merveilles améliorée', en: 'Augmented Splendorous' },
+      { fr: 'Cristalline', en: 'Crystalline' },
+      { fr: 'Cristalline de Chora-Zoi', en: "Chora-Zoi's Crystalline" },
+      { fr: 'Splendide', en: 'Brilliant' },
+      { fr: 'Norvrandtesque', en: "Vrandtic Visionary's" },
+      { fr: 'Superstellaire', en: 'Lodestar' },
+    ],
     steps: [
-      { url: `${WIKI}/Splendorous_Tools`, materials: [m(750, 'pions violets (ou coffre de quête)', 'Purple Scrips (or quest coffer)', 'purple-scrips', 'currency')] },
+      { url: `${WIKI}/Splendorous_Tools`, materials: [m(750, 'assignats violets (ou coffre de quête)', 'Purple Scrips (or quest coffer)', 'purple-scrips', 'currency', XIV('ui/icon/065000/065088_hr1.tex'))] },
       { url: `${WIKI}/Splendorous_Tools`, materials: [m(20, 'collectionnables (60 composants)', 'collectables (60 components)', 'collectables')] },
       { url: `${WIKI}/Splendorous_Tools`, materials: [m(30, 'collectionnables (90 composants)', 'collectables (90 components)', 'collectables')] },
       { url: `${WIKI}/Splendorous_Tools`, materials: [m(30, 'collectionnables (90 composants)', 'collectables (90 components)', 'collectables')] },

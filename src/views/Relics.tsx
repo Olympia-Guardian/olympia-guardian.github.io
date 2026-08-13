@@ -531,7 +531,8 @@ function SeriesCard({
                           )}
                         </span>
                       )}
-                      {stepCost && stepCost.materials.length > 0 && showReq && stepCost.once && (!reqLeft || list.length - c > 0) && (
+                      {/* « 1re arme seulement » : dès qu'une pièce du palier existe, c'est fait. */}
+                      {stepCost && stepCost.materials.length > 0 && showReq && stepCost.once && (!reqLeft || c === 0) && (
                         <span className="relic-step-mats relic-once relic-step-iconrow">
                           <span className="relic-remaining-label">{t('relicOnce')}</span>
                           <span className="relic-req-items">{stepCost.once.map(matIcon)}</span>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { HIDDEN_KINDS, type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
-import { UNAVAILABLE_TYPES, typeLabel } from '../sources'
+import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
 import { TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 
@@ -95,8 +95,7 @@ export function Matrix({
               (s) => s.text.toLowerCase().includes(q) || s.textEn.toLowerCase().includes(q),
             )) return false
         if (typeFilter !== 'all' && !item.sources.some((s) => s.type === typeFilter)) return false
-        if (!includeUnavailable && item.sources.length > 0 &&
-            item.sources.every((s) => UNAVAILABLE_TYPES.has(s.type))) return false
+        if (!includeUnavailable && !itemStillObtainable(item)) return false
         if (onlyMissing && missing.length === 0) return false
         return true
       })
@@ -194,6 +193,11 @@ export function Matrix({
                         <span className="item-name">
                           {name}
                           {item.patch && <span className="chip chip-patch">{item.patch}</span>}
+                          {item.unobtainable && (
+                            <span className="chip chip-unavail" title={t('unobtainableTitle')}>
+                              {t('unobtainableChip')}
+                            </span>
+                          )}
                           {item.tradeable && (
                             <span className="chip chip-hv" title={t('hvTitle')}>
                               HV

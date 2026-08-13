@@ -53,6 +53,11 @@ export function ItemModal({
             <p className="modal-chips">
               <KindChip kind={kind} />
               {item.patch && <span className="chip chip-patch">{t('patch', { n: item.patch })}</span>}
+              {item.unobtainable && (
+                <span className="chip chip-unavail" title={t('unobtainableTitle')}>
+                  {t('unobtainableChip')}
+                </span>
+              )}
               {item.tradeable && (
                 <span className="chip chip-hv" title={t('hvTitle')}>
                   HV

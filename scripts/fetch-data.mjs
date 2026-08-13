@@ -275,6 +275,24 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
     getJson(`${API}/${path}?limit=${PAGE_LIMIT}&language=fr`),
   ])
   const items = mergeDb(en, fr)
+  // Inobtenable aujourd'hui : toutes les sources sont « limited » chez
+  // FFXIV Collect. L'API n'expose pas le drapeau, mais son filtre ransack
+  // marche : ce qui ne ressort pas avec sources_limited_eq=false n'a plus
+  // aucune voie d'obtention active (ex. monture Goobbue, chocobo Legacy).
+  try {
+    const ok = await getJson(`${API}/${path}?limit=${PAGE_LIMIT}&sources_limited_eq=false`)
+    const okIds = new Set(ok.results.map((r) => r.id))
+    let n = 0
+    for (const it of items) {
+      if (it.sources.length > 0 && !okIds.has(it.id)) {
+        it.unobtainable = true
+        n++
+      }
+    }
+    if (n) console.log(`${kind}: ${n} inobtenable(s)`)
+  } catch (e) {
+    console.warn(`${kind}: filtre limited indisponible — ${e.message}`)
+  }
   await writeFile(new URL(`${kind}.json`, OUT), JSON.stringify(items))
   console.log(`${kind}: ${items.length}`)
 }

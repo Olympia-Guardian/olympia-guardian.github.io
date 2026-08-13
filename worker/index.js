@@ -9,7 +9,7 @@
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 }
 
@@ -520,6 +520,260 @@ async function putCollections(env, user, charId, raw) {
   return response('{"ok":true}')
 }
 
+// ------------------------------------------------------------------- groupes
+// Deux natures : privé (shared=0, visible du seul propriétaire) et synchronisé
+// (shared=1, lisible par quiconque a le lien — l'id fait office de secret).
+// Droits : le créateur fait tout ; un membre connecté peut rejoindre avec son
+// perso vérifié et se retirer lui-même ; le reste du monde lit.
+//
+// Tables :
+//   groups(id, name, owner_user_id, shared, created, updated)
+//   group_members(group_id, char_id, added_by, added)
+//   group_links(user_id, group_id, added)   ← « ce groupe est dans ma liste »
+
+const MAX_GROUPS_PER_USER = 50
+const MAX_NAME = 60
+
+function validGroupName(name) {
+  return typeof name === 'string' && name.trim().length >= 1 && name.trim().length <= MAX_NAME
+}
+
+function validCharId(id) {
+  return Number.isInteger(id) && id > 0 && id < 1e12
+}
+
+async function groupRow(env, id) {
+  return env.DB.prepare('SELECT id, name, owner_user_id, shared, updated FROM groups WHERE id = ?1')
+    .bind(id)
+    .first()
+}
+
+async function groupMembers(env, id) {
+  const rows = await env.DB.prepare(
+    'SELECT char_id FROM group_members WHERE group_id = ?1 ORDER BY added',
+  )
+    .bind(id)
+    .all()
+  return rows.results.map((r) => r.char_id)
+}
+
+function groupJson(row, members, userId) {
+  return {
+    id: row.id,
+    name: row.name,
+    shared: !!row.shared,
+    updated: row.updated,
+    mine: userId ? (row.owner_user_id === userId ? 'owner' : 'member') : 'guest',
+    members,
+  }
+}
+
+/** GET /groups : tous les groupes de ma liste, avec leurs membres. */
+async function listGroups(env, user) {
+  const groups = await env.DB.prepare(
+    'SELECT g.id, g.name, g.owner_user_id, g.shared, g.updated FROM group_links l ' +
+      'JOIN groups g ON g.id = l.group_id WHERE l.user_id = ?1 ORDER BY l.added',
+  )
+    .bind(user.id)
+    .all()
+  const members = await env.DB.prepare(
+    'SELECT m.group_id, m.char_id FROM group_members m ' +
+      'JOIN group_links l ON l.group_id = m.group_id WHERE l.user_id = ?1 ORDER BY m.added',
+  )
+    .bind(user.id)
+    .all()
+  const byGroup = new Map()
+  for (const r of members.results) {
+    const arr = byGroup.get(r.group_id) ?? []
+    arr.push(r.char_id)
+    byGroup.set(r.group_id, arr)
+  }
+  return response(
+    JSON.stringify({
+      groups: groups.results.map((g) => groupJson(g, byGroup.get(g.id) ?? [], user.id)),
+    }),
+  )
+}
+
+/** POST /groups {name, shared?, members?} : création (privé par défaut). */
+async function createGroup(env, user, raw) {
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (!validGroupName(body?.name)) return response('{"error":"invalid name"}', 422)
+  const members = Array.isArray(body?.members) ? [...new Set(body.members)] : []
+  if (members.length > MAX_MEMBERS || !members.every(validCharId))
+    return response('{"error":"invalid members"}', 422)
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM groups WHERE owner_user_id = ?1')
+    .bind(user.id)
+    .first()
+  if (count.n >= MAX_GROUPS_PER_USER) return response('{"error":"too many groups"}', 429)
+
+  const id = 'grp-' + crypto.randomUUID()
+  const now = Date.now()
+  const shared = body?.shared ? 1 : 0
+  const stmts = [
+    env.DB.prepare(
+      'INSERT INTO groups (id, name, owner_user_id, shared, created, updated) VALUES (?1, ?2, ?3, ?4, ?5, ?5)',
+    ).bind(id, body.name.trim(), user.id, shared, now),
+    env.DB.prepare('INSERT INTO group_links (user_id, group_id, added) VALUES (?1, ?2, ?3)').bind(
+      user.id,
+      id,
+      now,
+    ),
+  ]
+  const memberStmt = env.DB.prepare(
+    'INSERT INTO group_members (group_id, char_id, added_by, added) VALUES (?1, ?2, ?3, ?4)',
+  )
+  for (const charId of members) stmts.push(memberStmt.bind(id, charId, user.id, now))
+  await env.DB.batch(stmts)
+  return response(
+    JSON.stringify(groupJson({ id, name: body.name.trim(), owner_user_id: user.id, shared, updated: now }, members, user.id)),
+  )
+}
+
+/** GET /group/:id : lecture — publique si synchronisé, propriétaire sinon. */
+async function getGroup(env, user, id) {
+  const row = await groupRow(env, id)
+  if (!row) return response('{"error":"no such group"}', 404)
+  if (!row.shared && row.owner_user_id !== user?.id) return response('{"error":"no such group"}', 404)
+  return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user?.id)))
+}
+
+/** PATCH /group/:id {name?, shared?} : renommage / conversion (propriétaire). */
+async function patchGroup(env, user, id, raw) {
+  const row = await groupRow(env, id)
+  if (!row || row.owner_user_id !== user.id) return response('{"error":"no such group"}', 404)
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const name = body?.name !== undefined ? body.name : null
+  if (name !== null && !validGroupName(name)) return response('{"error":"invalid name"}', 422)
+  // La conversion ne va que dans un sens : privé → synchronisé.
+  const shared = body?.shared === true ? 1 : row.shared
+  await env.DB.prepare('UPDATE groups SET name = ?2, shared = ?3, updated = ?4 WHERE id = ?1')
+    .bind(id, name !== null ? name.trim() : row.name, shared, Date.now())
+    .run()
+  const fresh = await groupRow(env, id)
+  return response(JSON.stringify(groupJson(fresh, await groupMembers(env, id), user.id)))
+}
+
+/** DELETE /group/:id : suppression complète (propriétaire seul). */
+async function deleteGroup(env, user, id) {
+  const row = await groupRow(env, id)
+  if (!row || row.owner_user_id !== user.id) return response('{"error":"no such group"}', 404)
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM group_members WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM group_links WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM groups WHERE id = ?1').bind(id),
+  ])
+  return response('{"ok":true}')
+}
+
+/** POST /group/:id/join {charId?} : rejoindre un groupe synchronisé — ajoute
+ *  le groupe à ma liste, et mon perso vérifié si fourni. */
+async function joinGroup(env, user, id, raw) {
+  const row = await groupRow(env, id)
+  if (!row || !row.shared) return response('{"error":"no such group"}', 404)
+  let charId = null
+  try {
+    charId = JSON.parse(raw || '{}')?.charId ?? null
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const now = Date.now()
+  const stmts = [
+    env.DB.prepare(
+      'INSERT INTO group_links (user_id, group_id, added) VALUES (?1, ?2, ?3) ' +
+        'ON CONFLICT(user_id, group_id) DO NOTHING',
+    ).bind(user.id, id, now),
+  ]
+  if (charId !== null) {
+    if (!validCharId(charId)) return response('{"error":"invalid charId"}', 422)
+    const binding = await env.DB.prepare(
+      'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
+    )
+      .bind(user.id, charId)
+      .first()
+    if (!binding) return response('{"error":"not the verified owner"}', 403)
+    const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM group_members WHERE group_id = ?1')
+      .bind(id)
+      .first()
+    if (count.n >= MAX_MEMBERS) return response('{"error":"group full"}', 409)
+    stmts.push(
+      env.DB.prepare(
+        'INSERT INTO group_members (group_id, char_id, added_by, added) VALUES (?1, ?2, ?3, ?4) ' +
+          'ON CONFLICT(group_id, char_id) DO NOTHING',
+      ).bind(id, charId, user.id, now),
+    )
+    stmts.push(env.DB.prepare('UPDATE groups SET updated = ?2 WHERE id = ?1').bind(id, now))
+  }
+  await env.DB.batch(stmts)
+  return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user.id)))
+}
+
+/** DELETE /group/:id/link : quitter ma liste (sans toucher aux membres). */
+async function quitGroup(env, user, id) {
+  await env.DB.prepare('DELETE FROM group_links WHERE user_id = ?1 AND group_id = ?2')
+    .bind(user.id, id)
+    .run()
+  return response('{"ok":true}')
+}
+
+/** POST /group/:id/members {charId} : ajout d'un perso par le propriétaire
+ *  (le pote sans compte, ou l'édition d'un groupe privé). */
+async function addGroupMember(env, user, id, raw) {
+  const row = await groupRow(env, id)
+  if (!row || row.owner_user_id !== user.id) return response('{"error":"no such group"}', 404)
+  let charId
+  try {
+    charId = JSON.parse(raw)?.charId
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (!validCharId(charId)) return response('{"error":"invalid charId"}', 422)
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM group_members WHERE group_id = ?1')
+    .bind(id)
+    .first()
+  if (count.n >= MAX_MEMBERS) return response('{"error":"group full"}', 409)
+  const now = Date.now()
+  await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO group_members (group_id, char_id, added_by, added) VALUES (?1, ?2, ?3, ?4) ' +
+        'ON CONFLICT(group_id, char_id) DO NOTHING',
+    ).bind(id, charId, user.id, now),
+    env.DB.prepare('UPDATE groups SET updated = ?2 WHERE id = ?1').bind(id, now),
+  ])
+  return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user.id)))
+}
+
+/** DELETE /group/:id/member/:charId : le propriétaire retire n'importe qui,
+ *  un membre connecté retire son propre perso vérifié. */
+async function removeGroupMember(env, user, id, charId) {
+  const row = await groupRow(env, id)
+  if (!row) return response('{"error":"no such group"}', 404)
+  if (row.owner_user_id !== user.id) {
+    const binding = await env.DB.prepare(
+      'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
+    )
+      .bind(user.id, charId)
+      .first()
+    if (!binding) return response('{"error":"forbidden"}', 403)
+  }
+  const now = Date.now()
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM group_members WHERE group_id = ?1 AND char_id = ?2').bind(id, charId),
+    env.DB.prepare('UPDATE groups SET updated = ?2 WHERE id = ?1').bind(id, now),
+  ])
+  return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user.id)))
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -611,6 +865,37 @@ export default {
           return response(JSON.stringify({ error: String(e?.message ?? e) }), 502)
         }
       }
+      return response('{"error":"method not allowed"}', 405)
+    }
+
+    // --- groupes : voir la section « groupes » plus haut
+    if (url.pathname === '/groups') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      if (req.method === 'GET') return listGroups(env, user)
+      if (req.method === 'POST') return createGroup(env, user, await req.text())
+      return response('{"error":"method not allowed"}', 405)
+    }
+    const groupMatch = url.pathname.match(
+      /^\/group\/(grp-[\w-]{10,80})(?:\/(join|link|members)|\/member\/(\d{1,12}))?$/,
+    )
+    if (groupMatch) {
+      const [, id, action, memberId] = groupMatch
+      // Lecture : la seule route qui tolère l'anonyme (groupes synchronisés).
+      if (!action && !memberId && req.method === 'GET') {
+        return getGroup(env, await authenticate(env, req), id)
+      }
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      if (!action && !memberId) {
+        if (req.method === 'PATCH') return patchGroup(env, user, id, await req.text())
+        if (req.method === 'DELETE') return deleteGroup(env, user, id)
+      }
+      if (action === 'join' && req.method === 'POST') return joinGroup(env, user, id, await req.text())
+      if (action === 'link' && req.method === 'DELETE') return quitGroup(env, user, id)
+      if (action === 'members' && req.method === 'POST')
+        return addGroupMember(env, user, id, await req.text())
+      if (memberId && req.method === 'DELETE') return removeGroupMember(env, user, id, Number(memberId))
       return response('{"error":"method not allowed"}', 405)
     }
 

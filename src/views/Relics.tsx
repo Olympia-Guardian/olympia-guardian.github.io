@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { GiMagnifyingGlass, GiPowerLightning } from 'react-icons/gi'
-import type { Character, Relic, RelicDb, RelicSeriesInfo } from '../api'
-import { useI18n } from '../i18n'
+import { KINDS, type Character, type Relic, type RelicDb, type RelicSeriesInfo } from '../api'
+import { kindLabel, useI18n } from '../i18n'
 import {
   RELIC_COSTS,
   effectiveSteps,
@@ -10,7 +10,7 @@ import {
   type Material,
   type StepCost,
 } from '../relicCosts'
-import type { Member } from '../store'
+import type { Db, Member } from '../store'
 import { Meter, onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
@@ -728,14 +728,24 @@ function pct(count: number, total: number, lang: string): string {
 
 /** Vue de groupe : uniquement l'avancement. Le détail (paliers, matériaux,
  *  icônes) vit dans « Mon Journal », où l'on ne regarde que son propre perso. */
+/** Couleur de jauge par palier d'avancement (rouge → orange → bleu → vert). */
+function barLevel(c: number, total: number): string {
+  if (total > 0 && c >= total) return 'is-done'
+  const p = total > 0 ? c / total : 0
+  return p < 1 / 3 ? 'lvl-low' : p < 2 / 3 ? 'lvl-mid' : 'lvl-high'
+}
+
 function RelicSummary({
   db,
+  cdb,
   ready,
   ownedSets,
   byExpansion,
   bySeries,
 }: {
   db: RelicDb
+  /** Catalogues des collections : la page devient « Avancement du groupe ». */
+  cdb?: Db
   ready: Ready[]
   ownedSets: Map<number, Set<number>>
   byExpansion: Map<number, RelicSeriesInfo[]>
@@ -743,17 +753,24 @@ function RelicSummary({
 }) {
   const { lang, t } = useI18n()
   const totalAll = db.relics.length
+  // Total du bandeau : reliques + tous les catalogues quand on mixe tout.
+  const headerTotal = cdb ? totalAll + KINDS.reduce((s, k) => s + cdb[k].length, 0) : totalAll
 
   return (
     <div className="view">
       <section className="relic-series relic-global">
         <header className="relic-series-head">
-          <h4 className="relic-series-name">{t('relicGlobal')}</h4>
-          <span className="relic-shape">{fmt(totalAll, lang)}</span>
+          <h4 className="relic-series-name">{t(cdb ? 'groupProgress' : 'relicGlobal')}</h4>
+          <span className="relic-shape">{fmt(headerTotal, lang)}</span>
         </header>
         {ready.map((m) => {
           const owned = ownedSets.get(m.id)!
-          const count = db.relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
+          const relicCount = db.relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
+          // Jauge d'en-tête : collections + reliques confondues.
+          const colCount = cdb ? KINDS.reduce((s, k) => s + m.data[k].count, 0) : 0
+          const colTotal = cdb ? KINDS.reduce((s, k) => s + m.data[k].total, 0) : 0
+          const count = relicCount + colCount
+          const total = totalAll + colTotal
           return (
             <details key={m.id} className="relic-player-fold" open={ready.length === 1}>
               <summary className="relic-player">
@@ -766,12 +783,62 @@ function RelicSummary({
                   onError={onAvatarImgError}
                 />
                 <div className="relic-meter">
-                  <Meter label={m.data.name.split(' ')[0]} count={count} total={totalAll} />
+                  <Meter label={m.data.name.split(' ')[0]} count={count} total={total} />
                 </div>
-                <span className="relic-remaining">{pct(count, totalAll, lang)}</span>
+                <span className="relic-remaining">{pct(count, total, lang)}</span>
               </summary>
-              <div className="relic-breakdown">
-                {EXPANSIONS.map(({ num, fr, en }) => {
+              <div className={cdb ? 'relic-breakdown relic-breakdown-single' : 'relic-breakdown'}>
+                {cdb && (
+                  <div className="relic-exp-block">
+                    <header className="relic-exp-head">
+                      <b>{t('progressCollections')}</b>
+                      <span className={count >= total ? 'relic-done' : 'relic-remaining'}>
+                        {pct(count, total, lang)}
+                      </span>
+                    </header>
+                    <ul className="relic-exp-list">
+                      {KINDS.map((k) => {
+                        const { count: c, total: tt } = m.data[k]
+                        const done = tt > 0 && c >= tt
+                        return (
+                          <li key={k} className="relic-exp-row">
+                            <span className="relic-exp-name">{kindLabel(lang, k)}</span>
+                            <span className="relic-exp-bar">
+                              <i
+                                className={barLevel(c, tt)}
+                                style={{ width: `${tt > 0 ? (c / tt) * 100 : 0}%` }}
+                              />
+                            </span>
+                            <span className="relic-exp-count">
+                              {c}/{tt}
+                            </span>
+                            <span className={`relic-exp-pct ${done ? 'relic-done' : ''}`}>
+                              {pct(c, tt, lang)}
+                            </span>
+                          </li>
+                        )
+                      })}
+                      <li className="relic-exp-row">
+                        <span className="relic-exp-name">{t('progressRelics')}</span>
+                        <span className="relic-exp-bar">
+                          <i
+                            className={barLevel(relicCount, totalAll)}
+                            style={{ width: `${totalAll > 0 ? (relicCount / totalAll) * 100 : 0}%` }}
+                          />
+                        </span>
+                        <span className="relic-exp-count">
+                          {relicCount}/{totalAll}
+                        </span>
+                        <span className={`relic-exp-pct ${relicCount >= totalAll ? 'relic-done' : ''}`}>
+                          {pct(relicCount, totalAll, lang)}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+                {/* Avancement du groupe : pas de détail des reliques par
+                    extension — la ligne « Reliques » du bloc suffit. */}
+                {!cdb && EXPANSIONS.map(({ num, fr, en }) => {
                   const series = byExpansion.get(num)
                   if (!series || series.length === 0) return null
                   const expTotal = series.reduce((sum, s) => sum + s.total, 0)
@@ -830,12 +897,15 @@ function RelicSummary({
 
 export function Relics({
   db,
+  cdb,
   ready,
   detailed = false,
   onToggleRelic,
   onSetRelics,
 }: {
   db: RelicDb
+  /** Catalogues des collections : le résumé devient « Avancement du groupe ». */
+  cdb?: Db
   ready: Ready[]
   /** « Mon Journal » : paliers, matériaux et icônes. Sinon : avancement seul. */
   detailed?: boolean
@@ -926,6 +996,7 @@ export function Relics({
     return (
       <RelicSummary
         db={db}
+        cdb={cdb}
         ready={ready}
         ownedSets={ownedSets}
         byExpansion={byExpansion}

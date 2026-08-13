@@ -172,6 +172,9 @@ export function Planning({
     const minM = Math.min(minMissing, ready.length)
     for (const kind of kinds) {
       for (const item of db[kind]) {
+        // Plus obtenable du tout : rien à planifier, même si une source a
+        // un type encore « actif » (ex. monture Goobbue, vendeur disparu).
+        if (item.unobtainable && !includeUnavailable) continue
         const missing = ready.filter((m) => {
           if (!m.data[kind].isPublic) return false
           return !ownedSets.get(m.id)?.[kind].has(item.id)

@@ -102,8 +102,11 @@ export function sourceInScope(type: string, scope: Scope, includeUnavailable: bo
   return !INSTANCE_TYPES.has(type) && !UNAVAILABLE_TYPES.has(type)
 }
 
-/** Un objet est « farmable » s'il a au moins une source hors event/boutique. */
+/** Un objet est « farmable » s'il est encore obtenable (drapeau « limited »
+ *  de FFXIV Collect, cuit dans nos données) et qu'il a au moins une source
+ *  hors event/boutique. */
 export function itemStillObtainable(item: Item): boolean {
+  if (item.unobtainable) return false
   if (item.sources.length === 0) return true
   return item.sources.some((s) => !UNAVAILABLE_TYPES.has(s.type))
 }

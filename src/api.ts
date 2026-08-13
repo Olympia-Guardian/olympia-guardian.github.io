@@ -100,6 +100,8 @@ export interface Item {
   patch: string
   order: number
   tradeable: boolean
+  /** Plus aucune voie d'obtention active (drapeau « limited » FFXIV Collect). */
+  unobtainable?: boolean
   ownedPct: string
   /** Catégorie d'album (orchestrion : « Lieux », « Donjons »…). */
   group?: string
@@ -172,7 +174,7 @@ const CACHE_MAX_CHARS = 300_000
 // Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
-const DB_V = 'v6' // catalogues par collection
+const DB_V = 'v7' // catalogues par collection
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 const CHAR_V = 'v6' // fiches de personnage
 
@@ -282,7 +284,11 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
 }
 
 /** Worker OGS : personnages lus directement sur le Lodestone, stockés en D1. */
-export const WORKER_API = 'https://ogs-room.olympia-guardian.workers.dev'
+// Surcharge locale possible (tests E2E sur un worker `wrangler dev`) :
+// localStorage.setItem('ogs.apibase.v1', 'http://127.0.0.1:8788')
+export const WORKER_API =
+  (typeof localStorage !== 'undefined' && localStorage.getItem('ogs.apibase.v1')) ||
+  'https://ogs-room.olympia-guardian.workers.dev'
 
 function mapCharacter(r: any): Character {
   const col = (c: any): CharCollection => ({

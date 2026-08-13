@@ -13,8 +13,6 @@ function relativeDate(iso: string, t: I18n['t']): string {
 
 // Treize jauges par joueur rendraient la colonne illisible : on affiche celle
 // de la collection consultée, plus les deux qui viennent du Lodestone.
-const BASE_METERS: Kind[] = ['mounts', 'minions']
-
 function PlayerCard({
   member,
   focus,
@@ -29,7 +27,8 @@ function PlayerCard({
   present: boolean
   activeKind?: Kind
   onTogglePresence?: () => void
-  onRemove: () => void
+  /** Absent : ce membre ne peut pas être retiré par l'utilisateur courant. */
+  onRemove?: () => void
   onRefresh: () => void
 }) {
   const { lang, t } = useI18n()
@@ -50,9 +49,11 @@ function PlayerCard({
             <button className="icon-btn" title={t('retry')} onClick={onRefresh}>
               ↻
             </button>
-            <button className="icon-btn" title={t('remove')} onClick={onRemove}>
-              ×
-            </button>
+            {onRemove && (
+              <button className="icon-btn" title={t('remove')} onClick={onRemove}>
+                ×
+              </button>
+            )}
           </span>
         </div>
         <p className="player-error">{member.error ?? t('loadError')}</p>
@@ -90,16 +91,24 @@ function PlayerCard({
           <button className="icon-btn" title={t('refreshMember')} onClick={onRefresh}>
             ↻
           </button>
-          <button className="icon-btn" title={t('removeMember')} onClick={onRemove}>
-            ×
-          </button>
+          {onRemove && (
+            <button className="icon-btn" title={t('removeMember')} onClick={onRemove}>
+              ×
+            </button>
+          )}
         </span>
       </div>
-      <div className="meter-grid">
-        {[...new Set([...(activeKind ? [activeKind] : []), ...BASE_METERS])].map((k) => (
-          <Meter key={k} label={kindLabel(lang, k, 'short')} count={c[k].count} total={c[k].total} />
-        ))}
-      </div>
+      {/* Une seule jauge : celle de l'onglet ouvert. Sur les autres onglets
+          (Planning, Avancement), la carte reste sobre — pas de jauge. */}
+      {activeKind && (
+        <div className="meter-grid">
+          <Meter
+            label={kindLabel(lang, activeKind, 'short')}
+            count={c[activeKind].count}
+            total={c[activeKind].total}
+          />
+        </div>
+      )}
       {(c.cards.count === 0 || c.fashions.count === 0) && (
         <p className="player-note" title={t('playerNoteTitle')}>
           {t('playerNote')}
@@ -125,6 +134,7 @@ export function RosterBar({
   onTogglePresence,
   onResetPresence,
   onAdd,
+  canRemove,
   onRemove,
   onRefresh,
 }: {
@@ -138,7 +148,10 @@ export function RosterBar({
   onToggleCollapsed: () => void
   onTogglePresence: (id: number) => void
   onResetPresence: () => void
-  onAdd: (id: number) => void
+  /** Absent : le groupe actif n'est pas éditable — le formulaire d'ajout disparaît. */
+  onAdd?: (id: number) => void
+  /** Qui peut être retiré (défaut : tout le monde). */
+  canRemove?: (id: number) => boolean
   onRemove: (id: number) => void
   onRefresh: (id: number) => void
 }) {
@@ -155,7 +168,7 @@ export function RosterBar({
     }
     setInputError(null)
     setInput('')
-    onAdd(id)
+    onAdd?.(id)
   }
 
   const presentCount = members.length - absent.length
@@ -226,10 +239,11 @@ export function RosterBar({
           present={!absent.includes(m.id)}
           activeKind={activeKind}
           onTogglePresence={members.length > 1 ? () => onTogglePresence(m.id) : undefined}
-          onRemove={() => onRemove(m.id)}
+          onRemove={canRemove === undefined || canRemove(m.id) ? () => onRemove(m.id) : undefined}
           onRefresh={() => onRefresh(m.id)}
         />
       ))}
+      {onAdd && (
       <form className="player-card add-card" onSubmit={submit}>
         <label className="add-label" htmlFor="add-input">
           {t('addChar')}
@@ -260,6 +274,7 @@ export function RosterBar({
           </p>
         )}
       </form>
+      )}
     </aside>
   )
 }

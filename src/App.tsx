@@ -1,30 +1,50 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { GiCharacter } from 'react-icons/gi'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
 import { useAuth } from './auth'
 import { useDigest } from './digest'
-import { currentGroupHash, loadGroups, saveGroups, switchToGroup, type SavedGroup } from './groups'
+import { useGroups } from './groups'
 import { MyPage } from './views/MyPage'
-import { detectLang, kindLabel, persistLang, translate, LangContext, type Lang } from './i18n'
+import { detectLang, kindLabel, persistLang, translate, useI18n, LangContext, type Lang } from './i18n'
 import { ItemModal, type ShownItem } from './ItemModal'
-import { useRoom, type LocalState } from './room'
 import { RosterBar } from './RosterBar'
 import { TabIcon } from './ui'
+import { fetchCharacter } from './api'
 import {
   readHashParam,
-  readHashRoomId,
   setHashParam,
   useDb,
+  useMembers,
   useOwnedSets,
   useReadyMembers,
   useRelicDb,
-  useRoster,
 } from './store'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
 
 type Tab = 'planning' | Kind | 'relics' | 'mypage'
+
+/** Bouton « Rejoindre avec {perso} » du bandeau d'invitation : le nom du
+ *  perso vérifié se charge tout seul (fiche déjà en cache la plupart du temps). */
+function JoinChip({ charId, onJoin }: { charId: number; onJoin: () => void }) {
+  const [name, setName] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetchCharacter(charId)
+      .then((c) => alive && setName(c.name))
+      .catch(() => alive && setName(`#${charId}`))
+    return () => {
+      alive = false
+    }
+  }, [charId])
+  const { t } = useI18n()
+  return (
+    <button className="btn btn-primary btn-mini" onClick={onJoin}>
+      {t('joinWith', { name: name ?? '…' })}
+    </button>
+  )
+}
 
 export default function App() {
   // Langue (FR/EN) — détectée puis mémorisée par navigateur
@@ -48,20 +68,36 @@ export default function App() {
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
   const auth = useAuth()
 
-  // Salon de synchro (lu depuis le lien avant tout le reste : il pilote le hash)
-  const [roomId, setRoomId] = useState<string | null>(() => readHashRoomId())
-  const hasRoom = roomId !== null
-
-  const { members, roster, add, remove, refresh, applyRemoteRoster } = useRoster(hasRoom)
+  // Groupes : LE modèle de l'app — privés (navigateur ou compte) et
+  // synchronisés (invitation par lien). Le groupe actif fournit les membres.
+  const verifiedIds = useMemo(
+    () => auth.bindings.filter((b) => b.verified).map((b) => b.charId),
+    [auth.bindings],
+  )
+  const grp = useGroups(auth.token, verifiedIds)
+  const { members, refresh } = useMembers(grp.active?.members ?? [])
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
 
-  const stateRef = useRef<LocalState>({ roster })
-  stateRef.current = { roster }
-  const room = useRoom(roomId, setRoomId, stateRef, applyRemoteRoster)
+  // Droits sur le groupe actif : le créateur édite, un membre gère son perso.
+  const canEditGroup =
+    grp.active !== null && (grp.active.mine === 'owner' || grp.active.id.startsWith('loc-'))
+  const canRemoveMember = (id: number) =>
+    canEditGroup || (grp.active?.mine === 'member' && verifiedIds.includes(id))
 
-  // Toute évolution locale du roster part vers le salon après un court délai.
-  useEffect(() => room.schedulePush(), [roster.t, room.schedulePush]) // eslint-disable-line react-hooks/exhaustive-deps
+  async function handleAddMember(id: number) {
+    try {
+      if (!grp.active) await grp.create(t('groupDefaultName'), [id])
+      else await grp.addMember(grp.active.id, id)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  function handleRemoveMember(id: number) {
+    if (!grp.active || !canRemoveMember(id)) return
+    void grp.removeMember(grp.active.id, id)
+  }
 
   // Nettoyage des anciens liens : le paramètre o= (coches manuelles) n'existe plus.
   useEffect(() => {
@@ -86,27 +122,24 @@ export default function App() {
   const [copied, setCopied] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
 
-  // Multi-groupes : registre local de groupes nommés, bascule par rechargement.
-  const [groups, setGroups] = useState<SavedGroup[]>(loadGroups)
-  const groupHash = currentGroupHash(roomId, roster.ids)
-  const currentGroupIdx = groups.findIndex((g) => g.hash === groupHash)
+  // Sélecteur de groupes : bascule instantanée, création, renommage, sortie.
   function onGroupAction(value: string) {
-    if (value === '__save') {
-      if (!groupHash) return
+    if (value === '__create') {
       const name = prompt(t('groupNamePrompt'))?.trim()
-      if (!name) return
-      const next = [...groups.filter((g) => g.hash !== groupHash), { name, hash: groupHash }]
-      setGroups(next)
-      saveGroups(next)
-    } else if (value === '__forget') {
-      const next = groups.filter((g) => g.hash !== groupHash)
-      setGroups(next)
-      saveGroups(next)
-    } else {
-      const idx = Number(value)
-      if (Number.isInteger(idx) && groups[idx] && groups[idx].hash !== groupHash) {
-        switchToGroup(groups[idx].hash)
-      }
+      if (name) void grp.create(name)
+    } else if (value === '__rename') {
+      if (!grp.active) return
+      const name = prompt(t('groupNamePrompt'), grp.active.name)?.trim()
+      if (name) void grp.rename(grp.active.id, name)
+    } else if (value === '__drop') {
+      if (!grp.active) return
+      const owner = grp.active.mine === 'owner' || grp.active.id.startsWith('loc-')
+      const msg = owner
+        ? t('groupDeleteConfirm', { name: grp.active.name })
+        : t('groupLeaveConfirm', { name: grp.active.name })
+      if (confirm(msg)) void grp.drop(grp.active.id)
+    } else if (value) {
+      grp.setActive(value)
     }
   }
 
@@ -167,20 +200,30 @@ export default function App() {
   const [rosterOpen, setRosterOpen] = useState<boolean | null>(null)
   const rosterCollapsed = !(rosterOpen ?? members.length <= 8)
 
-  async function copyLink() {
+  // « Inviter » : convertit le groupe en synchronisé si besoin et copie le
+  // lien d'invitation. Sans compte, on explique puis on lance la connexion.
+  async function inviteToGroup() {
+    if (!grp.active) return
+    if (!auth.token) {
+      if (confirm(t('inviteNeedLogin'))) auth.login()
+      return
+    }
     try {
-      await navigator.clipboard.writeText(location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      prompt(t('copyPrompt'), location.href)
+      // Déjà synchronisé : le lien suffit. Sinon, conversion (propriétaire).
+      const link = grp.active.shared
+        ? `${location.origin}${location.pathname}#j=${grp.active.id}`
+        : await grp.share(grp.active.id)
+      try {
+        await navigator.clipboard.writeText(link)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch {
+        prompt(t('copyPrompt'), link)
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
     }
   }
-
-  const syncTitle =
-    room.status === 'error'
-      ? t('syncErrTitle')
-      : `${t('syncOkTitle')}${room.lastSync ? ' ' + t('lastSync', { time: new Date(room.lastSync).toLocaleTimeString() }) : ''}`
 
   // Treize collections ne tiennent pas dans une pilule d'onglets : la barre du
   // haut ne garde que les grandes sections, la collection se choisit sur une
@@ -189,7 +232,7 @@ export default function App() {
   const TABS: { id: Tab; label: string }[] = [
     { id: 'planning', label: t('planning') },
     { id: collectionTab, label: t('collections') },
-    { id: 'relics', label: t('relicsTab') },
+    { id: 'relics', label: t('groupProgressTab') },
   ]
 
   return (
@@ -295,24 +338,25 @@ export default function App() {
             activeKind={isCollection ? (tab as Kind) : undefined}
             controls={
               <div className="sidebar-controls">
-                {(groups.length > 0 || groupHash !== null) && (
-                  <select
-                    value={currentGroupIdx >= 0 ? String(currentGroupIdx) : ''}
-                    onChange={(e) => onGroupAction(e.target.value)}
-                    title={t('groupsTitle')}
-                  >
-                    {currentGroupIdx < 0 && <option value="">📁 {t('groupUnsaved')}</option>}
-                    {groups.map((g, i) => (
-                      <option key={g.hash} value={i}>
-                        📁 {g.name}
-                      </option>
-                    ))}
-                    {groupHash && currentGroupIdx < 0 && (
-                      <option value="__save">{t('groupSave')}</option>
-                    )}
-                    {currentGroupIdx >= 0 && <option value="__forget">{t('groupForget')}</option>}
-                  </select>
-                )}
+                <select
+                  value={grp.activeId ?? ''}
+                  onChange={(e) => onGroupAction(e.target.value)}
+                  title={t('groupsTitle')}
+                >
+                  {!grp.active && <option value="">{t('groupNone')}</option>}
+                  {grp.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.shared ? '🔗' : '📁'} {g.name}
+                    </option>
+                  ))}
+                  <option value="__create">{t('groupNew')}</option>
+                  {grp.active && canEditGroup && <option value="__rename">{t('groupRename')}</option>}
+                  {grp.active && (
+                    <option value="__drop">
+                      {canEditGroup ? t('groupDelete') : t('groupLeave')}
+                    </option>
+                  )}
+                </select>
                 {ready.length > 1 && (
                   <select
                     value={focusId ?? ''}
@@ -328,28 +372,9 @@ export default function App() {
                   </select>
                 )}
                 <div className="sidebar-controls-row">
-                  {!hasRoom && members.length > 0 && (
-                    <button className="btn btn-ghost btn-mini" onClick={room.enable} title={t('enableSyncTitle')}>
-                      {t('enableSync')}
-                    </button>
-                  )}
-                  {hasRoom && (
-                    <span className={`sync-badge sync-${room.status}`} title={syncTitle}>
-                      ● {room.status === 'error' ? t('syncKo') : t('syncOn')}
-                      <button
-                        className="icon-btn"
-                        title={t('syncOffTitle')}
-                        onClick={() => {
-                          if (confirm(t('syncOffConfirm'))) room.disable()
-                        }}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  {members.length > 0 && (
-                    <button className="btn btn-ghost btn-mini" onClick={copyLink} title={t('copyLink')}>
-                      {copied ? t('copied') : '🔗 ' + t('copyLinkSolo')}
+                  {grp.active && (canEditGroup || grp.active.shared) && (
+                    <button className="btn btn-ghost btn-mini" onClick={inviteToGroup} title={t('inviteTitle')}>
+                      {copied ? t('copied') : '🔗 ' + t('invite')}
                     </button>
                   )}
                 </div>
@@ -361,13 +386,33 @@ export default function App() {
             onToggleCollapsed={() => setRosterOpen(rosterCollapsed)}
             onTogglePresence={togglePresence}
             onResetPresence={() => setAbsent([])}
-            onAdd={add}
-            onRemove={remove}
+            onAdd={canEditGroup || !grp.active ? handleAddMember : undefined}
+            canRemove={canRemoveMember}
+            onRemove={handleRemoveMember}
             onRefresh={refresh}
           />
           )}
 
           <main className="main">
+            {grp.invite && (
+              <div className="notice join-banner">
+                <span>
+                  {t(auth.token ? 'joinBannerMember' : 'joinBannerGuest', { name: grp.invite.name })}
+                </span>
+                {auth.token ? (
+                  grp.joinableChars.map((id) => (
+                    <JoinChip key={id} charId={id} onJoin={() => void grp.joinWithChar(grp.invite!.id, id)} />
+                  ))
+                ) : (
+                  <button className="btn btn-primary btn-mini" onClick={auth.login}>
+                    {t('joinLogin')}
+                  </button>
+                )}
+                <button className="icon-btn" onClick={grp.dismissInvite} title={t('dismiss')}>
+                  ×
+                </button>
+              </div>
+            )}
             {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
             {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}
 
@@ -400,9 +445,9 @@ export default function App() {
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
               />
             )}
-            {activeReady.length > 0 && tab === 'relics' &&
+            {db && activeReady.length > 0 && tab === 'relics' &&
               (relicDb ? (
-                <Relics db={relicDb} ready={activeReady} />
+                <Relics db={relicDb} cdb={db} ready={activeReady} />
               ) : (
                 <p className="empty">{t('relicsLoading')}</p>
               ))}

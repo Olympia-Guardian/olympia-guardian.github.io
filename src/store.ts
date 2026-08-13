@@ -60,28 +60,6 @@ export function useRelicDb() {
 }
 
 // ---------------------------------------------------------------------------
-// État partagé : le roster porte un horodatage (t) pour la fusion « le plus
-// récent gagne » (LWW) via le salon de synchro. Toutes les possessions
-// viennent de FFXIV Collect (source de vérité unique) : rien d'autre à
-// synchroniser.
-// ---------------------------------------------------------------------------
-
-export interface RosterState {
-  ids: number[]
-  t: number
-}
-
-export interface RoomDoc {
-  v: 1
-  roster: RosterState
-}
-
-export function mergeRosterLWW(a: RosterState, b: RosterState | undefined | null): RosterState {
-  if (!b) return a
-  return b.t > a.t ? b : a
-}
-
-// ---------------------------------------------------------------------------
 // Hash de l'URL
 // ---------------------------------------------------------------------------
 
@@ -104,20 +82,6 @@ export function readHashParam(key: string): string | null {
   return m ? m[1] : null
 }
 
-export function readHashRoomId(): string | null {
-  const match = location.hash.match(/r=([\w-]+)/)
-  return match ? match[1] : null
-}
-
-function readHashIds(): number[] {
-  const match = location.hash.match(/g=([\d.]+)/)
-  if (!match) return []
-  return match[1]
-    .split('.')
-    .map(Number)
-    .filter((n) => Number.isInteger(n) && n > 0)
-}
-
 // ---------------------------------------------------------------------------
 // Roster
 // ---------------------------------------------------------------------------
@@ -129,43 +93,11 @@ export interface Member {
   data?: Character
 }
 
-const ROSTER_KEY = 'ogs.roster.v2'
-
-function readStoredRoster(): RosterState {
-  try {
-    const raw = localStorage.getItem(ROSTER_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed?.ids)) {
-        return { ids: parsed.ids.filter((n: unknown) => Number.isInteger(n)), t: parsed.t ?? 1 }
-      }
-    }
-    // migration depuis l'ancien format (simple tableau)
-    const old = localStorage.getItem('ogs.roster.v1')
-    if (old) {
-      const ids = JSON.parse(old)
-      if (Array.isArray(ids)) return { ids: ids.filter((n) => Number.isInteger(n)), t: 1 }
-    }
-  } catch {
-    // état vierge
-  }
-  return { ids: [], t: 0 }
-}
-
-function initialRoster(): RosterState {
-  const stored = readStoredRoster()
-  const fromHash = readHashIds()
-  const added = fromHash.filter((id) => !stored.ids.includes(id))
-  if (added.length > 0) {
-    return { ids: [...stored.ids, ...added], t: Date.now() }
-  }
-  return stored
-}
-
-export function useRoster(hasRoom: boolean) {
-  const [roster, setRoster] = useState<RosterState>(initialRoster)
+/** Fiches des membres d'une liste d'ids (le groupe actif) : chargement,
+ *  rafraîchissement — la composition de la liste vit dans useGroups. */
+export function useMembers(ids: number[]) {
   const [members, setMembers] = useState<Member[]>(() =>
-    initialRoster().ids.map((id) => ({ id, status: 'loading' as const })),
+    ids.map((id) => ({ id, status: 'loading' as const })),
   )
   const inFlight = useRef(new Set<number>())
 
@@ -185,49 +117,21 @@ export function useRoster(hasRoom: boolean) {
     }
   }, [])
 
+  // La liste suit le groupe : on garde les fiches déjà chargées.
+  const key = ids.join('.')
+  useEffect(() => {
+    setMembers((prev) => {
+      const byId = new Map(prev.map((m) => [m.id, m]))
+      return ids.map((id) => byId.get(id) ?? { id, status: 'loading' as const })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+
   useEffect(() => {
     for (const m of members) {
       if (m.status === 'loading') void load(m.id, false)
     }
   }, [members, load])
-
-  // Persistance locale + hash (g= seulement hors salon : dans un salon, le
-  // roster voyage par la synchro et le lien reste court).
-  const rosterKey = `${roster.ids.join('.')}|${roster.t}|${hasRoom}`
-  useEffect(() => {
-    try {
-      localStorage.setItem(ROSTER_KEY, JSON.stringify(roster))
-    } catch {
-      // tant pis pour la persistance
-    }
-    setHashParam('g', !hasRoom && roster.ids.length > 0 ? roster.ids.join('.') : null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rosterKey])
-
-  const applyIds = useCallback((ids: number[]) => {
-    setMembers((prev) => {
-      const byId = new Map(prev.map((m) => [m.id, m]))
-      return ids.map((id) => byId.get(id) ?? { id, status: 'loading' as const })
-    })
-  }, [])
-
-  const add = useCallback((id: number) => {
-    setRoster((prev) =>
-      prev.ids.includes(id) ? prev : { ids: [...prev.ids, id], t: Date.now() },
-    )
-    setMembers((prev) =>
-      prev.some((m) => m.id === id) ? prev : [...prev, { id, status: 'loading' as const }],
-    )
-  }, [])
-
-  const remove = useCallback((id: number) => {
-    setRoster((prev) =>
-      prev.ids.includes(id)
-        ? { ids: prev.ids.filter((x) => x !== id), t: Date.now() }
-        : prev,
-    )
-    setMembers((prev) => prev.filter((m) => m.id !== id))
-  }, [])
 
   const refresh = useCallback(
     (id: number) => {
@@ -239,16 +143,7 @@ export function useRoster(hasRoom: boolean) {
     [load],
   )
 
-  /** Adoption d'un roster distant plus récent (synchro de salon). */
-  const applyRemoteRoster = useCallback(
-    (remote: RosterState) => {
-      setRoster(remote)
-      applyIds(remote.ids)
-    },
-    [applyIds],
-  )
-
-  return { members, roster, add, remove, refresh, applyRemoteRoster }
+  return { members, refresh }
 }
 
 // ---------------------------------------------------------------------------

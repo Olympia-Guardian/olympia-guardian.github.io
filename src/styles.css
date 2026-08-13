@@ -258,6 +258,22 @@ button:focus-visible {
   letter-spacing: 0.03em;
 }
 
+/* sélecteur global de groupe, à droite de la marque — dégaine de bouton ghost */
+.topbar-group-select {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  color: var(--ink-2);
+  padding: 7px 10px;
+  font-size: 13px;
+  max-width: 220px;
+}
+
+.topbar-group-select:hover {
+  color: var(--ink);
+  border-color: var(--ring);
+}
+
 .tabs {
   display: flex;
   gap: 4px;
@@ -1180,6 +1196,172 @@ a.player-name:hover {
 
 .join-banner > .icon-btn {
   margin-left: auto;
+}
+
+/* formulaire « Nouveau groupe » : nom + perso fondateur */
+.group-create {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 380px;
+  padding: 20px;
+}
+
+.group-create-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.group-create-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.group-type-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.group-type-opt:has(input:checked) {
+  border-color: var(--gold);
+  background: var(--surface-2);
+}
+
+.group-type-opt.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.group-type-opt input {
+  margin-top: 3px;
+}
+
+.group-type-opt b {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.group-type-opt small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.group-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------- page « Groupes » */
+
+.groups-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 860px;
+}
+
+.groups-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.groups-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.group-card.is-active-group {
+  border-color: rgba(214, 178, 107, 0.45);
+}
+
+.group-card-spacer {
+  flex: 1;
+}
+
+.group-drop {
+  color: var(--critical);
+}
+
+.group-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px 4px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.member-chip img {
+  border-radius: 50%;
+}
+
+.member-chip .icon-btn {
+  padding: 0 4px;
+}
+
+.group-add-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-add-form input {
+  flex: 0 1 340px;
+}
+
+.group-invite-block {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.group-invite-label {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.group-invite-code {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  padding: 4px 8px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 380px;
+  white-space: nowrap;
 }
 
 /* demandes d'adhésion (côté créateur, dans le panneau latéral) */

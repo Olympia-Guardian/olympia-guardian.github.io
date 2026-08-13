@@ -944,11 +944,13 @@ async function quitGroup(env, user, id) {
   return response('{"ok":true}')
 }
 
-/** POST /group/:id/members {charId} : ajout d'un perso par le propriétaire
- *  (le pote sans compte, ou l'édition d'un groupe privé). */
+/** POST /group/:id/members {charId} : ajout d'un perso arbitraire par le
+ *  propriétaire — groupes PRIVÉS seulement. Dans un groupe synchronisé, on
+ *  n'entre que par invitation validée (ou son propre perso vérifié via join). */
 async function addGroupMember(env, user, id, raw) {
   const row = await groupRow(env, id)
   if (!row || row.owner_user_id !== user.id) return response('{"error":"no such group"}', 404)
+  if (row.shared) return response('{"error":"shared group: invite only"}', 403)
   let charId
   try {
     charId = JSON.parse(raw)?.charId

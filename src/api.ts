@@ -102,6 +102,8 @@ export interface Item {
   tradeable: boolean
   /** Plus aucune voie d'obtention active (drapeau « limited » FFXIV Collect). */
   unobtainable?: boolean
+  /** Collection d'origine dans les vues fusionnées (onglet « Mode »). */
+  kindOf?: Kind
   ownedPct: string
   /** Catégorie d'album (orchestrion : « Lieux », « Donjons »…). */
   group?: string

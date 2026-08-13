@@ -53,14 +53,19 @@ export function Matrix({
   ready,
   ownedSets,
   onShowItem,
+  titleLabel,
 }: {
   kind: Kind
   items: Item[]
   ready: Ready[]
   ownedSets: Map<number, Record<Kind, Set<number>>>
   onShowItem: (item: Item, kind: Kind) => void
+  /** Vue fusionnée (« Mode ») : libellé de recherche personnalisé. */
+  titleLabel?: string
 }) {
   const { lang, t } = useI18n()
+  // Vue fusionnée : chaque objet connaît sa collection d'origine.
+  const kindFor = (item: Item): Kind => item.kindOf ?? kind
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [onlyMissing, setOnlyMissing] = useState(true)
@@ -85,7 +90,7 @@ export function Matrix({
     const q = search.trim().toLowerCase()
     const list = items
       .map((item) => {
-        const missing = activeMembers.filter((m) => !ownedSets.get(m.id)?.[kind].has(item.id))
+        const missing = activeMembers.filter((m) => !ownedSets.get(m.id)?.[kindFor(item)].has(item.id))
         return { item, missing }
       })
       .filter(({ item, missing }) => {
@@ -120,7 +125,7 @@ export function Matrix({
           className="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('searchIn', { what: kindLabel(lang, kind) })}
+          placeholder={t('searchIn', { what: titleLabel ?? kindLabel(lang, kind) })}
           spellCheck={false}
         />
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
@@ -178,20 +183,23 @@ export function Matrix({
               const primary = item.sources[0]
               const name = localName(item, lang)
               return (
-                <tr key={item.id}>
+                <tr key={`${kindFor(item)}-${item.id}`}>
                   <td className="col-item">
                     <div
                       className="item-cell item-clickable"
                       role="button"
                       tabIndex={0}
                       title={t('itemDetails')}
-                      onClick={() => onShowItem(item, kind)}
-                      onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(item, kind)}
+                      onClick={() => onShowItem(item, kindFor(item))}
+                      onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(item, kindFor(item))}
                     >
                       <img className="item-icon" src={item.icon} alt="" loading="lazy" onError={onItemImgError} />
                       <div className="item-text">
                         <span className="item-name">
                           {name}
+                          {item.kindOf && (
+                            <span className="chip chip-type">{kindLabel(lang, item.kindOf, 'short')}</span>
+                          )}
                           {item.patch && <span className="chip chip-patch">{item.patch}</span>}
                           {item.unobtainable && (
                             <span className="chip chip-unavail" title={t('unobtainableTitle')}>

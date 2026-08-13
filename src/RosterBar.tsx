@@ -19,17 +19,12 @@ function PlayerCard({
   present,
   activeKind,
   onTogglePresence,
-  onRemove,
-  onRefresh,
 }: {
   member: Member
   focus?: boolean
   present: boolean
-  activeKind?: Kind
+  activeKind?: Kind | 'fashion'
   onTogglePresence?: () => void
-  /** Absent : ce membre ne peut pas être retiré par l'utilisateur courant. */
-  onRemove?: () => void
-  onRefresh: () => void
 }) {
   const { lang, t } = useI18n()
   if (member.status === 'loading') {
@@ -45,16 +40,7 @@ function PlayerCard({
       <div className="player-card is-error">
         <div className="player-head">
           <span className="player-name">ID {member.id}</span>
-          <span className="player-actions">
-            <button className="icon-btn" title={t('retry')} onClick={onRefresh}>
-              ↻
-            </button>
-            {onRemove && (
-              <button className="icon-btn" title={t('remove')} onClick={onRemove}>
-                ×
-              </button>
-            )}
-          </span>
+          <span className="player-actions" />
         </div>
         <p className="player-error">{member.error ?? t('loadError')}</p>
       </div>
@@ -88,24 +74,27 @@ function PlayerCard({
               {present ? '🎮' : '💤'}
             </button>
           )}
-          <button className="icon-btn" title={t('refreshMember')} onClick={onRefresh}>
-            ↻
-          </button>
-          {onRemove && (
-            <button className="icon-btn" title={t('removeMember')} onClick={onRemove}>
-              ×
-            </button>
-          )}
         </span>
       </div>
       {/* Une seule jauge : celle de l'onglet ouvert. Sur les autres onglets
-          (Planning, Avancement), la carte reste sobre — pas de jauge. */}
+          (Planning, Avancement), la carte reste sobre — pas de jauge. L'onglet
+          « Mode » somme ses trois collections. */}
       {activeKind && (
         <div className="meter-grid">
           <Meter
-            label={kindLabel(lang, activeKind, 'short')}
-            count={c[activeKind].count}
-            total={c[activeKind].total}
+            label={
+              activeKind === 'fashion' ? t('fashionFamily') : kindLabel(lang, activeKind, 'short')
+            }
+            count={
+              activeKind === 'fashion'
+                ? c.fashions.count + c.facewear.count + c.hairstyles.count
+                : c[activeKind].count
+            }
+            total={
+              activeKind === 'fashion'
+                ? c.fashions.total + c.facewear.total + c.hairstyles.total
+                : c[activeKind].total
+            }
           />
         </div>
       )}
@@ -134,26 +123,19 @@ export function RosterBar({
   onTogglePresence,
   onResetPresence,
   onAdd,
-  canRemove,
-  onRemove,
-  onRefresh,
 }: {
   members: Member[]
   controls?: ReactNode
   focusId: number | null
   absent: number[]
   /** Collection consultée : sa jauge s'ajoute aux cartes des joueurs. */
-  activeKind?: Kind
+  activeKind?: Kind | 'fashion'
   collapsed: boolean
   onToggleCollapsed: () => void
   onTogglePresence: (id: number) => void
   onResetPresence: () => void
   /** Absent : le groupe actif n'est pas éditable — le formulaire d'ajout disparaît. */
   onAdd?: (id: number) => void
-  /** Qui peut être retiré (défaut : tout le monde). */
-  canRemove?: (id: number) => boolean
-  onRemove: (id: number) => void
-  onRefresh: (id: number) => void
 }) {
   const { t } = useI18n()
   const [input, setInput] = useState('')
@@ -239,8 +221,6 @@ export function RosterBar({
           present={!absent.includes(m.id)}
           activeKind={activeKind}
           onTogglePresence={members.length > 1 ? () => onTogglePresence(m.id) : undefined}
-          onRemove={canRemove === undefined || canRemove(m.id) ? () => onRemove(m.id) : undefined}
-          onRefresh={() => onRefresh(m.id)}
         />
       ))}
       {onAdd && (

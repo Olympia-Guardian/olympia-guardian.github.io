@@ -209,6 +209,8 @@ function ensureMigrated(): void {
   pendingRooms = migrateLegacySync().rooms
 }
 
+export type GroupsController = ReturnType<typeof useGroups>
+
 export function useGroups(token: string | null, verifiedCharIds: number[]) {
   const [locals, setLocals] = useState<LocalGroup[]>(() => {
     ensureMigrated()
@@ -317,16 +319,32 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
       if (uploadStarted !== token) {
         uploadStarted = token
         const toUpload = readLocalGroups()
-        for (const g of toUpload) {
+        if (toUpload.length > 0) {
+          // Idempotence : un vieux navigateur/onglet peut refabriquer le même
+          // groupe local à chaque chargement — s'il existe déjà au compte
+          // (même nom, mêmes membres), on jette la copie locale sans re-créer.
+          let existing: ApiGroup[] = []
           try {
-            const created = await apiCreateGroup(token, g.name, g.members)
-            const rest = readLocalGroups().filter((x) => x.id !== g.id)
-            writeJson(LOCAL_KEY, rest)
-            setLocals(rest)
-            if (localStorage.getItem(ACTIVE_KEY) === g.id) setActive(created.id)
+            existing = (await apiListGroups(token)).groups
           } catch {
-            // on garde la copie locale, retentée à la prochaine connexion
             uploadStarted = null
+            return
+          }
+          const sig = (name: string, members: number[]) =>
+            `${name}|${[...members].sort((a, b) => a - b).join('.')}`
+          for (const g of toUpload) {
+            const dup = existing.find((x) => sig(x.name, x.members) === sig(g.name, g.members))
+            try {
+              const target = dup ?? (await apiCreateGroup(token, g.name, g.members))
+              if (!dup) existing.push(target as ApiGroup)
+              const rest = readLocalGroups().filter((x) => x.id !== g.id)
+              writeJson(LOCAL_KEY, rest)
+              setLocals(rest)
+              if (localStorage.getItem(ACTIVE_KEY) === g.id) setActive(target.id)
+            } catch {
+              // on garde la copie locale, retentée à la prochaine connexion
+              uploadStarted = null
+            }
           }
         }
       }
@@ -385,11 +403,13 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
 
   // --------------------------------------------------------------- écritures
 
-  /** Crée un groupe privé (compte si connecté, navigateur sinon). */
+  /** Crée un groupe. Offline (défaut) : compte si connecté, navigateur sinon.
+   *  Online (shared) : en base avec code d'invitation — connexion requise. */
   const create = useCallback(
-    async (name: string, members: number[] = []): Promise<string> => {
+    async (name: string, members: number[] = [], online = false): Promise<string> => {
+      if (online && !tokenRef.current) throw new Error('login required')
       if (tokenRef.current) {
-        const g = await apiCreateGroup(tokenRef.current, name, members)
+        const g = await apiCreateGroup(tokenRef.current, name, members, online)
         setServer((prev) => [...prev, g])
         setActive(g.id)
         return g.id
@@ -464,30 +484,15 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     [persistLocals],
   )
 
-  /** « Inviter » : convertit si besoin (privé → synchronisé) et rend le lien
-   *  d'invitation. Réservé au créateur — le code ne sort que pour lui. */
+  /** « Inviter » : rend le lien d'invitation d'un groupe online. Le type se
+   *  choisit à la création — un groupe offline ne se partage pas. */
   const share = useCallback(
     async (id: string): Promise<string> => {
-      const tok = tokenRef.current
-      if (!tok) throw new Error('login required')
-      if (id.startsWith('loc-')) {
-        const local = readLocalGroups().find((g) => g.id === id)
-        if (!local) throw new Error('no such group')
-        const created = await apiCreateGroup(tok, local.name, local.members, true)
-        persistLocals(readLocalGroups().filter((g) => g.id !== id))
-        setServer((prev) => [...prev, created])
-        setActive(created.id)
-        if (!created.inviteCode) throw new Error('no invite code')
-        return inviteLink(created.inviteCode)
-      }
       const existing = server.find((x) => x.id === id)
-      if (existing?.inviteCode) return inviteLink(existing.inviteCode)
-      const g = await apiPatchGroup(tok, id, { shared: true })
-      setServer((prev) => prev.map((x) => (x.id === id ? g : x)))
-      if (!g.inviteCode) throw new Error('no invite code')
-      return inviteLink(g.inviteCode)
+      if (!existing?.shared || !existing.inviteCode) throw new Error('offline group')
+      return inviteLink(existing.inviteCode)
     },
-    [persistLocals, server, setActive],
+    [server],
   )
 
   /** Régénère le code d'invitation — l'ancien lien meurt immédiatement. */

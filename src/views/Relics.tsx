@@ -825,12 +825,21 @@ function RelicSummary({
                       </span>
                     </header>
                     <ul className="relic-exp-list">
-                      {KINDS.map((k) => {
-                        const { count: c, total: tt } = m.data[k]
+                      {KINDS.filter((k) => k !== 'facewear' && k !== 'hairstyles').map((k) => {
+                        // « Mode » : accessoires + lunettes + coiffures en une ligne.
+                        const merged = k === 'fashions'
+                        const c = merged
+                          ? m.data.fashions.count + m.data.facewear.count + m.data.hairstyles.count
+                          : m.data[k].count
+                        const tt = merged
+                          ? m.data.fashions.total + m.data.facewear.total + m.data.hairstyles.total
+                          : m.data[k].total
                         const done = tt > 0 && c >= tt
                         return (
                           <li key={k} className="relic-exp-row">
-                            <span className="relic-exp-name">{kindLabel(lang, k)}</span>
+                            <span className="relic-exp-name">
+                              {merged ? t('fashionFamily') : kindLabel(lang, k)}
+                            </span>
                             <span className="relic-exp-bar">
                               <i
                                 className={barLevel(c, tt)}

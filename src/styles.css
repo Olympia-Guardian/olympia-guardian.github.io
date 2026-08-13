@@ -1280,6 +1280,115 @@ a.player-name:hover {
   gap: 8px;
 }
 
+/* ----------------------------------------------- cloche des suggestions */
+
+.bell-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bell-btn {
+  position: relative;
+  font-size: 16px;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--critical);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 380px;
+  max-height: 480px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.notif-bulk {
+  display: flex;
+  gap: 8px;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.notif-row img {
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.notif-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-text small {
+  color: var(--muted);
+}
+
+.notif-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.modal-suggest {
+  align-self: flex-start;
+}
+
 /* ---------------------------------------------- stats Lodestone du journal */
 
 .mypage-char-layout {

@@ -1179,6 +1179,161 @@ async function collectSync(env, user, charId, raw) {
   return response(JSON.stringify({ ok: true, added }))
 }
 
+// ---------------------------------------------------------------- suggestions
+// Un membre d'un groupe ONLINE propose un objet pour le perso d'un autre
+// membre ; la cible accepte (l'objet est coché) ou refuse. Pour les montures
+// et mascottes, l'acceptation vaut « validation temporaire » : le scrape
+// Lodestone réécrit ces collections à chaque synchro et confirme (ou retire)
+// l'objet tout seul.
+
+const SUGGESTABLE_KINDS = [...ALL_KINDS, 'relics']
+const MAX_SUGGESTIONS_PER_CHAR = 500
+
+/** Le proposeur partage-t-il un groupe online avec le perso cible ? */
+async function sharesOnlineGroup(env, userId, charId) {
+  const row = await env.DB.prepare(
+    'SELECT 1 AS x FROM group_members m JOIN groups g ON g.id = m.group_id ' +
+      'JOIN group_links l ON l.group_id = g.id ' +
+      'WHERE m.char_id = ?1 AND g.shared = 1 AND l.user_id = ?2 LIMIT 1',
+  )
+    .bind(charId, userId)
+    .first()
+  return !!row
+}
+
+/** POST /suggest {charId, items: [{kind, itemId}]} : crée des suggestions. */
+async function createSuggestions(env, user, raw) {
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const charId = body?.charId
+  const items = Array.isArray(body?.items) ? body.items : []
+  if (!validCharId(charId) || items.length === 0 || items.length > 50)
+    return response('{"error":"invalid body"}', 422)
+  for (const it of items) {
+    if (!SUGGESTABLE_KINDS.includes(it?.kind) || !Number.isInteger(it?.itemId) || it.itemId <= 0)
+      return response('{"error":"invalid item"}', 422)
+  }
+  if (!(await sharesOnlineGroup(env, user.id, charId)))
+    return response('{"error":"not in a shared group with this character"}', 403)
+
+  // Pas de suggestion pour un objet déjà possédé par la cible.
+  const owned = new Map()
+  for (const kind of [...new Set(items.map((i) => i.kind))]) {
+    const row = await env.DB.prepare(
+      'SELECT ids FROM collections WHERE char_id = ?1 AND kind = ?2',
+    )
+      .bind(charId, kind)
+      .first()
+    owned.set(kind, new Set(row ? JSON.parse(row.ids) : []))
+  }
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM suggestions WHERE char_id = ?1')
+    .bind(charId)
+    .first()
+  if (count.n >= MAX_SUGGESTIONS_PER_CHAR) return response('{"error":"too many suggestions"}', 429)
+
+  const now = Date.now()
+  const stmt = env.DB.prepare(
+    'INSERT INTO suggestions (char_id, kind, item_id, from_user_id, created) VALUES (?1, ?2, ?3, ?4, ?5) ' +
+      'ON CONFLICT(char_id, kind, item_id) DO NOTHING',
+  )
+  const stmts = []
+  let skipped = 0
+  for (const it of items) {
+    if (owned.get(it.kind)?.has(it.itemId)) {
+      skipped++
+      continue
+    }
+    stmts.push(stmt.bind(charId, it.kind, it.itemId, user.id, now))
+  }
+  if (stmts.length > 0) await env.DB.batch(stmts)
+  return response(JSON.stringify({ ok: true, created: stmts.length, skipped }))
+}
+
+/** GET /suggestions : suggestions en attente pour MES persos vérifiés. */
+async function listSuggestions(env, user) {
+  const rows = await env.DB.prepare(
+    'SELECT s.id, s.char_id, s.kind, s.item_id, s.created, u.name AS from_name ' +
+      'FROM suggestions s JOIN bindings b ON b.char_id = s.char_id AND b.verified = 1 AND b.user_id = ?1 ' +
+      'LEFT JOIN users u ON u.id = s.from_user_id ORDER BY s.created DESC LIMIT 500',
+  )
+    .bind(user.id)
+    .all()
+  return response(
+    JSON.stringify({
+      suggestions: rows.results.map((r) => ({
+        id: r.id,
+        charId: r.char_id,
+        kind: r.kind,
+        itemId: r.item_id,
+        from: r.from_name ?? '?',
+        created: r.created,
+      })),
+    }),
+  )
+}
+
+/** POST /suggestions/resolve {ids, accept} : accepte (coche l'objet) ou
+ *  refuse — uniquement les suggestions visant mes persos vérifiés. */
+async function resolveSuggestions(env, user, raw) {
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((n) => Number.isInteger(n)) : []
+  const accept = body?.accept === true
+  if (ids.length === 0 || ids.length > 500) return response('{"error":"invalid ids"}', 422)
+
+  const marks = ids.map(() => '?').join(',')
+  const rows = await env.DB.prepare(
+    `SELECT s.id, s.char_id, s.kind, s.item_id FROM suggestions s ` +
+      `JOIN bindings b ON b.char_id = s.char_id AND b.verified = 1 AND b.user_id = ? ` +
+      `WHERE s.id IN (${marks})`,
+  )
+    .bind(user.id, ...ids)
+    .all()
+  const mine = rows.results
+  if (mine.length === 0) return response('{"ok":true,"accepted":0,"dismissed":0}')
+
+  const now = Date.now()
+  const stmts = []
+  if (accept) {
+    // Regroupe par (perso, collection) puis fusionne dans les coches.
+    const byKey = new Map()
+    for (const s of mine) {
+      const key = `${s.char_id}|${s.kind}`
+      const arr = byKey.get(key) ?? []
+      arr.push(s.item_id)
+      byKey.set(key, arr)
+    }
+    const upsert = env.DB.prepare(
+      'INSERT INTO collections (char_id, kind, ids, updated, source) VALUES (?1, ?2, ?3, ?4, ?5) ' +
+        'ON CONFLICT(char_id, kind) DO UPDATE SET ids=?3, updated=?4, source=?5',
+    )
+    for (const [key, itemIds] of byKey) {
+      const [charId, kind] = key.split('|')
+      const cur = await env.DB.prepare(
+        'SELECT ids FROM collections WHERE char_id = ?1 AND kind = ?2',
+      )
+        .bind(Number(charId), kind)
+        .first()
+      const merged = [...new Set([...(cur ? JSON.parse(cur.ids) : []), ...itemIds])]
+      stmts.push(upsert.bind(Number(charId), kind, JSON.stringify(merged), now, 'user'))
+    }
+  }
+  const del = env.DB.prepare(`DELETE FROM suggestions WHERE id IN (${mine.map(() => '?').join(',')})`)
+  stmts.push(del.bind(...mine.map((s) => s.id)))
+  await env.DB.batch(stmts)
+  return response(
+    JSON.stringify({ ok: true, accepted: accept ? mine.length : 0, dismissed: accept ? 0 : mine.length }),
+  )
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -1280,6 +1435,23 @@ export default {
         }
       }
       return response('{"error":"method not allowed"}', 405)
+    }
+
+    // --- suggestions : POST /suggest · GET /suggestions · POST /suggestions/resolve
+    if (url.pathname === '/suggest' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return createSuggestions(env, user, await req.text())
+    }
+    if (url.pathname === '/suggestions' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return listSuggestions(env, user)
+    }
+    if (url.pathname === '/suggestions/resolve' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return resolveSuggestions(env, user, await req.text())
     }
 
     // --- groupes : voir la section « groupes » plus haut

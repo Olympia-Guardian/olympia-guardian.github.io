@@ -284,6 +284,21 @@ const STR = {
   jobLevel: { fr: 'niveau {n}', en: 'level {n}' },
   jobLocked: { fr: 'non débloqué', en: 'not unlocked' },
   viewOnLodestone: { fr: 'Voir sur le Lodestone', en: 'View on the Lodestone' },
+  bellTitle: { fr: 'Suggestions reçues', en: 'Received suggestions' },
+  suggestionsTitle: { fr: 'Suggestions ({n})', en: 'Suggestions ({n})' },
+  suggestionsEmpty: { fr: 'Aucune suggestion en attente.', en: 'No pending suggestions.' },
+  acceptAll: { fr: 'Tout accepter', en: 'Accept all' },
+  refuseAll: { fr: 'Tout refuser', en: 'Refuse all' },
+  suggestedBy: { fr: 'proposé par {name}', en: 'suggested by {name}' },
+  proposeToMissing: {
+    fr: 'Proposer aux manquants ({n})',
+    en: 'Suggest to those missing it ({n})',
+  },
+  proposeSent: { fr: 'Proposé ✓ ({n})', en: 'Suggested ✓ ({n})' },
+  suggTemp: {
+    fr: 'temporaire, confirmé à la prochaine synchro Lodestone',
+    en: 'temporary, confirmed at the next Lodestone sync',
+  },
   collectOffer: {
     fr: 'On dirait que tu tiens déjà tes collections sur FFXIV Collect ({n} entrées cochées là-bas). Veux-tu tout importer ici ? Rien ne sera retiré, seulement ajouté.',
     en: 'Looks like you already track your collections on FFXIV Collect ({n} entries checked there). Import everything here? Nothing will be removed, only added.',

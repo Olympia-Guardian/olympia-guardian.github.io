@@ -124,3 +124,35 @@ export function apiHandleRequest(
 export function apiRotateInvite(token: string, groupId: string): Promise<{ inviteCode: string }> {
   return call(`/group/${groupId}/rotate`, token, { method: 'POST' })
 }
+
+// ------------------------------------------------------------- suggestions
+
+export interface ApiSuggestion {
+  id: number
+  charId: number
+  kind: string
+  itemId: number
+  from: string
+  created: number
+}
+
+/** Propose des objets pour le perso d'un autre membre d'un groupe online. */
+export function apiSuggest(
+  token: string,
+  charId: number,
+  items: { kind: string; itemId: number }[],
+): Promise<{ created: number; skipped: number }> {
+  return call('/suggest', token, { method: 'POST', body: { charId, items } })
+}
+
+export function apiListSuggestions(token: string): Promise<{ suggestions: ApiSuggestion[] }> {
+  return call('/suggestions', token)
+}
+
+export function apiResolveSuggestions(
+  token: string,
+  ids: number[],
+  accept: boolean,
+): Promise<{ accepted: number; dismissed: number }> {
+  return call('/suggestions/resolve', token, { method: 'POST', body: { ids, accept } })
+}

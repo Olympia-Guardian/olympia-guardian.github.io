@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { GiCharacter, GiThreeFriends } from 'react-icons/gi'
+import { GiCharacter, GiRingingBell, GiThreeFriends } from 'react-icons/gi'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
 import { useAuth } from './auth'
 import { useDigest } from './digest'
@@ -19,6 +19,9 @@ import {
   useReadyMembers,
   useRelicDb,
 } from './store'
+import { apiSuggest } from './groupsApi'
+import { NotificationsPanel } from './Notifications'
+import { useSuggestions } from './suggestions'
 import { GroupCreateDialog, GroupsPage } from './views/Groups'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
@@ -84,6 +87,9 @@ export default function App() {
     [auth.bindings],
   )
   const grp = useGroups(auth.token, verifiedIds)
+  // Suggestions reçues (cloche) : objets proposés par les groupes online.
+  const sugg = useSuggestions(auth.token)
+  const [bellOpen, setBellOpen] = useState(false)
   const { members, refresh } = useMembers(grp.active?.members ?? [])
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
@@ -284,6 +290,25 @@ export default function App() {
                 >
                   <GiCharacter /> {t('myPage')}
                 </button>
+                <span className="bell-wrap">
+                  <button
+                    className={`btn btn-ghost btn-icon-only bell-btn ${bellOpen ? 'is-active' : ''}`}
+                    title={t('bellTitle')}
+                    onClick={() => setBellOpen((v) => !v)}
+                  >
+                    <GiRingingBell />
+                    {sugg.count > 0 && <span className="bell-badge">{sugg.count}</span>}
+                  </button>
+                  {bellOpen && (
+                    <NotificationsPanel
+                      suggestions={sugg.list}
+                      db={db}
+                      relicDb={relicDb}
+                      onResolve={(ids, accept) => void sugg.resolve(ids, accept)}
+                      onClose={() => setBellOpen(false)}
+                    />
+                  )}
+                </span>
                 {/* Le compte n'est affiché qu'ici : plus de doublon dans Mon Journal. */}
                 <span className="account-chip" title={auth.user.name}>
                   {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
@@ -525,6 +550,19 @@ export default function App() {
             shown={shownItem}
             ready={ready}
             ownedSets={ownedSets}
+            suggest={
+              auth.token && grp.active?.shared
+                ? {
+                    exclude: verifiedIds,
+                    send: async (charIds, kind, itemId) => {
+                      const results = await Promise.all(
+                        charIds.map((cid) => apiSuggest(auth.token!, cid, [{ kind, itemId }])),
+                      )
+                      return results.reduce((sum, r) => sum + r.created, 0)
+                    },
+                  }
+                : undefined
+            }
             onClose={() => setShownItem(null)}
           />
         )}

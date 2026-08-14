@@ -127,7 +127,7 @@ const TAB_ICONS: Record<string, string> = {
   frames: '000088',
   orchestrions: '000067',
   spells: '000078',
-  achievements: '060404',
+  achievements: '000006',
   relics: '000016',
   groups: '000082',
   contacts: '000020',
@@ -141,6 +141,22 @@ const TAB_ICONS: Record<string, string> = {
   bell: '000654',
   logout: '000026',
   admin: '060840',
+  // Boutons d'action (règle : uniquement des icônes du jeu)
+  lodestone: '000014',
+  sync: '000073',
+  collect: '000028',
+  unlink: '000027',
+  rename: '000030',
+  del: '000026',
+  share: '000011',
+  rotate: '000097',
+  invite: '000056',
+  block: '000019',
+  addfriend: '000018',
+  newgroup: '000017',
+  quick: '000025',
+  inspect: '000046',
+  purge: '000029',
 }
 
 export function TabIcon({ k }: { k: string }) {

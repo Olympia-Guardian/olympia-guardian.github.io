@@ -16,15 +16,7 @@ import {
 import type { useAuth } from '../auth'
 import { kindLabel, localName, useI18n } from '../i18n'
 import { sourceIcon, typeLabel } from '../sources'
-import {
-  GiCheckMark,
-  GiMagnifyingGlass,
-  GiPadlock,
-  GiBreakingChain,
-  GiCrystalCluster,
-  GiPowerLightning,
-  GiRoundStar,
-} from 'react-icons/gi'
+import { GiCheckMark, GiPadlock, GiRoundStar } from 'react-icons/gi'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
 import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import { localSource } from '../i18n'
@@ -805,14 +797,14 @@ function FashionEditor({
             title={t('modeQuickTitle')}
             onClick={() => setMode('quick')}
           >
-            <GiPowerLightning /> {t('modeQuick')}
+            <TabIcon k="quick" /> {t('modeQuick')}
           </button>
           <button
             className={`mode-btn ${mode === 'inspect' ? 'is-active' : ''}`}
             title={t('modeInspectTitle')}
             onClick={() => setMode('inspect')}
           >
-            <GiMagnifyingGlass /> {t('modeInspect')}
+            <TabIcon k="inspect" /> {t('modeInspect')}
           </button>
         </div>
       </div>
@@ -958,14 +950,14 @@ function CollectionEditor({
               title={t('modeQuickTitle')}
               onClick={() => setMode('quick')}
             >
-              <GiPowerLightning /> {t('modeQuick')}
+              <TabIcon k="quick" /> {t('modeQuick')}
             </button>
             <button
               className={`mode-btn ${mode === 'inspect' ? 'is-active' : ''}`}
               title={t('modeInspectTitle')}
               onClick={() => setMode('inspect')}
             >
-              <GiMagnifyingGlass /> {t('modeInspect')}
+              <TabIcon k="inspect" /> {t('modeInspect')}
             </button>
           </div>
         )}
@@ -1400,7 +1392,7 @@ export function MyPage({
                       rel="noreferrer"
                       title={t('viewOnLodestone')}
                     >
-                      <GiCrystalCluster />
+                      <TabIcon k="lodestone" />
                     </a>
                     <button
                       className="btn btn-ghost btn-mini"
@@ -1414,7 +1406,7 @@ export function MyPage({
                       }
                       onClick={() => void forceSync()}
                     >
-                      {syncing ? '…' : '⟳ ' + t('syncForce')}
+                      {syncing ? '…' : <><TabIcon k="sync" /> {t('syncForce')}</>}
                     </button>
                     <button
                       className="btn btn-ghost btn-mini"
@@ -1422,13 +1414,13 @@ export function MyPage({
                       title={t('collectImportTitle')}
                       onClick={() => void collectImport()}
                     >
-                      {importing ? '…' : '⬇ Collect'}
+                      {importing ? '…' : <><TabIcon k="collect" /> Collect</>}
                     </button>
                     <button
                       className="btn btn-ghost btn-mini mypage-unbind"
                       onClick={() => doUnbind(char.id, char.name)}
                     >
-                      <GiBreakingChain /> {t('unbindChar')}
+                      <TabIcon k="unlink" /> {t('unbindChar')}
                     </button>
                   </span>
                 </div>

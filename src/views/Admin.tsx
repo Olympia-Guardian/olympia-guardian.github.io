@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { WORKER_API } from '../api'
 import { useI18n } from '../i18n'
-import { StatTile } from '../ui'
+import { StatTile, TabIcon } from '../ui'
 
 interface Overview {
   tiles: {
@@ -133,10 +133,10 @@ export function AdminPage({ token }: { token: string }) {
             onClick={() => void action('purge', '/admin/purge-tokens', 'POST')}
             title={t('adminPurgeTitle')}
           >
-            🧹 {t('adminPurge')}
+            <TabIcon k="purge" /> {t('adminPurge')}
           </button>
           <button className="btn btn-ghost btn-mini" onClick={() => void load()}>
-            ⟳ {t('adminReload')}
+            <TabIcon k="sync" /> {t('adminReload')}
           </button>
         </span>
       </div>
@@ -230,7 +230,7 @@ export function AdminPage({ token }: { token: string }) {
                         )
                       }
                     >
-                      🗑
+                      <TabIcon k="del" />
                     </button>
                   </td>
                 </tr>
@@ -294,7 +294,7 @@ export function AdminPage({ token }: { token: string }) {
                         void action(String(c.id), `/admin/character/${c.id}/refresh`, 'POST')
                       }
                     >
-                      ⟳
+                      <TabIcon k="sync" />
                     </button>
                   </td>
                 </tr>
@@ -369,7 +369,7 @@ export function AdminPage({ token }: { token: string }) {
                         )
                       }
                     >
-                      🗑
+                      <TabIcon k="del" />
                     </button>
                   </td>
                 </tr>

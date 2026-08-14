@@ -194,6 +194,15 @@ button:focus-visible {
   border-radius: 4px;
 }
 
+/* Icônes du jeu dans les boutons d'action courants */
+.btn img.kind-icon,
+.icon-btn img.kind-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  vertical-align: -3px;
+}
+
 .topbar-actions .account-btn img.kind-icon {
   width: 19px;
   height: 19px;

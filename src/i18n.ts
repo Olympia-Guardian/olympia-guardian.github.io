@@ -521,7 +521,7 @@ const STR = {
     en: 'Log in with Discord to add {name} as a contact.',
   },
   contactAsk: { fr: 'Ajouter {name} à tes contacts ?', en: 'Add {name} as a contact?' },
-  contactSend: { fr: '✋ Demander', en: '✋ Send request' },
+  contactSend: { fr: 'Demander', en: 'Send request' },
   // Tableau de bord super-admin
   adminTitle: { fr: 'Administration', en: 'Administration' },
   adminError: { fr: 'Espace admin indisponible.', en: 'Admin space unavailable.' },

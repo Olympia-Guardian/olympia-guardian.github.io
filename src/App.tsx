@@ -592,7 +592,7 @@ export default function App() {
                           .catch((e) => alert(e instanceof Error ? e.message : String(e)))
                       }
                     >
-                      {t('contactSend')}
+                      <TabIcon k="addfriend" /> {t('contactSend')}
                     </button>
                   </>
                 )}

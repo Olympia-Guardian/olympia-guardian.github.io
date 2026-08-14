@@ -232,7 +232,7 @@ function FriendCard({
                   .catch((e) => alert(e instanceof Error ? e.message : String(e)))
               }
             >
-              {invited ? t('contactInvited') : '🎟'}
+              {invited ? t('contactInvited') : <TabIcon k="invite" />}
             </button>
           </>
         )}
@@ -252,7 +252,7 @@ function FriendCard({
               void contacts.block(friend.userId)
           }}
         >
-          🚫 {t('contactBlock')}
+          <TabIcon k="block" /> {t('contactBlock')}
         </button>
       </div>
     </div>
@@ -299,7 +299,7 @@ function ContactsSection({
               if (confirm(t('contactRotateConfirm'))) void contacts.rotate()
             }}
           >
-            ♻️
+            <TabIcon k="rotate" />
           </button>
         </div>
       </section>
@@ -433,7 +433,7 @@ function RequestRow({
             if (confirm(t('requestBanConfirm', { name: userName }))) onAction('ban')
           }}
         >
-          🚫
+          <TabIcon k="block" />
         </button>
       </span>
     </div>
@@ -539,11 +539,11 @@ function GroupCard({
         <span className="group-card-spacer" />
         {canEdit && (
           <button className="btn btn-ghost btn-mini" onClick={renameGroup}>
-            ✏️ {t('groupRenameShort')}
+            <TabIcon k="rename" /> {t('groupRenameShort')}
           </button>
         )}
         <button className="btn btn-ghost btn-mini group-drop" onClick={dropGroup}>
-          {canEdit ? '🗑 ' + t('groupDeleteShort') : '👋 ' + t('groupLeaveShort')}
+          {canEdit ? <><TabIcon k="del" /> {t('groupDeleteShort')}</> : <><TabIcon k="unlink" /> {t('groupLeaveShort')}</>}
         </button>
       </header>
 
@@ -586,7 +586,7 @@ function GroupCard({
                           .catch((e) => alert(e instanceof Error ? e.message : String(e)))
                       }
                     >
-                      ➕
+                      <TabIcon k="addfriend" />
                     </button>
                   )}
                 </span>
@@ -619,10 +619,10 @@ function GroupCard({
             {g.inviteCode ? `${location.origin}${location.pathname}#j=${g.inviteCode}` : '…'}
           </code>
           <button className="btn btn-ghost btn-mini" onClick={copyLink}>
-            {copied ? t('copied') : '🔗 ' + t('copyShort')}
+            {copied ? t('copied') : <><TabIcon k="share" /> {t('copyShort')}</>}
           </button>
           <button className="btn btn-ghost btn-mini" title={t('rotateConfirm')} onClick={rotate}>
-            ♻️
+            <TabIcon k="rotate" />
           </button>
         </div>
       )}
@@ -690,7 +690,7 @@ export function GroupsPage({
         </h2>
         {section === 'groups' && (
           <button className="btn btn-primary" onClick={() => setCreating(true)}>
-            ➕ {t('createGroupTitle')}
+            <TabIcon k="newgroup" /> {t('createGroupTitle')}
           </button>
         )}
       </div>

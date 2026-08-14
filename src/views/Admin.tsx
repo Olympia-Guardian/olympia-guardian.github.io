@@ -61,7 +61,6 @@ interface Overview {
 /** Icône + phrase d'un événement du journal d'activité. */
 const EVENT_FMT: Record<string, { icon: string; fr: (a: string, b: string) => string; en: (a: string, b: string) => string }> = {
   signup: { icon: '🌱', fr: (a) => `${a} a créé son compte`, en: (a) => `${a} signed up` },
-  login: { icon: '🔑', fr: (a) => `${a} s’est connecté`, en: (a) => `${a} logged in` },
   group: { icon: '👥', fr: (a, b) => `${a} a créé le groupe « ${b} »`, en: (a, b) => `${a} created the group “${b}”` },
   suggestion: { icon: '💡', fr: (a, b) => `${a} a proposé un objet à ${b}`, en: (a, b) => `${a} suggested an item to ${b}` },
   friend: { icon: '🤝', fr: (a, b) => `${a} et ${b} sont devenus amis`, en: (a, b) => `${a} and ${b} became friends` },

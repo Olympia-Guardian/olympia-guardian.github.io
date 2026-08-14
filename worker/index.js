@@ -523,20 +523,25 @@ async function authDiscordCallback(env, url) {
     .run()
 
   const token = randomToken()
-  await env.DB.prepare(
-    'INSERT INTO tokens (token, user_id, created, expires) VALUES (?1, ?2, ?3, ?4)',
-  )
-    .bind(token, userId, Date.now(), Date.now() + TOKEN_TTL)
-    .run()
+  await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO tokens (token, user_id, created, expires) VALUES (?1, ?2, ?3, ?4)',
+    ).bind(token, userId, Date.now(), Date.now() + TOKEN_TTL),
+    // La table des sessions ne grossit pas : les jetons expirés partent, et
+    // chaque compte garde au plus ses 5 sessions les plus récentes.
+    env.DB.prepare('DELETE FROM tokens WHERE expires < ?1').bind(Date.now()),
+    env.DB.prepare(
+      'DELETE FROM tokens WHERE user_id = ?1 AND token NOT IN ' +
+        '(SELECT token FROM tokens WHERE user_id = ?1 ORDER BY created DESC LIMIT 5)',
+    ).bind(userId),
+  ])
 
   const dest = new URL(payload.r)
   dest.hash = `login=${token}`
   return Response.redirect(dest.toString(), 302)
 }
 
-async function authenticate(env, req) {
-  const header = req.headers.get('Authorization') ?? ''
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null
+async function authenticateToken(env, token) {
   if (!token) return null
   const row = await env.DB.prepare(
     'SELECT u.id, u.name, u.avatar FROM tokens t JOIN users u ON u.id = t.user_id ' +
@@ -545,6 +550,12 @@ async function authenticate(env, req) {
     .bind(token, Date.now())
     .first()
   return row ?? null
+}
+
+async function authenticate(env, req) {
+  const header = req.headers.get('Authorization') ?? ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null
+  return authenticateToken(env, token)
 }
 
 async function getMe(env, user) {
@@ -679,6 +690,7 @@ async function putCollections(env, user, charId, raw) {
       'ON CONFLICT(char_id, kind) DO UPDATE SET ids=?3, updated=?4, source=?5',
   )
   await env.DB.batch(rows.map((r) => stmt.bind(...r, 'user')))
+  await notify(env, await usersSharingChar(env, charId), { t: 'char', id: charId })
   return response('{"ok":true}')
 }
 
@@ -1044,6 +1056,7 @@ async function requestJoin(env, user, code, raw) {
     )
       .bind(row.id, user.id, charId, Date.now())
       .run()
+    await notify(env, [row.owner_user_id], { t: 'groups' })
   }
   return response('{"status":"pending"}')
 }
@@ -1086,12 +1099,17 @@ async function handleRequest(env, user, id, targetUserId, raw) {
       ),
       env.DB.prepare('UPDATE groups SET updated = ?2 WHERE id = ?1').bind(id, now),
     ])
+    const linked = await env.DB.prepare('SELECT user_id FROM group_links WHERE group_id = ?1')
+      .bind(id)
+      .all()
+    await notify(env, linked.results.map((r) => r.user_id), { t: 'groups' })
     return response('{"ok":true}')
   }
   if (action === 'reject') {
     await env.DB.prepare('DELETE FROM group_requests WHERE group_id = ?1 AND user_id = ?2')
       .bind(id, targetUserId)
       .run()
+    await notify(env, [targetUserId], { t: 'groups' })
     return response('{"ok":true}')
   }
   if (action === 'ban') {
@@ -1238,7 +1256,10 @@ async function collectSync(env, user, charId, raw) {
     const source = cur?.source === 'user' ? 'user' : 'seed'
     stmts.push(upsert.bind(charId, kind, JSON.stringify(merged), now, source))
   }
-  if (stmts.length > 0) await env.DB.batch(stmts)
+  if (stmts.length > 0) {
+    await env.DB.batch(stmts)
+    await notify(env, await usersSharingChar(env, charId), { t: 'char', id: charId })
+  }
   return response(JSON.stringify({ ok: true, added }))
 }
 
@@ -1322,7 +1343,10 @@ async function createSuggestions(env, user, raw) {
     }
     stmts.push(stmt.bind(charId, it.kind, it.itemId, user.id, now))
   }
-  if (stmts.length > 0) await env.DB.batch(stmts)
+  if (stmts.length > 0) {
+    await env.DB.batch(stmts)
+    await notify(env, await ownersOfChar(env, charId), { t: 'inbox' })
+  }
   return response(JSON.stringify({ ok: true, created: stmts.length, skipped }))
 }
 
@@ -1387,7 +1411,7 @@ async function resolveSuggestions(env, user, raw) {
 
   const marks = ids.map(() => '?').join(',')
   const rows = await env.DB.prepare(
-    `SELECT s.id, s.char_id, s.kind, s.item_id FROM suggestions s ` +
+    `SELECT s.id, s.char_id, s.kind, s.item_id, s.from_user_id FROM suggestions s ` +
       `JOIN bindings b ON b.char_id = s.char_id AND b.verified = 1 AND b.user_id = ? ` +
       `WHERE s.id IN (${marks})`,
   )
@@ -1425,6 +1449,15 @@ async function resolveSuggestions(env, user, raw) {
   const del = env.DB.prepare(`DELETE FROM suggestions WHERE id IN (${mine.map(() => '?').join(',')})`)
   stmts.push(del.bind(...mine.map((s) => s.id)))
   await env.DB.batch(stmts)
+  // Temps réel : les expéditeurs voient leur ✓ dorée se résoudre ; si accepté,
+  // les co-membres voient la fiche du perso changer.
+  await notify(env, mine.map((s) => s.from_user_id), { t: 'inbox' })
+  if (accept) {
+    const chars = [...new Set(mine.map((s) => s.char_id))]
+    for (const charId of chars) {
+      await notify(env, await usersSharingChar(env, charId), { t: 'char', id: charId })
+    }
+  }
   return response(
     JSON.stringify({ ok: true, accepted: accept ? mine.length : 0, dismissed: accept ? 0 : mine.length }),
   )
@@ -1595,6 +1628,7 @@ async function contactRequestCore(env, me, targetId) {
     )
       .bind(targetId, me, now)
       .run()
+    await notify(env, [me, targetId], { t: 'inbox' })
     return response('{"status":"friend"}')
   }
   const count = await env.DB.prepare(
@@ -1609,6 +1643,7 @@ async function contactRequestCore(env, me, targetId) {
   )
     .bind(me, targetId, now)
     .run()
+  await notify(env, [targetId], { t: 'inbox' })
   return response('{"status":"pending"}')
 }
 
@@ -1664,6 +1699,7 @@ async function respondContact(env, user, raw) {
       .bind(body.userId, user.id)
       .run()
   }
+  await notify(env, [body.userId], { t: 'inbox' })
   return response('{"ok":true}')
 }
 
@@ -1741,6 +1777,7 @@ async function inviteToGroup(env, user, groupId, raw) {
   )
     .bind(groupId, user.id, targetId, Date.now())
     .run()
+  await notify(env, [targetId], { t: 'inbox' })
   return response('{"status":"invited"}')
 }
 
@@ -1781,6 +1818,10 @@ async function respondGroupInvite(env, user, raw) {
       user.id,
     ),
   ])
+  const linked = await env.DB.prepare('SELECT user_id FROM group_links WHERE group_id = ?1')
+    .bind(body.groupId)
+    .all()
+  await notify(env, linked.results.map((r) => r.user_id), { t: 'groups' })
   return response('{"ok":true}')
 }
 
@@ -1930,7 +1971,6 @@ async function adminOverview(env) {
       // (D1 plafonne les termes d'un UNION composé), fusionnées côté JS.
       env.DB.prepare(
         "SELECT 'signup' AS type, COALESCE(name, '?') AS a, '' AS b, created AS created FROM users " +
-          "UNION ALL SELECT 'login', COALESCE(u.name, '?'), '', t.created FROM tokens t LEFT JOIN users u ON u.id = t.user_id " +
           "UNION ALL SELECT 'group', COALESCE(u.name, '?'), g.name, g.created FROM groups g LEFT JOIN users u ON u.id = g.owner_user_id " +
           "UNION ALL SELECT 'ginvite', COALESCE(u1.name, '?'), g.name, i.created FROM group_invites i " +
           'LEFT JOIN users u1 ON u1.id = i.from_user_id LEFT JOIN groups g ON g.id = i.group_id ' +
@@ -2125,6 +2165,86 @@ async function adminPurgeTokens(env) {
   return response(JSON.stringify({ ok: true, purged: r.meta.changes }))
 }
 
+// --------------------------------------------------------------- temps réel
+// Un salon WebSocket par utilisateur (Durable Object en hibernation : les
+// connexions inactives ne coûtent rien). Le worker notifie les salons après
+// chaque mutation ; le front rafraîchit à la réception. Le poll de 90 s du
+// front reste en filet de secours si le socket tombe.
+
+export class LiveHub {
+  constructor(state) {
+    this.state = state
+    // ping/pong répondu par la plateforme sans réveiller l'objet
+    this.state.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair('ping', 'pong'),
+    )
+  }
+
+  async fetch(req) {
+    const url = new URL(req.url)
+    if (req.headers.get('Upgrade') === 'websocket') {
+      const pair = new WebSocketPair()
+      this.state.acceptWebSocket(pair[1])
+      return new Response(null, { status: 101, webSocket: pair[0] })
+    }
+    if (url.pathname === '/send' && req.method === 'POST') {
+      const msg = await req.text()
+      for (const ws of this.state.getWebSockets()) {
+        try {
+          ws.send(msg)
+        } catch {
+          // socket mourant : le close fera le ménage
+        }
+      }
+      return new Response('{"ok":true}')
+    }
+    return new Response('{"error":"not found"}', { status: 404 })
+  }
+
+  webSocketClose(ws) {
+    try {
+      ws.close()
+    } catch {
+      // déjà fermé
+    }
+  }
+}
+
+/** Envoie un événement aux salons des utilisateurs visés (au mieux : un salon
+ *  sans connexion avale le message sans bruit). */
+async function notify(env, userIds, event) {
+  const body = JSON.stringify(event)
+  await Promise.all(
+    [...new Set(userIds)].filter(Boolean).map((id) =>
+      env.LIVE.get(env.LIVE.idFromName(`user:${id}`))
+        .fetch('https://live/send', { method: 'POST', body })
+        .catch(() => {}),
+    ),
+  )
+}
+
+/** Comptes qui voient le perso dans un groupe online (co-membres). */
+async function usersSharingChar(env, charId) {
+  const rows = await env.DB.prepare(
+    'SELECT DISTINCT l.user_id FROM group_links l ' +
+      'JOIN groups g ON g.id = l.group_id AND g.shared = 1 ' +
+      'JOIN group_members m ON m.group_id = g.id WHERE m.char_id = ?1',
+  )
+    .bind(charId)
+    .all()
+  return rows.results.map((r) => r.user_id)
+}
+
+/** Comptes propriétaires (vérifiés) d'un perso. */
+async function ownersOfChar(env, charId) {
+  const rows = await env.DB.prepare(
+    'SELECT user_id FROM bindings WHERE char_id = ?1 AND verified = 1',
+  )
+    .bind(charId)
+    .all()
+  return rows.results.map((r) => r.user_id)
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -2248,6 +2368,14 @@ export default {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return resolveSuggestions(env, user, await req.text())
+    }
+
+    // --- temps réel : WebSocket vers le salon de l'utilisateur
+    if (url.pathname === '/ws' && req.headers.get('Upgrade') === 'websocket') {
+      // Un WebSocket ne porte pas d'en-tête Authorization : jeton en query.
+      const user = await authenticateToken(env, url.searchParams.get('token'))
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return env.LIVE.get(env.LIVE.idFromName(`user:${user.id}`)).fetch(req)
     }
 
     // --- admin : réservé à ADMIN_USER_ID — 404 pour tout le monde ailleurs

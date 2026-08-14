@@ -20,6 +20,7 @@ import {
 } from './store'
 import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
+import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
 import { useSuggestions } from './suggestions'
 import { AdminPage } from './views/Admin'
@@ -97,6 +98,21 @@ export default function App() {
   const { members, refresh, reload } = useMembers(grp.active?.members ?? [])
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
+
+  // Temps réel : le worker pousse un événement à chaque mutation qui nous
+  // concerne — on rafraîchit la donnée visée sans attendre le poll.
+  useLive(auth.token, (e) => {
+    if (e.t === 'inbox') {
+      void sugg.refresh()
+      void contacts.refresh()
+    } else if (e.t === 'char' && e.id) {
+      invalidateCharacter(e.id)
+      if (members.some((m) => m.id === e.id)) reload(e.id)
+    } else if (e.t === 'groups') {
+      void grp.refreshServer()
+      void sugg.refresh()
+    }
+  })
 
   // Suggestion envoyée disparue du serveur = acceptée OU refusée : on recharge
   // la fiche du perso visé pour trancher (✓ possédé ou retour de la croix).

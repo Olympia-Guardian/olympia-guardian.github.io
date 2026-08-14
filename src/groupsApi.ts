@@ -165,6 +165,25 @@ export function apiListSentSuggestions(token: string): Promise<{ sent: ApiSentSu
   return call('/suggestions/sent', token)
 }
 
+/** Résultat de la recherche Lodestone par nom (assistant de liaison). */
+export interface CharSearchResult {
+  id: number
+  avatar: string
+  name: string
+  server: string
+  dc: string
+}
+
+export function apiSearchCharacter(
+  token: string,
+  name: string,
+  server?: string,
+): Promise<{ results: CharSearchResult[] }> {
+  const q = new URLSearchParams({ name })
+  if (server) q.set('server', server)
+  return call(`/search-character?${q.toString()}`, token)
+}
+
 // ---------------------------------------------------------------- contacts
 
 export interface ApiContact {

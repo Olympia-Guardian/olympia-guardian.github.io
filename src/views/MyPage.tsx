@@ -14,6 +14,7 @@ import {
   type RelicDb,
 } from '../api'
 import type { useAuth } from '../auth'
+import { apiSearchCharacter, type CharSearchResult } from '../groupsApi'
 import { kindLabel, localName, useI18n } from '../i18n'
 import { sourceIcon, typeLabel } from '../sources'
 import { GiCheckMark, GiPadlock, GiRoundStar } from 'react-icons/gi'
@@ -673,7 +674,14 @@ function GroupedChecklist({
                       <span className="checklist-src">
                         {it.sources[0] && <SourceIcon s={it.sources[0]} />}
                         <span className="checklist-src-text">
-                          {it.sources[0] ? (lang === 'fr' ? it.sources[0].text : it.sources[0].textEn) : ''}
+                          {it.sources[0]
+                            ? lang === 'fr'
+                              ? it.sources[0].text
+                              : it.sources[0].textEn
+                            : // Succès : le descriptif EST la méthode d'obtention.
+                              lang === 'fr'
+                              ? it.description
+                              : it.descriptionEn}
                         </span>
                       </span>
                       {variant === 'orchestrion' && (
@@ -891,7 +899,13 @@ function CollectionEditor({
     )
     // Tenues, bardes, montures, mascottes : classées par méthode d'obtention —
     // le rail de gauche sert de tri/filtre.
-    if (kind === 'outfits' || kind === 'bardings' || kind === 'mounts' || kind === 'minions')
+    if (
+      kind === 'outfits' ||
+      kind === 'bardings' ||
+      kind === 'mounts' ||
+      kind === 'minions' ||
+      kind === 'frames'
+    )
       return base.map((it) => ({
         ...it,
         group: typeLabel(it.sources[0]?.type ?? 'Other', 'fr'),
@@ -1014,6 +1028,11 @@ export function MyPage({
 }) {
   const { lang, t } = useI18n()
   const [bindInput, setBindInput] = useState('')
+  // Assistant de liaison : recherche du perso par nom + serveur.
+  const [searchName, setSearchName] = useState('')
+  const [searchServer, setSearchServer] = useState('')
+  const [searchResults, setSearchResults] = useState<CharSearchResult[] | null>(null)
+  const [searching, setSearching] = useState(false)
   const [busy, setBusy] = useState(false)
   // Synchro Lodestone forcée (déclaré ici : MyPage a des retours anticipés).
   const [syncing, setSyncing] = useState(false)
@@ -1096,6 +1115,20 @@ export function MyPage({
         </div>
       </div>
     )
+  }
+
+  async function doSearch() {
+    if (!auth.token || searchName.trim().length < 2) return
+    setSearching(true)
+    setSearchResults(null)
+    setNotice(null)
+    try {
+      const r = await apiSearchCharacter(auth.token, searchName.trim(), searchServer.trim() || undefined)
+      setSearchResults(r.results)
+    } catch {
+      setNotice(t('searchCharError'))
+    }
+    setSearching(false)
   }
 
   async function doBind(charId: number) {
@@ -1275,52 +1308,129 @@ export function MyPage({
       {(!verified || adding) && (
         <section className="relic-series mypage-bind">
           <h3 className="relic-series-name">{verified ? t('bindAdd') : t('bindTitle')}</h3>
+          {/* Étapier : 1 connexion (faite) · 2 trouver son perso · 3 vérifier */}
+          <ol className="onboard-steps">
+            <li className="is-done">
+              <span className="onboard-num">✓</span> {t('onboardStep1')}
+            </li>
+            <li className={pending ? 'is-done' : 'is-active'}>
+              <span className="onboard-num">{pending ? '✓' : '2'}</span> {t('onboardStep2')}
+            </li>
+            <li className={pending ? 'is-active' : ''}>
+              <span className="onboard-num">3</span> {t('onboardStep3')}
+            </li>
+          </ol>
           {!pending && (
             <>
-              <p className="modal-muted">{t('bindIntro')}</p>
+              <p className="modal-muted">{t('searchCharIntro')}</p>
               <div className="controls">
-                <select value={bindInput} onChange={(e) => setBindInput(e.target.value)}>
-                  <option value="">—</option>
-                  {members
-                    .filter((m) => m.status === 'ok' && m.data)
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.data!.name} ({m.data!.server})
-                      </option>
-                    ))}
-                </select>
                 <input
                   className="search"
-                  value={bindInput}
-                  onChange={(e) => setBindInput(e.target.value)}
-                  placeholder={t('addPlaceholder')}
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && doSearch()}
+                  placeholder={t('searchCharName')}
+                  spellCheck={false}
+                />
+                <input
+                  className="search onboard-server"
+                  value={searchServer}
+                  onChange={(e) => setSearchServer(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && doSearch()}
+                  placeholder={t('searchCharServer')}
                   spellCheck={false}
                 />
                 <button
                   className="btn btn-primary"
-                  disabled={busy || !/^\d+$/.test(bindInput.trim())}
-                  onClick={() => doBind(Number(bindInput.trim()))}
+                  disabled={searching || searchName.trim().length < 2}
+                  onClick={() => void doSearch()}
                 >
-                  {t('bindStart')}
+                  <TabIcon k="inspect" /> {t('searchCharGo')}
                 </button>
               </div>
+              {searching && <p className="modal-muted">…</p>}
+              {searchResults !== null && searchResults.length === 0 && (
+                <p className="modal-muted">{t('searchCharNone')}</p>
+              )}
+              {searchResults !== null && searchResults.length > 0 && (
+                <div className="char-results">
+                  {searchResults.map((r) => (
+                    <button
+                      key={r.id}
+                      className="char-result"
+                      disabled={busy}
+                      onClick={() => doBind(r.id)}
+                    >
+                      <img src={r.avatar} alt="" width={44} height={44} onError={onAvatarImgError} />
+                      <span className="char-result-id">
+                        <b>{r.name}</b>
+                        <small>
+                          {r.server}
+                          {r.dc ? ` [${r.dc}]` : ''}
+                        </small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <details className="onboard-fallback">
+                <summary>{t('searchCharFallback')}</summary>
+                <div className="controls">
+                  <select value={bindInput} onChange={(e) => setBindInput(e.target.value)}>
+                    <option value="">—</option>
+                    {members
+                      .filter((m) => m.status === 'ok' && m.data)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.data!.name} ({m.data!.server})
+                        </option>
+                      ))}
+                  </select>
+                  <input
+                    className="search"
+                    value={bindInput}
+                    onChange={(e) => setBindInput(e.target.value)}
+                    placeholder={t('addPlaceholder')}
+                    spellCheck={false}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    disabled={busy || !/^\d+$/.test(bindInput.trim())}
+                    onClick={() => doBind(Number(bindInput.trim()))}
+                  >
+                    {t('bindStart')}
+                  </button>
+                </div>
+              </details>
             </>
           )}
           {pending && (
             <>
-              <p>
-                {t('bindStep1')} <code className="bind-code">{pending.code}</code>
-              </p>
-              <p className="modal-muted">{t('bindStep2')}</p>
-              <p>
-                <a
-                  href={`https://eu.finalfantasyxiv.com/lodestone/my/setting/profile/`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t('bindProfileLink')}
-                </a>
-              </p>
+              <ol className="onboard-verify">
+                <li>
+                  {t('verifyStepCopy')} <code className="bind-code">{pending.code}</code>{' '}
+                  <button
+                    className="btn btn-ghost btn-mini"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(pending.code ?? '')
+                      showToast(t('copied'))
+                    }}
+                  >
+                    <TabIcon k="share" /> {t('contactCopy')}
+                  </button>
+                </li>
+                <li>
+                  {t('verifyStepOpen')}{' '}
+                  <a
+                    href="https://eu.finalfantasyxiv.com/lodestone/my/setting/profile/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t('bindProfileLink')}
+                  </a>
+                </li>
+                <li>{t('verifyStepPaste')}</li>
+              </ol>
               <button
                 className="btn btn-primary"
                 disabled={busy}
@@ -1380,8 +1490,8 @@ export function MyPage({
                       )}
                     </span>
                     <span className="player-server">
-                      {char.dataCenter ? `${char.dataCenter} — ` : ''}
                       {char.server}
+                      {char.dataCenter ? ` [${char.dataCenter}]` : ''}
                     </span>
                   </div>
                   <span className="mypage-char-actions">

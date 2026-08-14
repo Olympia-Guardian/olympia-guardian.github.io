@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { GiMagnifyingGlass, GiPowerLightning } from 'react-icons/gi'
 import { KINDS, type Character, type Relic, type RelicDb, type RelicSeriesInfo } from '../api'
 import { kindLabel, useI18n } from '../i18n'
 import {
@@ -11,7 +10,7 @@ import {
   type StepCost,
 } from '../relicCosts'
 import type { Db, Member } from '../store'
-import { Meter, onAvatarImgError, onItemImgError } from '../ui'
+import { Meter, onAvatarImgError, onItemImgError, TabIcon } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -1080,14 +1079,14 @@ export function Relics({
                 setPick(null)
               }}
             >
-              <GiPowerLightning /> {t('modeQuick')}
+              <TabIcon k="quick" /> {t('modeQuick')}
             </button>
             <button
               className={`mode-btn ${mode === 'inspect' ? 'is-active' : ''}`}
               title={t('modeInspectTitle')}
               onClick={() => setMode('inspect')}
             >
-              <GiMagnifyingGlass /> {t('modeInspect')}
+              <TabIcon k="inspect" /> {t('modeInspect')}
             </button>
           </div>
         </div>

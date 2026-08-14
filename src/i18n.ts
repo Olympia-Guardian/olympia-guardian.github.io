@@ -40,8 +40,8 @@ const STR = {
   },
   enableSync: { fr: '⚡ Activer la synchro', en: '⚡ Enable sync' },
   enableSyncTitle: {
-    fr: 'Crée un salon partagé : le lien devient court et stable, et le roster comme les coches se synchronisent tout seuls pour tout le groupe — plus besoin de repartager le lien.',
-    en: 'Creates a shared room: the link becomes short and stable, and the roster and manual checks sync automatically for everyone — no need to re-share the link.',
+    fr: 'Crée un salon partagé : le lien devient court et stable, et le roster comme les coches se synchronisent tout seuls pour tout le groupe, plus besoin de repartager le lien.',
+    en: 'Creates a shared room: the link becomes short and stable, and the roster and manual checks sync automatically for everyone, no need to re-share the link.',
   },
   syncOn: { fr: 'Synchro auto', en: 'Auto sync' },
   syncKo: { fr: 'Synchro KO', en: 'Sync down' },
@@ -50,8 +50,8 @@ const STR = {
     en: 'Roster and manual checks sync automatically for the whole group through the link.',
   },
   syncErrTitle: {
-    fr: 'Impossible de joindre le salon — réessai automatique. Les données restent enregistrées en local.',
-    en: 'Cannot reach the room — retrying automatically. Your data is still saved locally.',
+    fr: 'Impossible de joindre le salon, réessai automatique. Les données restent enregistrées en local.',
+    en: 'Cannot reach the room, retrying automatically. Your data is still saved locally.',
   },
   lastSync: { fr: 'Dernière synchro : {time}', en: 'Last sync: {time}' },
   syncOffTitle: {
@@ -82,17 +82,17 @@ const STR = {
   },
   dbLoading: { fr: 'Chargement de la base des collections…', en: 'Loading the collections database…' },
   allAbsent: {
-    fr: 'Tout le monde est marqué absent ce soir 😅 — réactive quelqu\'un dans le roster.',
-    en: 'Everyone is marked away tonight 😅 — bring someone back in the roster.',
+    fr: 'Tout le monde est marqué absent ce soir 😅, réactive quelqu\'un dans le roster.',
+    en: 'Everyone is marked away tonight 😅, bring someone back in the roster.',
   },
   heroTitle: { fr: 'Complétez vos collections ensemble', en: 'Complete your collections together' },
   heroBody: {
-    fr: "Ajoutez les persos du groupe (ID Lodestone à gauche) et l'appli croise vos treize collections — montures, mascottes, cartes, mode, tenues, émotes, orchestrion, magie bleue, reliques… : elle vous dit quel contenu farmer ensemble pour que chaque run profite au plus de monde.",
-    en: 'Add your group\'s characters (Lodestone ID on the left) and the app cross-references your thirteen collections — mounts, minions, cards, fashion, outfits, emotes, orchestrion, blue magic, relics…: it tells you what content to farm together so every run benefits as many players as possible.',
+    fr: "Connecte-toi avec Discord, lie ton personnage en le cherchant par son nom, puis rejoins ou crée ton groupe. L'appli croise vos quatorze collections (montures, mascottes, cartes, mode, émotes, orchestrion, magie bleue, succès, reliques…) et vous dit quel contenu farmer ensemble pour que chaque run profite au plus de monde.",
+    en: 'Sign in with Discord, link your character by searching its name, then join or create your group. The app cross-references your fourteen collections (mounts, minions, cards, fashion, emotes, orchestrion, blue magic, achievements, relics…) and tells you what to farm together so every run benefits as many players as possible.',
   },
   heroHint: {
-    fr: 'Astuce : une fois le groupe constitué, « ⚡ Activer la synchro » puis partagez le lien une seule fois — roster et coches se synchronisent ensuite tout seuls.',
-    en: 'Tip: once the group is set up, hit "⚡ Enable sync" and share the link once — the roster and checks then sync on their own.',
+    fr: 'Astuce : le Guide (bouton « ? » en haut à droite) explique chaque écran. Et sans compte, tu peux déjà explorer en suivant des persos par leur ID Lodestone dans un groupe hors ligne.',
+    en: 'Tip: the Guide ("?" button, top right) explains every screen. Even without an account you can explore by tracking characters by Lodestone ID in an offline group.',
   },
   footer: {
     fr: 'catalogues rafraîchis chaque nuit',
@@ -106,8 +106,8 @@ const STR = {
   loginDiscord: { fr: 'Se connecter avec Discord', en: 'Sign in with Discord' },
   loginShort: { fr: 'Connexion', en: 'Sign in' },
   loginIntro: {
-    fr: 'Connecte-toi pour lier un ou plusieurs personnages et renseigner directement tes collections — cartes, mode, tenues, émotes, orchestrion, magie bleue, reliques…',
-    en: 'Sign in to link one or more characters and fill in your collections directly — cards, fashion, outfits, emotes, orchestrion, blue magic, relics…',
+    fr: 'Connecte-toi pour lier un ou plusieurs personnages et renseigner directement tes collections : cartes, mode, tenues, émotes, orchestrion, magie bleue, reliques…',
+    en: 'Sign in to link one or more characters and fill in your collections directly: cards, fashion, outfits, emotes, orchestrion, blue magic, relics…',
   },
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   bindTitle: { fr: 'Lier mon personnage', en: 'Link my character' },
@@ -126,15 +126,15 @@ const STR = {
   bindVerified: { fr: '✓ Personnage vérifié ! C\'est ton perso.', en: '✓ Character verified! It\'s yours.' },
   bindVerifiedChip: { fr: 'Vérifié', en: 'Verified' },
   bindCodeMissing: {
-    fr: 'Code introuvable dans ta présentation Lodestone — vérifie qu\'elle est bien enregistrée et publique, puis réessaie.',
-    en: 'Code not found in your Lodestone bio — make sure it\'s saved and public, then retry.',
+    fr: 'Code introuvable dans ta présentation Lodestone, vérifie qu\'elle est bien enregistrée et publique, puis réessaie.',
+    en: 'Code not found in your Lodestone bio, make sure it\'s saved and public, then retry.',
   },
   bindConflict: {
     fr: 'Ce personnage est déjà lié à un autre compte.',
     en: 'This character is already linked to another account.',
   },
-  bindError: { fr: 'Erreur — réessaie dans un instant.', en: 'Error — retry in a moment.' },
-  saveError: { fr: 'Sauvegarde impossible — réessaie.', en: 'Could not save — retry.' },
+  bindError: { fr: 'Erreur, réessaie dans un instant.', en: 'Error, retry in a moment.' },
+  saveError: { fr: 'Sauvegarde impossible, réessaie.', en: 'Could not save, retry.' },
   saved: { fr: '✓ Enregistré', en: '✓ Saved' },
   albumPage: { fr: 'Page {n}', en: 'Page {n}' },
   collections: { fr: 'Collections', en: 'Collections' },
@@ -142,7 +142,7 @@ const STR = {
   unbindChar: { fr: 'Délier', en: 'Unlink' },
   unbindConfirm: {
     fr: 'Délier {name} de ton compte ? Ses collections restent enregistrées : tu les retrouveras si tu le relies plus tard.',
-    en: 'Unlink {name} from your account? Its collections stay saved — you get them back if you link it again later.',
+    en: 'Unlink {name} from your account? Its collections stay saved, you get them back if you link it again later.',
   },
   // Rôles d'armure (libellés officiels des pièces : « de protecteur »…)
   roleFending: { fr: 'Protecteur', en: 'Fending' },
@@ -165,7 +165,7 @@ const STR = {
   relicUncheck: { fr: 'clique pour retirer', en: 'click to remove' },
   relicEditNote: {
     fr: 'Clique sur une relique pour la marquer comme obtenue : les matériaux restants se recalculent aussitôt.',
-    en: 'Click a relic to mark it obtained — remaining materials update instantly.',
+    en: 'Click a relic to mark it obtained, remaining materials update instantly.',
   },
   relicSummaryNote: {
     fr: "Déplie un joueur pour voir son avancement par extension et par série. Le détail des paliers et des matériaux se trouve dans « Mon Journal ».",
@@ -189,12 +189,12 @@ const STR = {
   panelOwned: { fr: 'Possédé ✓', en: 'Owned ✓' },
   panelMissing: { fr: 'Manquant', en: 'Missing' },
   myPageAutoNote: {
-    fr: 'Montures et mascottes se synchronisent toutes seules depuis le Lodestone (lecture seule). Les autres onglets se cochent à la main — clique sur les icônes.',
-    en: 'Mounts and minions sync on their own from the Lodestone (read-only). The other tabs are checked by hand — click the icons.',
+    fr: 'Montures et mascottes se synchronisent toutes seules depuis le Lodestone (lecture seule). Les autres onglets se cochent à la main, clique sur les icônes.',
+    en: 'Mounts and minions sync on their own from the Lodestone (read-only). The other tabs are checked by hand, click the icons.',
   },
   myPageReadOnly: {
-    fr: 'Synchronisé automatiquement depuis le Lodestone — lecture seule',
-    en: 'Synced automatically from the Lodestone — read-only',
+    fr: 'Synchronisé automatiquement depuis le Lodestone, lecture seule',
+    en: 'Synced automatically from the Lodestone, read-only',
   },
 
   // Multi-groupes
@@ -234,14 +234,14 @@ const STR = {
   },
   typeOnline: { fr: 'En ligne', en: 'Online' },
   typeOnlineDesc: {
-    fr: 'Adhésion par lien d’invitation, validée par toi — aucun ajout manuel possible.',
-    en: 'Join by invite link, approved by you — no manual adds.',
+    fr: 'Adhésion par lien d’invitation, validée par toi, aucun ajout manuel possible.',
+    en: 'Join by invite link, approved by you, no manual adds.',
   },
   typeOnlineNeedLogin: {
     fr: 'Connexion Discord requise pour créer un groupe en ligne.',
     en: 'Discord sign-in required to create an online group.',
   },
-  createGroupNoFounder: { fr: '— sans personnage —', en: '— no character —' },
+  createGroupNoFounder: { fr: 'sans personnage', en: 'no character' },
   groupsTab: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
   groupsManage: { fr: '⚙️ Gérer les groupes…', en: '⚙️ Manage groups…' },
   groupsPageTitle: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
@@ -252,8 +252,8 @@ const STR = {
     en: 'Log in with Discord to manage your contacts.',
   },
   groupsEmpty: {
-    fr: 'Aucun groupe pour l’instant — crée ton premier groupe pour commencer.',
-    en: 'No group yet — create your first group to get started.',
+    fr: 'Aucun groupe pour l’instant, crée ton premier groupe pour commencer.',
+    en: 'No group yet, create your first group to get started.',
   },
   groupOwnerChip: { fr: 'Créateur', en: 'Owner' },
   groupMemberChip: { fr: 'Membre', en: 'Member' },
@@ -273,13 +273,13 @@ const STR = {
     en: 'Re-scrape the Lodestone profile now (once per day at most)',
   },
   syncForceCooldown: {
-    fr: 'Déjà synchronisé aujourd’hui — possible à nouveau dans ~{h} h',
-    en: 'Already synced today — available again in ~{h}h',
+    fr: 'Déjà synchronisé aujourd’hui, possible à nouveau dans ~{h} h',
+    en: 'Already synced today, available again in ~{h}h',
   },
   syncForceDone: { fr: 'Fiche Lodestone actualisée ✓', en: 'Lodestone profile refreshed ✓' },
   syncForceAlready: {
-    fr: 'Synchro déjà utilisée aujourd’hui — données du cache.',
-    en: 'Sync already used today — cached data.',
+    fr: 'Synchro déjà utilisée aujourd’hui, données du cache.',
+    en: 'Sync already used today, cached data.',
   },
   factRace: { fr: 'Race / Clan', en: 'Race / Clan' },
   factNameday: { fr: 'Anniversaire', en: 'Nameday' },
@@ -298,8 +298,8 @@ const STR = {
   suggestedBy: { fr: 'proposé par {name}', en: 'suggested by {name}' },
   suggestCell: { fr: 'Proposer {what} à {who}', en: 'Suggest {what} to {who}' },
   pendingCell: {
-    fr: 'Proposé à {who} — coché de ton côté tant que ce n’est pas refusé',
-    en: 'Suggested to {who} — checked on your side until refused',
+    fr: 'Proposé à {who}, coché de ton côté tant que ce n’est pas refusé',
+    en: 'Suggested to {who}, checked on your side until refused',
   },
   addOwnCell: { fr: 'Cocher {what} dans mon journal', en: 'Check {what} in my journal' },
   addedCell: { fr: 'Ajouté au journal ✓', en: 'Added to the journal ✓' },
@@ -312,12 +312,12 @@ const STR = {
     en: 'Looks like you already track your collections on FFXIV Collect ({n} entries checked there). Import everything here? Nothing will be removed, only added.',
   },
   collectSynced: {
-    fr: 'Perso vérifié ✓ — {n} entrées importées depuis FFXIV Collect.',
-    en: 'Character verified ✓ — {n} entries imported from FFXIV Collect.',
+    fr: 'Perso vérifié ✓, {n} entrées importées depuis FFXIV Collect.',
+    en: 'Character verified ✓, {n} entries imported from FFXIV Collect.',
   },
   collectNothingNew: {
-    fr: 'Perso vérifié ✓ — tes collections étaient déjà à jour.',
-    en: 'Character verified ✓ — your collections were already up to date.',
+    fr: 'Perso vérifié ✓, tes collections étaient déjà à jour.',
+    en: 'Character verified ✓, your collections were already up to date.',
   },
   armoireWeapons: { fr: 'Armes & outils', en: 'Weapons & tools' },
   armoireArmor: { fr: 'Armures & accessoires', en: 'Armor & accessories' },
@@ -337,20 +337,20 @@ const STR = {
     en: 'Join the group “{name}”? The creator will review your request.',
   },
   invitePending: {
-    fr: 'Demande en attente d’acceptation — « {name} ». Tu verras le groupe dès que le créateur accepte.',
-    en: 'Request pending approval — “{name}”. You will see the group once the creator accepts.',
+    fr: 'Demande en attente d’acceptation, « {name} ». Tu verras le groupe dès que le créateur accepte.',
+    en: 'Request pending approval, “{name}”. You will see the group once the creator accepts.',
   },
   inviteAlreadyMember: {
     fr: 'Tu es déjà membre du groupe « {name} ».',
     en: 'You are already a member of “{name}”.',
   },
   inviteGuest: {
-    fr: 'Invitation au groupe « {name} » — connecte-toi avec Discord pour demander à le rejoindre.',
-    en: 'Invitation to “{name}” — sign in with Discord to request to join.',
+    fr: 'Invitation au groupe « {name} », connecte-toi avec Discord pour demander à le rejoindre.',
+    en: 'Invitation to “{name}”, sign in with Discord to request to join.',
   },
   inviteNeedChar: {
-    fr: 'Invitation au groupe « {name} » — vérifie d’abord un personnage dans « Mon Journal » pour pouvoir demander.',
-    en: 'Invitation to “{name}” — verify a character in “My Journal” first to request to join.',
+    fr: 'Invitation au groupe « {name} », vérifie d’abord un personnage dans « Mon Journal » pour pouvoir demander.',
+    en: 'Invitation to “{name}”, verify a character in “My Journal” first to request to join.',
   },
   inviteInvalid: {
     fr: 'Ce lien d’invitation n’est plus valide (périmé ou révoqué). Demande un nouveau lien au créateur du groupe.',
@@ -374,8 +374,8 @@ const STR = {
     en: 'Regenerate the invite link? The old link will stop working immediately (the new one will be copied).',
   },
   groupsTitle: {
-    fr: 'Tes groupes enregistrés sur ce navigateur — bascule de l\'un à l\'autre',
-    en: 'Groups saved on this browser — switch between them',
+    fr: 'Tes groupes enregistrés sur ce navigateur, bascule de l\'un à l\'autre',
+    en: 'Groups saved on this browser, switch between them',
   },
 
   // Roster
@@ -387,12 +387,12 @@ const STR = {
   collapseRoster: { fr: 'Réduire le roster', en: 'Collapse roster' },
   expandRoster: { fr: 'Développer le roster', en: 'Expand roster' },
   presentTitle: {
-    fr: 'Présent ce soir — clique pour le marquer absent (les vues l\'ignorent)',
-    en: 'Here tonight — click to mark as away (views will ignore them)',
+    fr: 'Présent ce soir, clique pour le marquer absent (les vues l\'ignorent)',
+    en: 'Here tonight, click to mark as away (views will ignore them)',
   },
   absentTitle: {
-    fr: 'Absent ce soir — clique pour le remettre dans le groupe',
-    en: 'Away tonight — click to bring them back',
+    fr: 'Absent ce soir, clique pour le remettre dans le groupe',
+    en: 'Away tonight, click to bring them back',
   },
   awayTonight: { fr: '(absent ce soir)', en: '(away tonight)' },
   loading: { fr: 'Chargement…', en: 'Loading…' },
@@ -409,7 +409,7 @@ const STR = {
     en: 'Paste a Lodestone ID (digits) or a Lodestone / FFXIV Collect URL.',
   },
   addHintPre: { fr: "L'ID est dans l'URL de ta fiche", en: 'The ID is in your profile URL on the' },
-  syncedAgo: { fr: 'Fiche FFXIV Collect — synchronisé {when}', en: 'FFXIV Collect profile — synced {when}' },
+  syncedAgo: { fr: 'Fiche FFXIV Collect, synchronisé {when}', en: 'FFXIV Collect profile, synced {when}' },
   today: { fr: "aujourd'hui", en: 'today' },
   yesterday: { fr: 'hier', en: 'yesterday' },
   daysAgo: { fr: 'il y a {n} j', en: '{n} d ago' },
@@ -458,8 +458,8 @@ const STR = {
   achPointsChip: { fr: '{a} / {b} pts', en: '{a} / {b} pts' },
   allCategories: { fr: 'Toutes les catégories', en: 'All categories' },
   collectImportTitle: {
-    fr: 'Importer ce qui est coché sur FFXIV Collect (fusion — ne retire jamais rien)',
-    en: 'Import what is checked on FFXIV Collect (merge — never removes anything)',
+    fr: 'Importer ce qui est coché sur FFXIV Collect (fusion, ne retire jamais rien)',
+    en: 'Import what is checked on FFXIV Collect (merge, never removes anything)',
   },
   collectNone: {
     fr: 'Aucune fiche FFXIV Collect trouvée pour ce perso.',
@@ -485,8 +485,8 @@ const STR = {
   },
   contactFriendsTitle: { fr: 'Amis ({n})', en: 'Friends ({n})' },
   contactFriendsEmpty: {
-    fr: 'Aucun contact pour l’instant — partage ton lien, ou ajoute un co-membre depuis un groupe online.',
-    en: 'No contacts yet — share your link, or add a co-member from an online group.',
+    fr: 'Aucun contact pour l’instant, partage ton lien, ou ajoute un co-membre depuis un groupe online.',
+    en: 'No contacts yet, share your link, or add a co-member from an online group.',
   },
   contactNoChars: { fr: 'aucun perso vérifié', en: 'no verified character' },
   contactInvite: { fr: 'Inviter dans…', en: 'Invite to…' },
@@ -522,6 +522,86 @@ const STR = {
   },
   contactAsk: { fr: 'Ajouter {name} à tes contacts ?', en: 'Add {name} as a contact?' },
   contactSend: { fr: 'Demander', en: 'Send request' },
+  // Assistant de liaison de personnage
+  onboardStep1: { fr: 'Connexion Discord', en: 'Discord login' },
+  onboardStep2: { fr: 'Trouve ton personnage', en: 'Find your character' },
+  onboardStep3: { fr: 'Prouve que c’est toi', en: 'Prove it’s you' },
+  searchCharIntro: {
+    fr: 'Tape le nom de ton personnage (le serveur affine si le nom est courant) et clique-le dans les résultats.',
+    en: 'Type your character’s name (add the server if the name is common) and click it in the results.',
+  },
+  searchCharName: { fr: 'Nom du personnage…', en: 'Character name…' },
+  searchCharServer: { fr: 'Serveur (optionnel)', en: 'Server (optional)' },
+  searchCharGo: { fr: 'Chercher', en: 'Search' },
+  searchCharNone: {
+    fr: 'Aucun personnage trouvé, vérifie l’orthographe, ou précise le serveur.',
+    en: 'No character found, check the spelling, or specify the server.',
+  },
+  searchCharError: {
+    fr: 'Le Lodestone n’a pas répondu, réessaie dans un instant.',
+    en: 'The Lodestone did not answer, try again in a moment.',
+  },
+  searchCharFallback: {
+    fr: 'J’ai déjà l’ID ou l’URL Lodestone',
+    en: 'I already have the Lodestone ID or URL',
+  },
+  verifyStepCopy: { fr: '1. Copie ce code :', en: '1. Copy this code:' },
+  verifyStepOpen: {
+    fr: '2. Ouvre l’édition de ton profil sur le Lodestone (connecte-toi avec ton compte Square Enix) :',
+    en: '2. Open your profile editor on the Lodestone (log in with your Square Enix account):',
+  },
+  verifyStepPaste: {
+    fr: '3. Colle le code dans le champ « Présentation », enregistre, puis reviens ici cliquer sur Vérifier. Tu pourras retirer le code juste après.',
+    en: '3. Paste the code into the “Character Profile” field, save, then come back here and click Verify. You can remove the code right after.',
+  },
+  // Aide active + Guide
+  helpWindowTitle: { fr: 'Aide active', en: 'Active Help' },
+  helpGotIt: { fr: 'Compris !', en: 'Got it!' },
+  guideTitle: { fr: 'Guide', en: 'Guide' },
+  guideIntro: {
+    fr: 'Tout ce qu’il faut savoir pour prendre en main Codex Olympia. Ces sujets apparaissent aussi en « Aide active » à la première visite de chaque écran.',
+    en: 'Everything you need to get started with Codex Olympia. These topics also appear as “Active Help” the first time you visit each screen.',
+  },
+  guideResetHelp: { fr: 'Revoir les aides actives', en: 'Replay active help' },
+  guideResetDone: {
+    fr: 'Elles réapparaîtront sur chaque écran ✓',
+    en: 'They will reappear on each screen ✓',
+  },
+  helpLinkTitle: { fr: 'Lier son personnage', en: 'Linking your character' },
+  helpLinkBody: {
+    fr: 'Connecte-toi avec Discord, puis dans Mon Journal cherche ton personnage par son nom et clique-le. Pour prouver qu’il est à toi, colle le code fourni dans la « Présentation » de ton profil Lodestone et clique Vérifier. Si tu tiens déjà tes collections sur FFXIV Collect, l’appli te proposera de tout importer d’un coup.',
+    en: 'Log in with Discord, then in My Journal search your character by name and click it. To prove it’s yours, paste the provided code into your Lodestone profile’s “Character Profile” field and click Verify. If you already track your collections on FFXIV Collect, the app will offer to import everything at once.',
+  },
+  helpPlanningTitle: { fr: 'Planning', en: 'Planning' },
+  helpPlanningBody: {
+    fr: 'Le Planning répond à « on farme quoi ce soir ? » : une carte par contenu (donjon, défi, raid…) listant ce qui manque encore, classées par nombre d’objets à looter. Filtre par collection, par composition (solo / groupe conseillé) ou par périmètre, et clique un objet pour sa fiche.',
+    en: 'Planning answers “what do we farm tonight?”: one card per duty (dungeon, trial, raid…) listing what is still missing, sorted by loot impact. Filter by collection, party need (solo / group advised) or scope, and click any item for its details.',
+  },
+  helpCollectionsTitle: { fr: 'Collections', en: 'Collections' },
+  helpCollectionsBody: {
+    fr: 'La matrice croise les objets et les membres du groupe actif. Une croix rouge se clique : sur TON perso elle coche l’objet direct au journal, sur celui d’un autre elle lui propose l’objet (il accepte ou refuse depuis sa cloche, en attendant, c’est coché de ton côté). Montures et mascottes suivent le Lodestone.',
+    en: 'The matrix crosses items with the active group’s members. A red cross is clickable: on YOUR character it checks the item straight into your journal, on someone else’s it suggests the item to them (they accept or refuse from their bell, meanwhile it shows as checked on your side). Mounts and minions follow the Lodestone.',
+  },
+  helpRelicsTitle: { fr: 'Avancement', en: 'Progress' },
+  helpRelicsBody: {
+    fr: 'Le résumé du groupe : une jauge par membre avec sa complétion globale, détaillée par collection et par extension, qui est où, d’un coup d’œil. En dessous, toutes les sagas de reliques, armures et outils étape par étape : cocher un palier coche les précédents de la même arme, et le « gros total » liste tout ce qui reste, matériaux compris.',
+    en: 'The group summary: one gauge per member with their overall completion, broken down by collection and expansion, who’s where, at a glance. Below, every relic saga, armour and tool line step by step: checking a tier checks the previous ones of the same weapon, and the grand total lists everything left, materials included.',
+  },
+  helpMypageTitle: { fr: 'Mon Journal', en: 'My Journal' },
+  helpMypageBody: {
+    fr: 'Ta fiche : portrait, jobs, progression par collection. Montures et mascottes se synchronisent toutes seules depuis le Lodestone (bouton Synchroniser : une fois par jour) ; le reste se coche à la main ou s’importe depuis FFXIV Collect avec le bouton Collect. Clique une icône pour cocher, ou passe en mode « Un par un » pour inspecter.',
+    en: 'Your sheet: portrait, jobs, per-collection progress. Mounts and minions sync themselves from the Lodestone (Sync button: once a day); everything else is checked by hand or imported from FFXIV Collect with the Collect button. Click an icon to check it, or switch to “One by one” to inspect.',
+  },
+  helpGroupsTitle: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
+  helpGroupsBody: {
+    fr: 'Deux types de groupes : hors ligne (tu suis qui tu veux par ID Lodestone) et en ligne (chacun rejoint via un lien d’invitation, validé par le créateur). Les contacts sont tes amis : partage ton lien de contact, vois leurs persos, invite-les direct dans tes groupes, et bloque en silence si besoin.',
+    en: 'Two kinds of groups: offline (track anyone by Lodestone ID) and online (people join via an invite link, approved by the owner). Contacts are your friends: share your contact link, see their characters, invite them straight into your groups, and block silently if needed.',
+  },
+  helpBellTitle: { fr: 'Notifications', en: 'Notifications' },
+  helpBellBody: {
+    fr: 'La cloche sonne en direct : suggestions d’objets (accepter = l’objet est coché ; pour une monture ou mascotte c’est temporaire, la prochaine synchro Lodestone confirme), demandes de contact et invitations de groupe. Tout se traite en un clic, unitairement ou en masse.',
+    en: 'The bell rings live: item suggestions (accepting checks the item; for a mount or minion it’s temporary, the next Lodestone sync confirms), contact requests and group invitations. Everything resolves in one click, one by one or in bulk.',
+  },
   // Tableau de bord super-admin
   adminTitle: { fr: 'Administration', en: 'Administration' },
   adminError: { fr: 'Espace admin indisponible.', en: 'Admin space unavailable.' },
@@ -554,8 +634,8 @@ const STR = {
   adminColMembers: { fr: 'Membres', en: 'Members' },
   adminFollowed: { fr: 'suivi', en: 'tracked' },
   adminSources: {
-    fr: 'Collections — lodestone : {lodestone} · manuel : {user} · seed : {seed} · vides : {empty}',
-    en: 'Collections — lodestone: {lodestone} · manual: {user} · seed: {seed} · empty: {empty}',
+    fr: 'Collections, lodestone : {lodestone} · manuel : {user} · seed : {seed} · vides : {empty}',
+    en: 'Collections, lodestone: {lodestone} · manual: {user} · seed: {seed} · empty: {empty}',
   },
   adminCharRefreshTitle: {
     fr: 'Marquer la fiche périmée (re-scrape au prochain affichage) et rendre la synchro forcée',
@@ -574,8 +654,8 @@ const STR = {
   adminColChecked: { fr: 'Cochés', en: 'Checked' },
   adminActivity: { fr: 'Activité récente', en: 'Recent activity' },
   adminVolumes: {
-    fr: 'Volumes — collections : {collections} lignes · sessions : {tokens} · rooms héritées : {rooms}',
-    en: 'Volumes — collections: {collections} rows · sessions: {tokens} · legacy rooms: {rooms}',
+    fr: 'Volumes, collections : {collections} lignes · sessions : {tokens} · rooms héritées : {rooms}',
+    en: 'Volumes, collections: {collections} rows · sessions: {tokens} · legacy rooms: {rooms}',
   },
   adminPending: { fr: 'En attente', en: 'Pending' },
   adminPendingRequest: {
@@ -593,7 +673,7 @@ const STR = {
   tileBardings: { fr: 'bardes à récupérer', en: 'bardings to get' },
   tileEmotes: { fr: 'émotes à récupérer', en: 'emotes to get' },
   tileFrames: { fr: 'portraits à récupérer', en: 'portraits to get' },
-  planningEmpty: { fr: 'Rien à farmer avec ces filtres — collection complète ? 🎉', en: 'Nothing to farm with these filters — collection complete? 🎉' },
+  planningEmpty: { fr: 'Rien à farmer avec ces filtres, collection complète ? 🎉', en: 'Nothing to farm with these filters, collection complete? 🎉' },
   toLoot: { fr: '{n} à looter', en: '{n} to loot' },
   toLootTitle: {
     fr: "Nombre total d'objets que le groupe peut y récupérer",
@@ -647,7 +727,7 @@ const STR = {
   // Reliques
   relicsTab: { fr: 'Reliques', en: 'Relics' },
   fashionFamily: { fr: 'Mode', en: 'Fashion' },
-  relicGlobal: { fr: 'Avancement global — toutes les reliques', en: 'Overall progress — all relics' },
+  relicGlobal: { fr: 'Avancement global, toutes les reliques', en: 'Overall progress, all relics' },
   groupProgressTab: { fr: 'Avancement', en: 'Progress' },
   groupProgress: { fr: 'Avancement du groupe', en: 'Group progress' },
   progressCollections: { fr: 'Par collection', en: 'By collection' },

@@ -196,7 +196,7 @@ export function RosterBar({
               {t('team')} · {members.length}
               {absent.length > 0 && (
                 <span className="sidebar-presence">
-                  {' — '}
+                  {' · '}
                   {t(presentCount > 1 ? 'presents' : 'present', { n: presentCount })}
                 </span>
               )}

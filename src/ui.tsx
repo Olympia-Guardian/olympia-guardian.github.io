@@ -141,6 +141,7 @@ const TAB_ICONS: Record<string, string> = {
   bell: '000654',
   logout: '000026',
   admin: '060840',
+  guide: '000065',
   // Boutons d'action (règle : uniquement des icônes du jeu)
   lodestone: '000014',
   sync: '000073',

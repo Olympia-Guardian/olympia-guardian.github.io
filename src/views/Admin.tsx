@@ -71,7 +71,7 @@ const EVENT_FMT: Record<string, { icon: string; fr: (a: string, b: string) => st
 
 /** « il y a 3 h » compact — l'admin veut jauger la fraîcheur d'un œil. */
 function ago(ts: number | null, lang: string): string {
-  if (!ts) return '—'
+  if (!ts) return '-'
   const mn = Math.round((Date.now() - ts) / 60_000)
   if (mn < 1) return lang === 'fr' ? 'à l’instant' : 'just now'
   if (mn < 60) return `${mn} min`
@@ -280,7 +280,7 @@ export function AdminPage({ token }: { token: string }) {
                     </a>
                   </td>
                   <td>
-                    {c.dc} — {c.server}
+                    {c.server} [{c.dc}]
                   </td>
                   <td>{c.owner ?? <span className="modal-muted">{t('adminFollowed')}</span>}</td>
                   <td>{c.checked.toLocaleString(lang)}</td>

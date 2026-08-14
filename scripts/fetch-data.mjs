@@ -13,6 +13,17 @@ try {
   console.warn('relic-jobs.json absent — reliques sans champ jobs')
 }
 
+// Voies d'obtention des kits d'encadrement (cache committé, rempli par
+// resolve-frame-sources.mjs via XIVAPI + Garland Tools) : Collect n'en a pas.
+let FRAME_SOURCES = {}
+try {
+  FRAME_SOURCES = JSON.parse(
+    await readFile(new URL('./frame-sources.json', import.meta.url), 'utf8'),
+  )
+} catch {
+  console.warn("frame-sources.json absent, portraits sans voie d'obtention")
+}
+
 // Types de contenu des sources de sorts de magie bleue (cache committé, rempli
 // par resolve-spell-duties.mjs) : FFXIV Collect les type toutes « Other ».
 let SPELL_DUTIES = {}
@@ -65,10 +76,11 @@ const KIND_PATHS = {
   hairstyles: 'hairstyles',
   emotes: 'emotes',
   bardings: 'bardings',
-  frames: 'frames',
   outfits: 'outfits',
   armoires: 'armoires',
   achievements: 'achievements',
+  // En dernier : la voie « récompense de haut fait » se déduit des succès.
+  frames: 'frames',
 }
 
 // L'armoire compte ~3500 entrées : la limite par défaut ne suffit plus.
@@ -121,12 +133,12 @@ function mergeDb(jsonEn, jsonFr) {
       ...(r.points !== undefined && r.type?.name
         ? { achType: fr?.type?.name ?? r.type.name, achTypeEn: r.type.name }
         : {}),
-      ...(r.reward && (r.reward.title?.name || r.reward.item?.name)
+      ...(r.reward && (r.reward.title?.name || r.reward.item?.name || r.reward.name)
         ? {
             reward:
-              fr?.reward?.title?.name ?? fr?.reward?.item?.name ??
-              r.reward.title?.name ?? r.reward.item?.name,
-            rewardEn: r.reward.title?.name ?? r.reward.item?.name,
+              fr?.reward?.title?.name ?? fr?.reward?.item?.name ?? fr?.reward?.name ??
+              r.reward.title?.name ?? r.reward.item?.name ?? r.reward.name,
+            rewardEn: r.reward.title?.name ?? r.reward.item?.name ?? r.reward.name,
             rewardType: r.reward.type,
           }
         : {}),
@@ -322,6 +334,8 @@ function mergeUpgradeTiers(series, relics) {
 
 await mkdir(OUT, { recursive: true })
 
+let achievementsItems = null
+
 for (const [kind, path] of Object.entries(KIND_PATHS)) {
   const [en, fr] = await Promise.all([
     getJson(`${API}/${path}?limit=${PAGE_LIMIT}`),
@@ -329,6 +343,83 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   ])
   const items = mergeDb(en, fr)
   if (kind === 'spells') refineSpellSources(items)
+  if (kind === 'achievements') achievementsItems = items
+  // Portraits : voies d'obtention maison (Garland) + récompenses de hauts
+  // faits déduites de notre propre catalogue de succès + saisons JcJ déduites
+  // du nom (« Gold Conflict 19 » = rang Or de la saison 19 du Conflit).
+  if (kind === 'frames') {
+    const byReward = new Map()
+    for (const a of achievementsItems ?? []) {
+      if (a.rewardType === 'Item' && a.rewardEn) byReward.set(a.rewardEn.toLowerCase(), a)
+    }
+    const CC_RANKS = {
+      Bronze: 'Bronze', Silver: 'Argent', Gold: 'Or', Platinum: 'Platine',
+      Diamond: 'Diamant', Crystal: 'Cristal', Omega: 'Oméga', Ultima: 'Ultima',
+      Rising: 'Croissant', Endless: 'Éternel', Final: 'Ultime',
+    }
+    // La monnaie trahit la vraie catégorie : cristaux-trophées = série JcJ,
+    // certificats de Jonathas = hauts faits, monnaies tribales = tribus,
+    // gemmes bicolores = ALÉAS, tessons = donjons sans fond, etc.
+    const CURRENCY_TYPE = [
+      [/trophy crystal/i, 'PvP'],
+      [/achievement certificate/i, 'Achievement'],
+      [/khloe|faux leaf/i, 'Wondrous Tails'],
+      [/bicolor gemstone/i, 'FATE'],
+      [/allied seal/i, 'Hunts'],
+      [/cosmocredit/i, 'Cosmic Exploration'],
+      // « illumed » = éthéromélangeur du Sanctuaire des pèlerins (donjon sans
+      // fond de Dawntrail), pas le Croissant occulte.
+      [/potsherd|orthos|illumed/i, 'Deep Dungeon'],
+      [/sil'dihn|shishu|aloalo|corvosi/i, 'V&C Dungeon'],
+      [/\bMG[FC]\b/, 'Gold Saucer'],
+      [
+        /goldleaf|amalj'ok|psashp|oaknot|cobaltpiece|whitebone|black copper|kupo nut|sango|dreamstaff|koban|compliment|frogment|pana|pelplume|nanook|omnitoken|fae fancy|yok huy/i,
+        'Tribal',
+      ],
+    ]
+    const refineType = (s) => {
+      for (const [re, type] of CURRENCY_TYPE) {
+        if (re.test(s.textEn)) return { ...s, type }
+      }
+      return s
+    }
+    let n = 0
+    for (const it of items) {
+      const sources = (FRAME_SOURCES[it.id] ?? []).map(refineType)
+      const ach = byReward.get((it.itemNameEn ?? '').toLowerCase())
+      if (ach && !sources.some((s) => s.type === 'Achievement')) {
+        sources.push({ type: 'Achievement', text: ach.name, textEn: ach.nameEn })
+      }
+      const cc = it.nameEn.match(/^(\w+) Conflict (\d+)$/)
+      if (sources.length === 0 && cc && CC_RANKS[cc[1]]) {
+        sources.push({
+          type: 'PvP',
+          text: `Conflit crystallin classé - saison ${cc[2]} (rang ${CC_RANKS[cc[1]]})`,
+          textEn: `Ranked Crystalline Conflict - Season ${cc[2]} (${cc[1]} tier)`,
+        })
+      }
+      if (sources.length > 0) {
+        it.sources = sources
+        n++
+      }
+    }
+    // Les saisons JcJ passées ne se gagnent plus : seule la plus récente
+    // reste obtenable.
+    const seasons = items
+      .map((it) => it.nameEn.match(/ Conflict (\d+)$/))
+      .filter(Boolean)
+      .map((m) => Number(m[1]))
+    const currentSeason = Math.max(0, ...seasons)
+    let past = 0
+    for (const it of items) {
+      const m = it.nameEn.match(/ Conflict (\d+)$/)
+      if (m && Number(m[1]) < currentSeason) {
+        it.unobtainable = true
+        past++
+      }
+    }
+    console.log(`frames: ${n} portraits avec voie d'obtention, ${past} saisons JcJ passées`)
+  }
   // Succès « Legacy » (ère 1.0) : plus obtenables depuis 2012.
   if (kind === 'achievements') {
     for (const it of items) if (it.achTypeEn === 'Legacy') it.unobtainable = true
@@ -337,7 +428,9 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   // FFXIV Collect. L'API n'expose pas le drapeau, mais son filtre ransack
   // marche : ce qui ne ressort pas avec sources_limited_eq=false n'a plus
   // aucune voie d'obtention active (ex. monture Goobbue, chocobo Legacy).
-  try {
+  // Exception : les portraits portent NOS sources, que Collect ignore — le
+  // drapeau vient de nos règles (saisons JcJ passées) posées plus haut.
+  if (kind !== 'frames') try {
     const ok = await getJson(`${API}/${path}?limit=${PAGE_LIMIT}&sources_limited_eq=false`)
     const okIds = new Set(ok.results.map((r) => r.id))
     let n = 0

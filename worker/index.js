@@ -908,14 +908,15 @@ async function patchGroup(env, user, id, raw) {
   }
   const name = body?.name !== undefined ? body.name : null
   if (name !== null && !validGroupName(name)) return response('{"error":"invalid name"}', 422)
-  // La conversion ne va que dans un sens : privé → synchronisé — et elle
-  // frappe le code d'invitation du groupe s'il n'en a pas encore.
-  const shared = body?.shared === true ? 1 : row.shared
-  const inviteCode = row.invite_code ?? (shared ? newInviteCode() : null)
+  // Le type (online/offline) se choisit à la création et ne change plus :
+  // toute demande de conversion est refusée, seul le renommage passe.
+  if (body?.shared !== undefined && !!body.shared !== !!row.shared)
+    return response('{"error":"group type is fixed at creation"}', 409)
+  const inviteCode = row.invite_code ?? (row.shared ? newInviteCode() : null)
   await env.DB.prepare(
     'UPDATE groups SET name = ?2, shared = ?3, invite_code = ?4, updated = ?5 WHERE id = ?1',
   )
-    .bind(id, name !== null ? name.trim() : row.name, shared, inviteCode, Date.now())
+    .bind(id, name !== null ? name.trim() : row.name, row.shared, inviteCode, Date.now())
     .run()
   const fresh = await groupRow(env, id)
   return response(JSON.stringify(groupJson(fresh, await groupMembers(env, id), user.id)))
@@ -2165,6 +2166,42 @@ async function adminPurgeTokens(env) {
   return response(JSON.stringify({ ok: true, purged: r.meta.changes }))
 }
 
+// ------------------------------------------------------------ recherche perso
+// GET /search-character?name=…&server=… (auth) : recherche Lodestone par nom
+// — fini la chasse à l'ID, on clique sur son perso dans les résultats.
+
+async function searchCharacter(env, url) {
+  const name = (url.searchParams.get('name') ?? '').trim()
+  const server = (url.searchParams.get('server') ?? '').trim()
+  if (name.length < 2) return response('{"error":"name too short"}', 422)
+  const target = new URL('https://eu.finalfantasyxiv.com/lodestone/character/')
+  target.searchParams.set('q', name)
+  if (server) target.searchParams.set('worldname', server)
+  const res = await fetch(target.toString(), {
+    headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': 'fr' },
+  })
+  if (!res.ok) return response('{"error":"lodestone unavailable"}', 502)
+  const html = await res.text()
+  const unescape = (s) =>
+    s.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+  const results = []
+  const re =
+    /href="\/lodestone\/character\/(\d+)\/" class="entry__chara__link"[\s\S]*?<img src="([^"]+)"[\s\S]*?entry__name">([^<]+)<[\s\S]*?entry__world">(?:<i[^>]*><\/i>)?([^<]+)</g
+  let m
+  while ((m = re.exec(html)) !== null && results.length < 12) {
+    const world = m[4].trim()
+    const wm = world.match(/^(.+?)\s*\[(.+)\]$/)
+    results.push({
+      id: Number(m[1]),
+      avatar: m[2],
+      name: unescape(m[3].trim()),
+      server: wm ? wm[1] : world,
+      dc: wm ? wm[2] : '',
+    })
+  }
+  return response(JSON.stringify({ results }))
+}
+
 // --------------------------------------------------------------- temps réel
 // Un salon WebSocket par utilisateur (Durable Object en hibernation : les
 // connexions inactives ne coûtent rien). Le worker notifie les salons après
@@ -2368,6 +2405,13 @@ export default {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return resolveSuggestions(env, user, await req.text())
+    }
+
+    // --- recherche de perso par nom (assistant de liaison)
+    if (url.pathname === '/search-character' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return searchCharacter(env, url)
     }
 
     // --- temps réel : WebSocket vers le salon de l'utilisateur

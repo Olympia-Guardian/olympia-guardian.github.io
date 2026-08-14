@@ -186,12 +186,14 @@ button:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 37px;
+  box-sizing: border-box;
 }
 
 .tabs .tab img.kind-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 25px;
+  height: 25px;
+  border-radius: 5px;
 }
 
 /* Icônes du jeu dans les boutons d'action courants */
@@ -203,9 +205,18 @@ button:focus-visible {
   vertical-align: -3px;
 }
 
-.topbar-actions .account-btn img.kind-icon {
-  width: 19px;
-  height: 19px;
+.topbar-actions .account-btn img.kind-icon,
+.topbar-actions .bell-btn img.kind-icon,
+.topbar-actions .guide-btn img.kind-icon,
+.topbar-actions .admin-btn img.kind-icon {
+  width: 25px;
+  height: 25px;
+  border-radius: 5px;
+}
+
+.account-chip .icon-btn img.kind-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .rail-face {
@@ -263,7 +274,7 @@ button:focus-visible {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
   padding: 14px 0;
   border-bottom: 1px solid var(--hairline);
   flex-wrap: wrap;
@@ -307,17 +318,20 @@ button:focus-visible {
 
 .tabs {
   display: flex;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  padding: 3px;
+  gap: 6px;
 }
 
 .tab {
-  padding: 6px 16px;
-  border-radius: 999px;
+  padding: 6px 12px 6px 6px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
   color: var(--ink-2);
+}
+
+.tab:hover {
+  color: var(--ink);
+  border-color: var(--ring);
 }
 
 .tab:hover {
@@ -326,6 +340,7 @@ button:focus-visible {
 
 .tab.is-active {
   background: var(--surface-2);
+  border-color: var(--gold);
   color: var(--gold);
   font-weight: 600;
 }
@@ -334,7 +349,7 @@ button:focus-visible {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -1323,17 +1338,35 @@ a.player-name:hover {
   font-size: 16px;
 }
 
-/* Cloche, compte et langue : même hauteur que « Mes Groupes »/« Mon Journal » */
+/* Tous les contrôles du header : gabarit fixe 37px, padding réduit à 4px
+   pour laisser la place à de grandes icônes bien lisibles. */
+.topbar-actions .account-btn,
 .topbar-actions .bell-btn,
+.topbar-actions .guide-btn,
+.topbar-actions .admin-btn,
 .topbar-actions .account-chip,
 .topbar-actions .lang-switch {
   height: 37px;
   box-sizing: border-box;
 }
 
-.topbar-actions .bell-btn {
+.topbar-actions .account-btn {
+  padding: 6px 12px 6px 6px;
+}
+
+.topbar-actions .bell-btn,
+.topbar-actions .guide-btn,
+.topbar-actions .admin-btn {
+  padding: 6px;
+}
+
+.topbar-actions .bell-btn,
+.topbar-actions .guide-btn,
+.topbar-actions .admin-btn {
   width: 37px;
   justify-content: center;
+  display: inline-flex;
+  align-items: center;
 }
 
 .topbar-actions .lang-btn {
@@ -1645,6 +1678,17 @@ a.player-name:hover {
   margin-bottom: 4px;
 }
 
+/* Deux onglets seulement : ils gardent leur taille naturelle. */
+.kind-bar.groups-tabs > .kind-btn {
+  flex: 0 0 auto;
+}
+
+.kind-btn img.kind-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+}
+
 .group-accounts {
   display: flex;
   align-items: center;
@@ -1808,6 +1852,179 @@ a.player-name:hover {
   color: var(--muted);
   font-size: 12px;
   flex-shrink: 0;
+}
+
+/* ------------------------------------------- assistant de liaison (journal) */
+
+.onboard-steps {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 4px 0 14px;
+  padding: 0;
+}
+
+.onboard-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.onboard-steps li.is-active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.onboard-steps li.is-done {
+  color: var(--gold, #c8a464);
+}
+
+.onboard-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.onboard-steps li.is-done .onboard-num {
+  border-color: var(--gold, #c8a464);
+  color: var(--gold, #c8a464);
+}
+
+.onboard-steps li.is-active .onboard-num {
+  border-color: var(--accent);
+}
+
+.char-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.char-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.char-result:hover {
+  border-color: var(--gold, #c8a464);
+}
+
+.char-result img {
+  border-radius: 50%;
+}
+
+.char-result-id {
+  display: flex;
+  flex-direction: column;
+}
+
+.char-result-id small {
+  color: var(--muted);
+}
+
+.onboard-server {
+  max-width: 190px;
+}
+
+/* Le bascule « Ajout rapide / Un par un » vit à droite de la barre d'outils */
+.editor-controls .mode-switch {
+  margin-left: auto;
+}
+
+.onboard-fallback {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.onboard-fallback summary {
+  cursor: pointer;
+}
+
+.onboard-fallback .controls {
+  margin-top: 8px;
+}
+
+.onboard-verify {
+  margin: 4px 0 12px;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ------------------------------------------------- aide active + guide */
+
+.active-help {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 350px;
+  max-width: calc(100vw - 44px);
+  background: var(--surface);
+  border: 1px solid var(--gold, #c8a464);
+  border-radius: var(--radius-s);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  z-index: 90;
+  padding: 0 14px 12px;
+}
+
+.active-help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -14px 8px;
+  padding: 7px 10px 7px 14px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--gold, #c8a464);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.active-help-title {
+  margin: 4px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.active-help-body {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.active-help-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.guide-page .guide-body {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
 }
 
 .group-invite-label {
@@ -2305,7 +2522,7 @@ a.player-name:hover {
 }
 
 .mypage-tabs {
-  align-self: flex-start;
+  align-self: stretch;
 }
 
 .mypage-count {
@@ -3134,20 +3351,39 @@ a.player-name:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 18px;
+  gap: 6px;
   padding: 10px 0 0;
+}
+
+/* La rangée remplit le container : chaque onglet grandit depuis sa taille
+   naturelle (pas d'égalisation forcée, les libellés restent entiers). */
+.kind-bar > .kind-btn,
+.kind-bar > .kind-family {
+  flex: 1 1 auto;
+}
+
+.kind-bar .kind-btn {
+  justify-content: center;
 }
 
 /* Les collections cousines (mode, tenues) restent visuellement soudées */
 .kind-family {
   display: inline-flex;
-  gap: 2px;
+  gap: 4px;
+}
+
+.kind-family .kind-btn {
+  flex: 1 1 auto;
 }
 
 .kind-btn {
-  padding: 7px 14px;
+  padding: 6px 12px 6px 6px;
+  height: 37px;
+  box-sizing: border-box;
   border-radius: var(--radius-s);
-  color: var(--muted);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink-2);
   font-size: 14px;
   display: inline-flex;
   align-items: center;
@@ -3159,8 +3395,14 @@ a.player-name:hover {
   background: var(--surface);
 }
 
+.kind-btn:hover {
+  color: var(--ink);
+  border-color: var(--ring);
+}
+
 .kind-btn.is-active {
   background: var(--surface-2);
+  border-color: var(--gold);
   color: var(--gold);
   font-weight: 600;
 }

@@ -20,6 +20,7 @@ import {
 } from './store'
 import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
+import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
 import { useSuggestions } from './suggestions'
@@ -29,7 +30,7 @@ import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
 
-type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'groups' | 'admin'
+type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'groups' | 'admin' | 'guide'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -184,6 +185,7 @@ export default function App() {
       t === 'groups' ||
       t === 'fashion' ||
       t === 'admin' ||
+      t === 'guide' ||
       (KINDS as string[]).includes(t ?? '')
     )
       return t as Tab
@@ -281,6 +283,21 @@ export default function App() {
   // haut ne garde que les grandes sections, la collection se choisit sur une
   // seconde ligne quand on est dans « Collections ».
   const isCollection = (KINDS as string[]).includes(tab) || tab === 'fashion'
+  // Aide active : le sujet suit l'écran affiché (la cloche prime quand ouverte).
+  const helpTopic = bellOpen
+    ? 'bell'
+    : tab === 'planning'
+      ? 'planning'
+      : isCollection
+        ? 'collections'
+        : tab === 'relics'
+          ? 'relics'
+          : tab === 'mypage'
+            ? 'mypage'
+            : tab === 'groups'
+              ? 'groups'
+              : null
+
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'planning', label: t('planning'), icon: 'planning' },
     { id: collectionTab, label: t('collections'), icon: 'collections' },
@@ -336,9 +353,18 @@ export default function App() {
               <TabIcon k="groups" /> {t('groupsTab')}
             </button>
             {!auth.user ? (
-              <button className="btn btn-ghost account-btn" onClick={auth.login} title={t('loginIntro')}>
-                <TabIcon k="login" /> {t('loginShort')}
-              </button>
+              <>
+                <button
+                  className={`btn btn-ghost btn-icon-only guide-btn ${tab === 'guide' ? 'is-active' : ''}`}
+                  title={t('guideTitle')}
+                  onClick={() => setTab('guide')}
+                >
+                  <TabIcon k="guide" />
+                </button>
+                <button className="btn btn-ghost account-btn" onClick={auth.login} title={t('loginIntro')}>
+                  <TabIcon k="login" /> {t('loginShort')}
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -346,6 +372,13 @@ export default function App() {
                   onClick={() => setTab('mypage')}
                 >
                   <TabIcon k="journal" /> {t('myPage')}
+                </button>
+                <button
+                  className={`btn btn-ghost btn-icon-only guide-btn ${tab === 'guide' ? 'is-active' : ''}`}
+                  title={t('guideTitle')}
+                  onClick={() => setTab('guide')}
+                >
+                  <TabIcon k="guide" />
                 </button>
                 {auth.user.isAdmin && (
                   <button
@@ -671,6 +704,7 @@ export default function App() {
               tab !== 'mypage' &&
               tab !== 'groups' &&
               tab !== 'admin' &&
+              tab !== 'guide' &&
               tab !== 'fashion' && (
               <Matrix
                 kind={tab}
@@ -729,6 +763,7 @@ export default function App() {
             {tab === 'admin' && auth.token && auth.user?.isAdmin && (
               <AdminPage token={auth.token} />
             )}
+            {tab === 'guide' && <GuidePage />}
             {db && tab === 'mypage' && (
               <MyPage
                 db={db}
@@ -764,6 +799,8 @@ export default function App() {
             onClose={() => setShownItem(null)}
           />
         )}
+
+        <ActiveHelp topicKey={helpTopic} />
 
         <footer className="footer">
           {t('dataBy')}{' '}

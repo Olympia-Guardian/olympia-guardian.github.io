@@ -16,6 +16,8 @@ export interface SessionUser {
   id: string
   name: string
   avatar: string
+  /** Présent (true) uniquement pour le super-admin. */
+  isAdmin?: boolean
 }
 
 const TOKEN_KEY = 'ogs.session.v1'

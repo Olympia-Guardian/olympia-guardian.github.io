@@ -23,12 +23,13 @@ import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
 import { NotificationsPanel } from './Notifications'
 import { useSuggestions } from './suggestions'
+import { AdminPage } from './views/Admin'
 import { GroupCreateDialog, GroupsPage } from './views/Groups'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
 
-type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'groups'
+type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'groups' | 'admin'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -167,6 +168,7 @@ export default function App() {
       t === 'mypage' ||
       t === 'groups' ||
       t === 'fashion' ||
+      t === 'admin' ||
       (KINDS as string[]).includes(t ?? '')
     )
       return t as Tab
@@ -330,6 +332,15 @@ export default function App() {
                 >
                   <GiCharacter /> {t('myPage')}
                 </button>
+                {auth.user.isAdmin && (
+                  <button
+                    className={`btn btn-ghost btn-icon-only admin-btn ${tab === 'admin' ? 'is-active' : ''}`}
+                    title={t('adminTitle')}
+                    onClick={() => setTab('admin')}
+                  >
+                    🛡
+                  </button>
+                )}
                 <span className="bell-wrap">
                   <button
                     className={`btn btn-ghost btn-icon-only bell-btn ${bellOpen ? 'is-active' : ''}`}
@@ -644,6 +655,7 @@ export default function App() {
               tab !== 'relics' &&
               tab !== 'mypage' &&
               tab !== 'groups' &&
+              tab !== 'admin' &&
               tab !== 'fashion' && (
               <Matrix
                 kind={tab}
@@ -698,6 +710,9 @@ export default function App() {
                 token={auth.token}
                 myUserId={auth.user?.id ?? null}
               />
+            )}
+            {tab === 'admin' && auth.token && auth.user?.isAdmin && (
+              <AdminPage token={auth.token} />
             )}
             {db && tab === 'mypage' && (
               <MyPage

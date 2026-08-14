@@ -1703,6 +1703,48 @@ a.player-name:hover {
   border-radius: 50%;
 }
 
+/* ------------------------------------------------------------------- admin */
+
+.admin-head-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 6px 10px;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.admin-table thead th {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.admin-name {
+  font-weight: 600;
+}
+
+.admin-name img {
+  border-radius: 50%;
+  vertical-align: -5px;
+  margin-right: 6px;
+}
+
+.admin-danger:hover {
+  color: var(--critical);
+}
+
+.admin-sources {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .group-invite-label {
   color: var(--muted);
   text-transform: uppercase;

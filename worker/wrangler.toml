@@ -8,6 +8,8 @@ workers_dev = true
 [vars]
 DISCORD_CLIENT_ID = "1537099783573995522"
 APP_URL = "https://olympia-guardian.github.io"
+# Compte super-admin : seul lui voit /admin/* et le tableau de bord.
+ADMIN_USER_ID = "discord:161937296185229312"
 # DISCORD_CLIENT_SECRET : secret wrangler (npx wrangler secret put DISCORD_CLIENT_SECRET)
 
 [[d1_databases]]

@@ -530,7 +530,13 @@ async function getMe(env, user) {
     .bind(user.id)
     .all()
   return {
-    user: { id: user.id, name: user.name, avatar: user.avatar },
+    user: {
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
+      // Présent seulement pour le super-admin (le front ouvre son espace).
+      ...(isAdmin(env, user) ? { isAdmin: true } : {}),
+    },
     bindings: rows.results.map((r) => ({
       charId: r.char_id,
       verified: !!r.verified,
@@ -1820,6 +1826,194 @@ async function inbox(env, user) {
   )
 }
 
+// -------------------------------------------------------------------- admin
+// Espace super-admin : réservé au compte ADMIN_USER_ID (wrangler.toml). Vue
+// d'ensemble (comptes, persos, groupes, activité) et actions ciblées. Les
+// routes /admin/* répondent 404 aux autres — l'espace n'existe pas pour eux.
+
+function isAdmin(env, user) {
+  return !!user && !!env.ADMIN_USER_ID && user.id === env.ADMIN_USER_ID
+}
+
+/** GET /admin/overview : tuiles + listes pour le tableau de bord. */
+async function adminOverview(env) {
+  const now = Date.now()
+  const [users, bindings, chars, groups, sessions, suggPending, contactsAgg, blocksN, reqN, colSources] =
+    await Promise.all([
+      env.DB.prepare('SELECT id, name, avatar, created FROM users ORDER BY created').all(),
+      env.DB.prepare('SELECT user_id, char_id, verified FROM bindings').all(),
+      env.DB.prepare(
+        'SELECT id, name, server, dc, updated, forced_at FROM characters ORDER BY updated DESC',
+      ).all(),
+      env.DB.prepare(
+        'SELECT g.id, g.name, g.shared, g.created, g.owner_user_id, u.name AS owner_name, ' +
+          '(SELECT COUNT(*) FROM group_members m WHERE m.group_id = g.id) AS members ' +
+          'FROM groups g LEFT JOIN users u ON u.id = g.owner_user_id ORDER BY g.created',
+      ).all(),
+      env.DB.prepare(
+        'SELECT user_id, COUNT(*) AS n, MAX(created) AS last FROM tokens WHERE expires > ?1 GROUP BY user_id',
+      )
+        .bind(now)
+        .all(),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM suggestions').first(),
+      env.DB.prepare(
+        "SELECT SUM(status = 'accepted') AS friends, SUM(status = 'pending') AS pending FROM contacts",
+      ).first(),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM blocks').first(),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM group_requests').first(),
+      env.DB.prepare('SELECT source, COUNT(*) AS n FROM collections GROUP BY source').all(),
+    ])
+
+  const verifiedBy = new Map() // user → persos vérifiés
+  const ownerOf = new Map() // char → {userId, verified}
+  for (const b of bindings.results) {
+    if (b.verified) {
+      verifiedBy.set(b.user_id, (verifiedBy.get(b.user_id) ?? 0) + 1)
+      ownerOf.set(b.char_id, b.user_id)
+    }
+  }
+  const ownedBy = new Map()
+  for (const g of groups.results) {
+    ownedBy.set(g.owner_user_id, (ownedBy.get(g.owner_user_id) ?? 0) + 1)
+  }
+  const sessionsBy = new Map(sessions.results.map((s) => [s.user_id, s]))
+  const nameOf = new Map(users.results.map((u) => [u.id, u.name]))
+
+  return response(
+    JSON.stringify({
+      tiles: {
+        users: users.results.length,
+        characters: chars.results.length,
+        verifiedChars: ownerOf.size,
+        groups: groups.results.length,
+        onlineGroups: groups.results.filter((g) => g.shared).length,
+        suggestions: suggPending?.n ?? 0,
+        friendships: contactsAgg?.friends ?? 0,
+        pendingContacts: contactsAgg?.pending ?? 0,
+        blocks: blocksN?.n ?? 0,
+        joinRequests: reqN?.n ?? 0,
+        sessions: sessions.results.reduce((s, r) => s + r.n, 0),
+      },
+      collectionSources: Object.fromEntries(colSources.results.map((r) => [r.source, r.n])),
+      users: users.results.map((u) => ({
+        id: u.id,
+        name: u.name ?? '?',
+        avatar: u.avatar ?? '',
+        created: u.created,
+        verifiedChars: verifiedBy.get(u.id) ?? 0,
+        ownedGroups: ownedBy.get(u.id) ?? 0,
+        sessions: sessionsBy.get(u.id)?.n ?? 0,
+        lastSeen: sessionsBy.get(u.id)?.last ?? null,
+      })),
+      characters: chars.results.map((c) => ({
+        id: c.id,
+        name: c.name,
+        server: c.server,
+        dc: c.dc,
+        updated: c.updated,
+        forcedAt: c.forced_at ?? null,
+        owner: ownerOf.has(c.id) ? (nameOf.get(ownerOf.get(c.id)) ?? '?') : null,
+      })),
+      groups: groups.results.map((g) => ({
+        id: g.id,
+        name: g.name,
+        shared: !!g.shared,
+        created: g.created,
+        owner: g.owner_name ?? g.owner_user_id,
+        members: g.members,
+      })),
+    }),
+  )
+}
+
+/** POST /admin/character/:id/refresh : marque la fiche périmée (re-scrape au
+ *  prochain affichage — un seul perso, pas de rafale) et rend la synchro
+ *  forcée au joueur. */
+async function adminRefreshChar(env, id) {
+  const r = await env.DB.prepare(
+    'UPDATE characters SET updated = ?2, forced_at = NULL WHERE id = ?1',
+  )
+    .bind(id, Date.now() - CHAR_TTL - 1000)
+    .run()
+  return response(JSON.stringify({ ok: true, found: r.meta.changes > 0 }))
+}
+
+/** DELETE /admin/group/:id : suppression complète, quel qu'en soit le proprio. */
+async function adminDeleteGroup(env, id) {
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM group_members WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM group_links WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM group_requests WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM group_bans WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM group_invites WHERE group_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM groups WHERE id = ?1').bind(id),
+  ])
+  return response('{"ok":true}')
+}
+
+/** DELETE /admin/user/:id : purge complète d'un compte — ses groupes, ses
+ *  liaisons, ses contacts, ses sessions. Les fiches de persos restent (elles
+ *  sont publiques et resservent). L'admin ne peut pas se supprimer lui-même. */
+async function adminDeleteUser(env, admin, targetId) {
+  if (targetId === admin.id) return response('{"error":"cannot delete yourself"}', 422)
+  const target = await env.DB.prepare('SELECT id FROM users WHERE id = ?1').bind(targetId).first()
+  if (!target) return response('{"error":"no such user"}', 404)
+  const owned = await env.DB.prepare('SELECT id FROM groups WHERE owner_user_id = ?1')
+    .bind(targetId)
+    .all()
+  const verifiedChars = await env.DB.prepare(
+    'SELECT char_id FROM bindings WHERE user_id = ?1 AND verified = 1',
+  )
+    .bind(targetId)
+    .all()
+  const stmts = []
+  for (const g of owned.results) {
+    for (const table of [
+      'group_members',
+      'group_links',
+      'group_requests',
+      'group_bans',
+      'group_invites',
+    ]) {
+      stmts.push(env.DB.prepare(`DELETE FROM ${table} WHERE group_id = ?1`).bind(g.id))
+    }
+    stmts.push(env.DB.prepare('DELETE FROM groups WHERE id = ?1').bind(g.id))
+  }
+  // Ses persos vérifiés sortent des groupes online restants (les groupes
+  // privés d'autrui les gardent : ce ne sont que des persos suivis).
+  for (const c of verifiedChars.results) {
+    stmts.push(
+      env.DB.prepare(
+        'DELETE FROM group_members WHERE char_id = ?1 AND group_id IN (SELECT id FROM groups WHERE shared = 1)',
+      ).bind(c.char_id),
+    )
+    stmts.push(env.DB.prepare('DELETE FROM suggestions WHERE char_id = ?1').bind(c.char_id))
+  }
+  stmts.push(
+    env.DB.prepare('DELETE FROM group_links WHERE user_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM group_requests WHERE user_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM group_bans WHERE user_id = ?1').bind(targetId),
+    env.DB.prepare(
+      'DELETE FROM group_invites WHERE from_user_id = ?1 OR to_user_id = ?1',
+    ).bind(targetId),
+    env.DB.prepare('DELETE FROM contacts WHERE user_id = ?1 OR friend_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM contact_codes WHERE user_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM blocks WHERE user_id = ?1 OR blocked_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM suggestions WHERE from_user_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM bindings WHERE user_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM tokens WHERE user_id = ?1').bind(targetId),
+    env.DB.prepare('DELETE FROM users WHERE id = ?1').bind(targetId),
+  )
+  await env.DB.batch(stmts)
+  return response('{"ok":true}')
+}
+
+/** POST /admin/purge-tokens : supprime les sessions expirées. */
+async function adminPurgeTokens(env) {
+  const r = await env.DB.prepare('DELETE FROM tokens WHERE expires < ?1').bind(Date.now()).run()
+  return response(JSON.stringify({ ok: true, purged: r.meta.changes }))
+}
+
 // --------------------------------------------------------------------- http
 
 function response(body, status = 200) {
@@ -1943,6 +2137,23 @@ export default {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return resolveSuggestions(env, user, await req.text())
+    }
+
+    // --- admin : réservé à ADMIN_USER_ID — 404 pour tout le monde ailleurs
+    if (url.pathname.startsWith('/admin/')) {
+      const user = await authenticate(env, req)
+      if (!isAdmin(env, user)) return response('{"error":"not found"}', 404)
+      if (url.pathname === '/admin/overview' && req.method === 'GET') return adminOverview(env)
+      if (url.pathname === '/admin/purge-tokens' && req.method === 'POST')
+        return adminPurgeTokens(env)
+      const chr = url.pathname.match(/^\/admin\/character\/(\d{1,12})\/refresh$/)
+      if (chr && req.method === 'POST') return adminRefreshChar(env, Number(chr[1]))
+      const grpDel = url.pathname.match(/^\/admin\/group\/([\w-]{1,80})$/)
+      if (grpDel && req.method === 'DELETE') return adminDeleteGroup(env, grpDel[1])
+      const usrDel = url.pathname.match(/^\/admin\/user\/([\w:.@%-]{1,240})$/)
+      if (usrDel && req.method === 'DELETE')
+        return adminDeleteUser(env, user, decodeURIComponent(usrDel[1]))
+      return response('{"error":"not found"}', 404)
     }
 
     // --- contacts : amis, blacklist, invitations directes, boîte de réception

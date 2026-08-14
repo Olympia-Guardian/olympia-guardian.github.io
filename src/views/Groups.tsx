@@ -6,10 +6,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { fetchCharacter, parseLodestoneId, KINDS, type Character } from '../api'
 import type { ContactsController } from '../contacts'
+import { readHashParam, setHashParam } from '../store'
 import type { GroupsController, Group } from '../groups'
 import { apiGroupInvite, type ApiContact } from '../groupsApi'
 import { useI18n } from '../i18n'
-import { onAvatarImgError } from '../ui'
+import { TabIcon, onAvatarImgError } from '../ui'
 
 /** Fiche légère d'un perso (nom + avatar), chargée à la demande. */
 function useChar(charId: number): Character | null {
@@ -274,9 +275,6 @@ function ContactsSection({
   if (!d) return null
   return (
     <>
-      <div className="groups-head contacts-head">
-        <h2 className="groups-title">{t('contactsTitle')}</h2>
-      </div>
       <section className="relic-series group-card">
         <header className="relic-series-head">
           <h4 className="relic-series-name">🔗 {t('contactLinkTitle')}</h4>
@@ -662,17 +660,42 @@ export function GroupsPage({
 }) {
   const { t } = useI18n()
   const [creating, setCreating] = useState(false)
+  // Onglet courant (Groupes / Contacts) — dans le hash pour survivre au reload.
+  const [section, setSection] = useState<'groups' | 'contacts'>(() =>
+    readHashParam('gtab') === 'contacts' ? 'contacts' : 'groups',
+  )
+  useEffect(() => {
+    setHashParam('gtab', section === 'groups' ? null : section)
+  }, [section])
 
   return (
     <div className="view groups-page">
-      <div className="groups-head">
-        <h2 className="groups-title">{t('groupsPageTitle')}</h2>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          ➕ {t('createGroupTitle')}
+      <nav className="kind-bar groups-tabs">
+        <button
+          className={`kind-btn ${section === 'groups' ? 'is-active' : ''}`}
+          onClick={() => setSection('groups')}
+        >
+          <TabIcon k="groups" /> {t('groupsSection')}
         </button>
+        <button
+          className={`kind-btn ${section === 'contacts' ? 'is-active' : ''}`}
+          onClick={() => setSection('contacts')}
+        >
+          <TabIcon k="contacts" /> {t('contactsSection')}
+        </button>
+      </nav>
+      <div className="groups-head">
+        <h2 className="groups-title">
+          {t(section === 'groups' ? 'groupsSection' : 'contactsSection')}
+        </h2>
+        {section === 'groups' && (
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>
+            ➕ {t('createGroupTitle')}
+          </button>
+        )}
       </div>
 
-      {grp.pending.length > 0 && (
+      {section === 'groups' && grp.pending.length > 0 && (
         <section className="relic-series group-card">
           <header className="relic-series-head">
             <h4 className="relic-series-name">⏳ {t('pendingSentTitle')}</h4>
@@ -687,8 +710,11 @@ export function GroupsPage({
         </section>
       )}
 
-      {grp.groups.length === 0 && <p className="empty">{t('groupsEmpty')}</p>}
-      {grp.groups.map((g) => (
+      {section === 'groups' && grp.groups.length === 0 && (
+        <p className="empty">{t('groupsEmpty')}</p>
+      )}
+      {section === 'groups' &&
+        grp.groups.map((g) => (
         <GroupCard
           key={g.id}
           g={g}
@@ -698,9 +724,12 @@ export function GroupsPage({
           contacts={contacts}
           myUserId={myUserId}
         />
-      ))}
+        ))}
 
-      {token && <ContactsSection grp={grp} contacts={contacts} token={token} />}
+      {section === 'contacts' && token && (
+        <ContactsSection grp={grp} contacts={contacts} token={token} />
+      )}
+      {section === 'contacts' && !token && <p className="empty">{t('contactGuestPage')}</p>}
 
       {creating && (
         <GroupCreateDialog

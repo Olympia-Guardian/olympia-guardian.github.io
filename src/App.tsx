@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { GiCharacter, GiRingingBell, GiThreeFriends } from 'react-icons/gi'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
 import { useAuth } from './auth'
 import { useDigest } from './digest'
@@ -266,10 +265,10 @@ export default function App() {
   // haut ne garde que les grandes sections, la collection se choisit sur une
   // seconde ligne quand on est dans « Collections ».
   const isCollection = (KINDS as string[]).includes(tab) || tab === 'fashion'
-  const TABS: { id: Tab; label: string }[] = [
-    { id: 'planning', label: t('planning') },
-    { id: collectionTab, label: t('collections') },
-    { id: 'relics', label: t('groupProgressTab') },
+  const TABS: { id: Tab; label: string; icon: string }[] = [
+    { id: 'planning', label: t('planning'), icon: 'planning' },
+    { id: collectionTab, label: t('collections'), icon: 'collections' },
+    { id: 'relics', label: t('groupProgressTab'), icon: 'avancement' },
   ]
 
   return (
@@ -309,7 +308,7 @@ export default function App() {
                 className={`tab ${tab === tb.id || (tb.id === collectionTab && isCollection) ? 'is-active' : ''}`}
                 onClick={() => setTab(tb.id)}
               >
-                {tb.label}
+                <TabIcon k={tb.icon} /> {tb.label}
               </button>
             ))}
           </nav>
@@ -318,11 +317,11 @@ export default function App() {
               className={`btn btn-ghost account-btn ${tab === 'groups' ? 'is-active' : ''}`}
               onClick={() => setTab('groups')}
             >
-              <GiThreeFriends /> {t('groupsTab')}
+              <TabIcon k="groups" /> {t('groupsTab')}
             </button>
             {!auth.user ? (
               <button className="btn btn-ghost account-btn" onClick={auth.login} title={t('loginIntro')}>
-                <GiCharacter /> {t('loginShort')}
+                <TabIcon k="login" /> {t('loginShort')}
               </button>
             ) : (
               <>
@@ -330,7 +329,7 @@ export default function App() {
                   className={`btn btn-ghost account-btn ${tab === 'mypage' ? 'is-active' : ''}`}
                   onClick={() => setTab('mypage')}
                 >
-                  <GiCharacter /> {t('myPage')}
+                  <TabIcon k="journal" /> {t('myPage')}
                 </button>
                 {auth.user.isAdmin && (
                   <button
@@ -338,7 +337,7 @@ export default function App() {
                     title={t('adminTitle')}
                     onClick={() => setTab('admin')}
                   >
-                    🛡
+                    <TabIcon k="admin" />
                   </button>
                 )}
                 <span className="bell-wrap">
@@ -347,7 +346,7 @@ export default function App() {
                     title={t('bellTitle')}
                     onClick={() => setBellOpen((v) => !v)}
                   >
-                    <GiRingingBell />
+                    <TabIcon k="bell" />
                     {sugg.count > 0 && <span className="bell-badge">{sugg.count}</span>}
                   </button>
                   {bellOpen && (
@@ -381,8 +380,8 @@ export default function App() {
                 <span className="account-chip" title={auth.user.name}>
                   {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
                   <span className="account-name">{auth.user.name}</span>
-                  <button className="icon-btn" title={t('logout')} onClick={auth.logout}>
-                    ⏻
+                  <button className="icon-btn logout-btn" title={t('logout')} onClick={auth.logout}>
+                    <TabIcon k="logout" />
                   </button>
                 </span>
               </>
@@ -456,7 +455,7 @@ export default function App() {
         )}
 
         <div className="layout">
-          {tab !== 'mypage' && tab !== 'groups' && (
+          {tab !== 'mypage' && tab !== 'groups' && tab !== 'admin' && (
           <RosterBar
             members={members}
             activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}

@@ -242,9 +242,15 @@ const STR = {
     en: 'Discord sign-in required to create an online group.',
   },
   createGroupNoFounder: { fr: '— sans personnage —', en: '— no character —' },
-  groupsTab: { fr: 'Mes Groupes', en: 'My Groups' },
+  groupsTab: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
   groupsManage: { fr: '⚙️ Gérer les groupes…', en: '⚙️ Manage groups…' },
-  groupsPageTitle: { fr: 'Mes groupes', en: 'My groups' },
+  groupsPageTitle: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
+  groupsSection: { fr: 'Groupes', en: 'Groups' },
+  contactsSection: { fr: 'Contacts', en: 'Contacts' },
+  contactGuestPage: {
+    fr: 'Connecte-toi avec Discord pour gérer tes contacts.',
+    en: 'Log in with Discord to manage your contacts.',
+  },
   groupsEmpty: {
     fr: 'Aucun groupe pour l’instant — crée ton premier groupe pour commencer.',
     en: 'No group yet — create your first group to get started.',
@@ -562,6 +568,23 @@ const STR = {
   adminGroupDeleteConfirm: {
     fr: 'Supprimer le groupe « {name} » pour tout le monde ? Irréversible.',
     en: 'Delete the group “{name}” for everyone? Irreversible.',
+  },
+  adminColFriends: { fr: 'Amis', en: 'Friends' },
+  adminColSuggSent: { fr: 'Sugg.', en: 'Sugg.' },
+  adminColChecked: { fr: 'Cochés', en: 'Checked' },
+  adminActivity: { fr: 'Activité récente', en: 'Recent activity' },
+  adminVolumes: {
+    fr: 'Volumes — collections : {collections} lignes · sessions : {tokens} · rooms héritées : {rooms}',
+    en: 'Volumes — collections: {collections} rows · sessions: {tokens} · legacy rooms: {rooms}',
+  },
+  adminPending: { fr: 'En attente', en: 'Pending' },
+  adminPendingRequest: {
+    fr: '{user} demande à rejoindre « {group} »',
+    en: '{user} asked to join “{group}”',
+  },
+  adminPendingSuggestion: {
+    fr: '{from} a proposé un objet ({kind}) à {char}',
+    en: '{from} suggested an item ({kind}) to {char}',
   },
   tileFacewear: { fr: 'lunettes à récupérer', en: 'facewear to get' },
   tileHairstyles: { fr: 'coiffures à récupérer', en: 'hairstyles to get' },

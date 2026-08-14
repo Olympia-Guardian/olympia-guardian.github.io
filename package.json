@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "vite --mode localworker",
+    "dev:worker": "npx wrangler@4.122.0 dev --local --port 8788 --config worker/wrangler.toml",
+    "dev:pull": "node scripts/dev-pull.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },

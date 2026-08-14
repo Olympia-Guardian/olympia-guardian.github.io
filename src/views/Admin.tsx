@@ -29,6 +29,8 @@ interface Overview {
     created: number
     verifiedChars: number
     ownedGroups: number
+    friends: number
+    suggSent: number
     sessions: number
     lastSeen: number | null
   }[]
@@ -40,6 +42,7 @@ interface Overview {
     updated: number
     forcedAt: number | null
     owner: string | null
+    checked: number
   }[]
   groups: {
     id: string
@@ -49,6 +52,22 @@ interface Overview {
     owner: string
     members: number
   }[]
+  pendingSuggestions: { from: string; charName: string; kind: string; itemId: number; created: number }[]
+  pendingRequests: { user: string; charId: number; group: string; created: number }[]
+  activity: { type: string; a: string; b: string; created: number }[]
+  volumes: { collections: number; rooms: number; tokens: number }
+}
+
+/** Icône + phrase d'un événement du journal d'activité. */
+const EVENT_FMT: Record<string, { icon: string; fr: (a: string, b: string) => string; en: (a: string, b: string) => string }> = {
+  signup: { icon: '🌱', fr: (a) => `${a} a créé son compte`, en: (a) => `${a} signed up` },
+  login: { icon: '🔑', fr: (a) => `${a} s’est connecté`, en: (a) => `${a} logged in` },
+  group: { icon: '👥', fr: (a, b) => `${a} a créé le groupe « ${b} »`, en: (a, b) => `${a} created the group “${b}”` },
+  suggestion: { icon: '💡', fr: (a, b) => `${a} a proposé un objet à ${b}`, en: (a, b) => `${a} suggested an item to ${b}` },
+  friend: { icon: '🤝', fr: (a, b) => `${a} et ${b} sont devenus amis`, en: (a, b) => `${a} and ${b} became friends` },
+  contactReq: { icon: '✋', fr: (a, b) => `${a} a demandé ${b} en contact`, en: (a, b) => `${a} sent a contact request to ${b}` },
+  ginvite: { icon: '🎟', fr: (a, b) => `${a} a invité quelqu’un dans « ${b} »`, en: (a, b) => `${a} invited someone to “${b}”` },
+  grequest: { icon: '⏳', fr: (a, b) => `${a} demande à rejoindre « ${b} »`, en: (a, b) => `${a} asked to join “${b}”` },
 }
 
 /** « il y a 3 h » compact — l'admin veut jauger la fraîcheur d'un œil. */
@@ -140,6 +159,33 @@ export function AdminPage({ token }: { token: string }) {
         <StatTile value={data.tiles.blocks} label={t('adminTileBlocks')} />
       </div>
 
+      {/* Activité récente */}
+      <section className="relic-series group-card">
+        <header className="relic-series-head">
+          <h4 className="relic-series-name">📜 {t('adminActivity')}</h4>
+          <span className="admin-sources">
+            {t('adminVolumes', {
+              collections: data.volumes.collections,
+              tokens: data.volumes.tokens,
+              rooms: data.volumes.rooms,
+            })}
+          </span>
+        </header>
+        <ul className="admin-feed">
+          {data.activity.map((e, i) => {
+            const fmt = EVENT_FMT[e.type]
+            if (!fmt) return null
+            return (
+              <li key={i} className="admin-feed-row">
+                <span className="admin-feed-icon">{fmt.icon}</span>
+                <span>{lang === 'fr' ? fmt.fr(e.a, e.b) : fmt.en(e.a, e.b)}</span>
+                <span className="admin-feed-when">{ago(e.created, lang)}</span>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
       {/* Comptes */}
       <section className="relic-series group-card">
         <header className="relic-series-head">
@@ -153,6 +199,8 @@ export function AdminPage({ token }: { token: string }) {
                 <th>{t('adminColCreated')}</th>
                 <th>{t('adminColChars')}</th>
                 <th>{t('adminColGroups')}</th>
+                <th>{t('adminColFriends')}</th>
+                <th>{t('adminColSuggSent')}</th>
                 <th>{t('adminColLastSeen')}</th>
                 <th></th>
               </tr>
@@ -167,6 +215,8 @@ export function AdminPage({ token }: { token: string }) {
                   <td>{new Date(u.created).toLocaleDateString(lang)}</td>
                   <td>{u.verifiedChars}</td>
                   <td>{u.ownedGroups}</td>
+                  <td>{u.friends}</td>
+                  <td>{u.suggSent}</td>
                   <td>{ago(u.lastSeen, lang)}</td>
                   <td>
                     <button
@@ -213,6 +263,7 @@ export function AdminPage({ token }: { token: string }) {
                 <th>{t('adminColName')}</th>
                 <th>{t('adminColServer')}</th>
                 <th>{t('adminColOwner')}</th>
+                <th>{t('adminColChecked')}</th>
                 <th>{t('adminColUpdated')}</th>
                 <th></th>
               </tr>
@@ -233,6 +284,7 @@ export function AdminPage({ token }: { token: string }) {
                     {c.dc} — {c.server}
                   </td>
                   <td>{c.owner ?? <span className="modal-muted">{t('adminFollowed')}</span>}</td>
+                  <td>{c.checked.toLocaleString(lang)}</td>
                   <td>{ago(c.updated, lang)}</td>
                   <td>
                     <button
@@ -252,6 +304,33 @@ export function AdminPage({ token }: { token: string }) {
           </table>
         </div>
       </section>
+
+      {/* En attente : suggestions et demandes d'adhésion */}
+      {(data.pendingSuggestions.length > 0 || data.pendingRequests.length > 0) && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">⏳ {t('adminPending')}</h4>
+          </header>
+          <ul className="admin-feed">
+            {data.pendingRequests.map((r, i) => (
+              <li key={`r${i}`} className="admin-feed-row">
+                <span className="admin-feed-icon">🚪</span>
+                <span>{t('adminPendingRequest', { user: r.user, group: r.group })}</span>
+                <span className="admin-feed-when">{ago(r.created, lang)}</span>
+              </li>
+            ))}
+            {data.pendingSuggestions.map((s, i) => (
+              <li key={`s${i}`} className="admin-feed-row">
+                <span className="admin-feed-icon">💡</span>
+                <span>
+                  {t('adminPendingSuggestion', { from: s.from, char: s.charName, kind: s.kind })}
+                </span>
+                <span className="admin-feed-when">{ago(s.created, lang)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Groupes */}
       <section className="relic-series group-card">

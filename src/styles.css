@@ -177,6 +177,28 @@ button:focus-visible {
   border-radius: 50%;
 }
 
+/* Icônes du jeu dans le header : carrées arrondies, pas des avatars. */
+.topbar-actions img.kind-icon {
+  border-radius: 4px;
+}
+
+.tabs .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabs .tab img.kind-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
+.topbar-actions .account-btn img.kind-icon {
+  width: 19px;
+  height: 19px;
+}
+
 .rail-face {
   border-radius: 50%;
   border: 2px solid var(--surface);
@@ -1533,7 +1555,6 @@ a.player-name:hover {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 860px;
 }
 
 .groups-head {
@@ -1611,8 +1632,8 @@ a.player-name:hover {
 
 /* ---------------------------------------------------------------- contacts */
 
-.contacts-head {
-  margin-top: 28px;
+.groups-tabs {
+  margin-bottom: 4px;
 }
 
 .group-accounts {
@@ -1743,6 +1764,41 @@ a.player-name:hover {
   margin-left: auto;
   color: var(--muted);
   font-size: 12px;
+}
+
+.admin-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.admin-feed-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border-radius: var(--radius-s);
+}
+
+.admin-feed-row:nth-child(odd) {
+  background: var(--surface);
+}
+
+.admin-feed-icon {
+  flex-shrink: 0;
+}
+
+.admin-feed-when {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 .group-invite-label {

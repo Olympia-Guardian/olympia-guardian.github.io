@@ -7,3 +7,4 @@ dist/
 
 # état local de wrangler dev (worker)
 worker/.wrangler/
+worker/.dev-dump.sql

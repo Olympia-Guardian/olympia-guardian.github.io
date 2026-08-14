@@ -129,6 +129,18 @@ const TAB_ICONS: Record<string, string> = {
   spells: '000078',
   achievements: '000060',
   relics: '000016',
+  groups: '000082',
+  contacts: '000020',
+  // Icônes des commandes du jeu, choisies par Vincent : Calendrier,
+  // Inventaire, Carnet d'objectifs, Personnage, Alerte, Quitter le jeu.
+  planning: '000047',
+  collections: '000002',
+  avancement: '000057',
+  journal: '000001',
+  login: '000048',
+  bell: '000654',
+  logout: '000026',
+  admin: '060840',
 }
 
 export function TabIcon({ k }: { k: string }) {

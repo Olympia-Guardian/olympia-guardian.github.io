@@ -336,6 +336,8 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
 // localStorage.setItem('ogs.apibase.v1', 'http://127.0.0.1:8788')
 export const WORKER_API =
   (typeof localStorage !== 'undefined' && localStorage.getItem('ogs.apibase.v1')) ||
+  // `npm run dev:local` : front branché sur le worker local (.env.localworker)
+  (import.meta.env.VITE_WORKER_API as string | undefined) ||
   'https://ogs-room.olympia-guardian.workers.dev'
 
 function mapCharacter(r: any): Character {

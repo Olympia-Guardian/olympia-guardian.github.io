@@ -453,6 +453,30 @@ async function authDiscordStart(env, url) {
   if (!ret.startsWith(env.APP_URL) && !ret.startsWith('http://localhost')) {
     return response('{"error":"invalid return"}', 400)
   }
+  // Connexion de dev (npm run dev:worker) : pas d'OAuth possible en local
+  // (secret et redirect URI absents) — on ouvre directement une session pour
+  // le compte admin (ou ?as=<userId>), comme le ferait le callback. Double
+  // verrou : le secret Discord est TOUJOURS présent en prod (sinon l'OAuth
+  // entier est mort) et jamais en local, et la route ne s'active que sur
+  // 127.0.0.1/localhost.
+  if (
+    !env.DISCORD_CLIENT_SECRET &&
+    (url.hostname === '127.0.0.1' || url.hostname === 'localhost')
+  ) {
+    const userId = url.searchParams.get('as') ?? env.ADMIN_USER_ID
+    const known = await env.DB.prepare('SELECT id FROM users WHERE id = ?1').bind(userId).first()
+    if (!known)
+      return response('{"error":"utilisateur inconnu en base locale — npm run dev:pull ?"}', 404)
+    const token = randomToken()
+    await env.DB.prepare(
+      'INSERT INTO tokens (token, user_id, created, expires) VALUES (?1, ?2, ?3, ?4)',
+    )
+      .bind(token, userId, Date.now(), Date.now() + TOKEN_TTL)
+      .run()
+    const dest = new URL(ret)
+    dest.hash = `login=${token}`
+    return Response.redirect(dest.toString(), 302)
+  }
   const state = await signState(env, { r: ret, x: Date.now() + 600_000 })
   const auth = new URL(DISCORD_AUTH)
   auth.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
@@ -1838,8 +1862,26 @@ function isAdmin(env, user) {
 /** GET /admin/overview : tuiles + listes pour le tableau de bord. */
 async function adminOverview(env) {
   const now = Date.now()
-  const [users, bindings, chars, groups, sessions, suggPending, contactsAgg, blocksN, reqN, colSources] =
-    await Promise.all([
+  const [
+    users,
+    bindings,
+    chars,
+    groups,
+    sessions,
+    suggPending,
+    contactsAgg,
+    blocksN,
+    reqN,
+    colSources,
+    friendsBy,
+    suggSentBy,
+    checkedBy,
+    suggList,
+    reqList,
+    activityA,
+    activityB,
+    volumes,
+  ] = await Promise.all([
       env.DB.prepare('SELECT id, name, avatar, created FROM users ORDER BY created').all(),
       env.DB.prepare('SELECT user_id, char_id, verified FROM bindings').all(),
       env.DB.prepare(
@@ -1862,6 +1904,52 @@ async function adminOverview(env) {
       env.DB.prepare('SELECT COUNT(*) AS n FROM blocks').first(),
       env.DB.prepare('SELECT COUNT(*) AS n FROM group_requests').first(),
       env.DB.prepare('SELECT source, COUNT(*) AS n FROM collections GROUP BY source').all(),
+      // Amis par compte (l'amitié se lit dans les deux sens)
+      env.DB.prepare(
+        "SELECT uid, COUNT(*) AS n FROM (SELECT user_id AS uid FROM contacts WHERE status = 'accepted' " +
+          "UNION ALL SELECT friend_id AS uid FROM contacts WHERE status = 'accepted') GROUP BY uid",
+      ).all(),
+      env.DB.prepare(
+        'SELECT from_user_id AS uid, COUNT(*) AS n FROM suggestions GROUP BY from_user_id',
+      ).all(),
+      // Objets cochés par perso, toutes collections confondues
+      env.DB.prepare(
+        'SELECT char_id, SUM(json_array_length(ids)) AS n FROM collections GROUP BY char_id',
+      ).all(),
+      env.DB.prepare(
+        'SELECT s.kind, s.item_id, s.created, u.name AS from_name, c.name AS char_name ' +
+          'FROM suggestions s LEFT JOIN users u ON u.id = s.from_user_id ' +
+          'LEFT JOIN characters c ON c.id = s.char_id ORDER BY s.created DESC LIMIT 50',
+      ).all(),
+      env.DB.prepare(
+        'SELECT r.created, r.char_id, u.name AS user_name, g.name AS group_name ' +
+          'FROM group_requests r LEFT JOIN users u ON u.id = r.user_id ' +
+          'LEFT JOIN groups g ON g.id = r.group_id ORDER BY r.created DESC LIMIT 50',
+      ).all(),
+      // Journal d'activité : tout ce qui porte un timestamp — en DEUX requêtes
+      // (D1 plafonne les termes d'un UNION composé), fusionnées côté JS.
+      env.DB.prepare(
+        "SELECT 'signup' AS type, COALESCE(name, '?') AS a, '' AS b, created AS created FROM users " +
+          "UNION ALL SELECT 'login', COALESCE(u.name, '?'), '', t.created FROM tokens t LEFT JOIN users u ON u.id = t.user_id " +
+          "UNION ALL SELECT 'group', COALESCE(u.name, '?'), g.name, g.created FROM groups g LEFT JOIN users u ON u.id = g.owner_user_id " +
+          "UNION ALL SELECT 'ginvite', COALESCE(u1.name, '?'), g.name, i.created FROM group_invites i " +
+          'LEFT JOIN users u1 ON u1.id = i.from_user_id LEFT JOIN groups g ON g.id = i.group_id ' +
+          'ORDER BY created DESC LIMIT 40',
+      ).all(),
+      env.DB.prepare(
+        "SELECT 'suggestion' AS type, COALESCE(u.name, '?') AS a, COALESCE(c.name, CAST(s.char_id AS TEXT)) AS b, s.created AS created " +
+          'FROM suggestions s LEFT JOIN users u ON u.id = s.from_user_id LEFT JOIN characters c ON c.id = s.char_id ' +
+          "UNION ALL SELECT CASE ct.status WHEN 'accepted' THEN 'friend' ELSE 'contactReq' END, " +
+          "COALESCE(u1.name, '?'), COALESCE(u2.name, '?'), ct.created FROM contacts ct " +
+          'LEFT JOIN users u1 ON u1.id = ct.user_id LEFT JOIN users u2 ON u2.id = ct.friend_id ' +
+          "UNION ALL SELECT 'grequest', COALESCE(u.name, '?'), COALESCE(g.name, '?'), r.created FROM group_requests r " +
+          'LEFT JOIN users u ON u.id = r.user_id LEFT JOIN groups g ON g.id = r.group_id ' +
+          'ORDER BY created DESC LIMIT 40',
+      ).all(),
+      env.DB.prepare(
+        'SELECT (SELECT COUNT(*) FROM collections) AS collections, (SELECT COUNT(*) FROM rooms) AS rooms, ' +
+          '(SELECT COUNT(*) FROM tokens) AS tokens',
+      ).first(),
     ])
 
   const verifiedBy = new Map() // user → persos vérifiés
@@ -1878,6 +1966,9 @@ async function adminOverview(env) {
   }
   const sessionsBy = new Map(sessions.results.map((s) => [s.user_id, s]))
   const nameOf = new Map(users.results.map((u) => [u.id, u.name]))
+  const friendsOf = new Map(friendsBy.results.map((r) => [r.uid, r.n]))
+  const suggSentOf = new Map(suggSentBy.results.map((r) => [r.uid, r.n]))
+  const checkedOf = new Map(checkedBy.results.map((r) => [r.char_id, r.n ?? 0]))
 
   return response(
     JSON.stringify({
@@ -1902,6 +1993,8 @@ async function adminOverview(env) {
         created: u.created,
         verifiedChars: verifiedBy.get(u.id) ?? 0,
         ownedGroups: ownedBy.get(u.id) ?? 0,
+        friends: friendsOf.get(u.id) ?? 0,
+        suggSent: suggSentOf.get(u.id) ?? 0,
         sessions: sessionsBy.get(u.id)?.n ?? 0,
         lastSeen: sessionsBy.get(u.id)?.last ?? null,
       })),
@@ -1913,6 +2006,7 @@ async function adminOverview(env) {
         updated: c.updated,
         forcedAt: c.forced_at ?? null,
         owner: ownerOf.has(c.id) ? (nameOf.get(ownerOf.get(c.id)) ?? '?') : null,
+        checked: checkedOf.get(c.id) ?? 0,
       })),
       groups: groups.results.map((g) => ({
         id: g.id,
@@ -1922,6 +2016,23 @@ async function adminOverview(env) {
         owner: g.owner_name ?? g.owner_user_id,
         members: g.members,
       })),
+      pendingSuggestions: suggList.results.map((s) => ({
+        from: s.from_name ?? '?',
+        charName: s.char_name ?? '?',
+        kind: s.kind,
+        itemId: s.item_id,
+        created: s.created,
+      })),
+      pendingRequests: reqList.results.map((r) => ({
+        user: r.user_name ?? '?',
+        charId: r.char_id,
+        group: r.group_name ?? '?',
+        created: r.created,
+      })),
+      activity: [...activityA.results, ...activityB.results]
+        .sort((x, y) => y.created - x.created)
+        .slice(0, 40),
+      volumes,
     }),
   )
 }

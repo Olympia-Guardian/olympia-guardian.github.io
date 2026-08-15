@@ -17,27 +17,61 @@ import {
 
 export type Db = Record<Kind, Item[]>
 
+/** Les trois gros catalogues pèsent 5,5 Mo des 8,6 : succès (3946 entrées),
+ *  armoire (3521) et tenues (1086 avec leurs 6392 pièces). Rien à l'accueil,
+ *  au planning ni à la matrice n'en dépend, alors qu'attendre leur arrivée
+ *  retenait la page entière plus d'une minute en connexion lente. Ils partent
+ *  donc en seconde vague, et chacun s'affiche dès qu'il est là. */
+const HEAVY_KINDS: Kind[] = ['achievements', 'armoires', 'outfits']
+const LIGHT_KINDS: Kind[] = KINDS.filter((k) => !HEAVY_KINDS.includes(k))
+
 export function useDb() {
   const [db, setDb] = useState<Db | null>(null)
+  const [pending, setPending] = useState<Set<Kind>>(() => new Set(HEAVY_KINDS))
   const [error, setError] = useState<string | null>(null)
+  // Un gros catalogue peut arriver avant la première vague : on le met de côté
+  // ici, sinon le `setDb` partirait sur un état encore nul et serait perdu.
+  const early = useRef<Partial<Record<Kind, Item[]>>>({})
 
   useEffect(() => {
     let cancelled = false
-    Promise.all(KINDS.map((k) => fetchDb(k)))
+
+    Promise.all(LIGHT_KINDS.map((k) => fetchDb(k)))
       .then((lists) => {
-        if (!cancelled) {
-          setDb(Object.fromEntries(KINDS.map((k, i) => [k, lists[i]])) as Db)
-        }
+        if (cancelled) return
+        const base = Object.fromEntries(KINDS.map((k) => [k, [] as Item[]])) as Db
+        LIGHT_KINDS.forEach((k, i) => {
+          base[k] = lists[i]
+        })
+        setDb({ ...base, ...early.current })
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e))
       })
+
+    for (const kind of HEAVY_KINDS) {
+      fetchDb(kind)
+        .then((list) => {
+          if (cancelled) return
+          early.current[kind] = list
+          setDb((prev) => (prev ? { ...prev, [kind]: list } : prev))
+          setPending((prev) => {
+            const next = new Set(prev)
+            next.delete(kind)
+            return next
+          })
+        })
+        .catch(() => {
+          // la collection reste marquée en chargement, un rechargement réessaie
+        })
+    }
+
     return () => {
       cancelled = true
     }
   }, [])
 
-  return { db, error }
+  return { db, pending, error }
 }
 
 /** Base des reliques (chargée en parallèle, la vue Reliques attend son arrivée). */

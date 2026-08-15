@@ -78,7 +78,7 @@ export default function App() {
     document.documentElement.lang = lang
   }, [lang])
 
-  const { db, error: dbError } = useDb()
+  const { db, pending: dbPending, error: dbError } = useDb()
   const relicDb = useRelicDb()
 
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
@@ -706,7 +706,18 @@ export default function App() {
               tab !== 'groups' &&
               tab !== 'admin' &&
               tab !== 'guide' &&
-              tab !== 'fashion' && (
+              tab !== 'fashion' &&
+              dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
+            {db &&
+              activeReady.length > 0 &&
+              tab !== 'planning' &&
+              tab !== 'relics' &&
+              tab !== 'mypage' &&
+              tab !== 'groups' &&
+              tab !== 'admin' &&
+              tab !== 'guide' &&
+              tab !== 'fashion' &&
+              !dbPending.has(tab) && (
               <Matrix
                 kind={tab}
                 items={db[tab]}
@@ -768,6 +779,7 @@ export default function App() {
             {db && tab === 'mypage' && (
               <MyPage
                 db={db}
+                dbPending={dbPending}
                 relicDb={relicDb}
                 auth={auth}
                 members={members}

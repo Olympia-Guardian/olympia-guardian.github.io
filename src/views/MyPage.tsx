@@ -1213,12 +1213,17 @@ function CollectionEditor({
 
 export function MyPage({
   db,
+  dbPending,
   relicDb,
   auth,
   members,
   onCharacterUpdated,
 }: {
   db: Db
+  /** Collections encore en cours de téléchargement (les trois gros catalogues
+   *  arrivent après les autres) : l'onglet concerné dit qu'il charge au lieu
+   *  d'afficher une liste vide et de laisser croire à un bug. */
+  dbPending: Set<Kind>
   relicDb: RelicDb | null
   auth: Auth
   members: Member[]
@@ -1823,6 +1828,8 @@ export function MyPage({
             )
           ) : kind === 'fashion' ? (
             <FashionEditor key={`${verified.charId}-fashion`} db={db} char={char} onSave={save} />
+          ) : dbPending.has(kind) ? (
+            <p className="muted">{t('dbLoading')}</p>
           ) : (
             <CollectionEditor
               key={`${verified.charId}-${kind}`}

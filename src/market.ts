@@ -98,18 +98,25 @@ export interface Achat {
   world: string
 }
 
+/** Budget à 0 = pas de plafond de dépense ; prix maximum à 0 = pas de
+ *  plafond par objet. Les deux se combinent : le prix maximum filtre les
+ *  objets un par un, le budget arrête la liste. Sans le premier, un seul
+ *  objet cher pouvait avaler toute l'enveloppe. */
+const sansPlafond = (n: number) => (n > 0 ? n : Number.POSITIVE_INFINITY)
+
 /** Le plus d'objets possible pour le budget. Trier par prix croissant et
  *  prendre tant que ça rentre est optimal pour ce critère : il n'y a pas
  *  besoin d'algorithme plus savant, chaque objet compte pour un. */
-export function plusDObjets(prix: PriceMap, budget: number): Achat[] {
+export function plusDObjets(prix: PriceMap, budget: number, prixMax = 0): Achat[] {
+  const plafondObjet = sansPlafond(prixMax)
   const candidats: Achat[] = []
   for (const [itemId, offres] of prix) {
-    const o = offres[0]
+    const o = offres.find((x) => x.price <= plafondObjet)
     if (o) candidats.push({ itemId, price: o.price, world: o.world })
   }
   candidats.sort((a, b) => a.price - b.price)
   const pris: Achat[] = []
-  let reste = budget
+  let reste = sansPlafond(budget)
   for (const c of candidats) {
     if (c.price > reste) continue
     pris.push(c)
@@ -122,12 +129,18 @@ export function plusDObjets(prix: PriceMap, budget: number): Achat[] {
  *  d'acheter le plus d'objets dans le budget, puis on complète avec le
  *  meilleur monde suivant. Un objet acheté sur place vaut mieux qu'un objet
  *  légèrement moins cher trois voyages plus loin. */
-export function moinsDeVoyages(prix: PriceMap, budget: number, maxMondes = 2): Achat[] {
+export function moinsDeVoyages(
+  prix: PriceMap,
+  budget: number,
+  prixMax = 0,
+  maxMondes = 2,
+): Achat[] {
+  const plafondObjet = sansPlafond(prixMax)
   const parMonde = new Map<string, Achat[]>()
   for (const [itemId, offres] of prix) {
     const vus = new Set<string>()
     for (const o of offres) {
-      if (vus.has(o.world)) continue
+      if (o.price > plafondObjet || vus.has(o.world)) continue
       vus.add(o.world)
       const liste = parMonde.get(o.world) ?? []
       liste.push({ itemId, price: o.price, world: o.world })
@@ -137,7 +150,7 @@ export function moinsDeVoyages(prix: PriceMap, budget: number, maxMondes = 2): A
 
   const retenus: Achat[] = []
   const dejaPris = new Set<number>()
-  let reste = budget
+  let reste = sansPlafond(budget)
 
   for (let tour = 0; tour < maxMondes; tour++) {
     let meilleur: { monde: string; achats: Achat[] } | null = null

@@ -46,7 +46,11 @@ export function Market({
 }) {
   const { lang, t } = useI18n()
   const [charId, setCharId] = useState<number | null>(chars[0]?.id ?? null)
+  // Zéro = pas de plafond. Les deux champs sont facultatifs et se combinent :
+  // le prix maximum écarte les objets trop chers un par un, le budget arrête
+  // la liste quand l'enveloppe est épuisée.
   const [budget, setBudget] = useState(1_000_000)
+  const [prixMax, setPrixMax] = useState(0)
   const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
   const [prix, setPrix] = useState<PriceMap | null>(null)
@@ -103,8 +107,10 @@ export function Market({
 
   const selection: Achat[] = useMemo(() => {
     if (!prix) return []
-    return strategie === 'objets' ? plusDObjets(prix, budget) : moinsDeVoyages(prix, budget)
-  }, [prix, budget, strategie])
+    return strategie === 'objets'
+      ? plusDObjets(prix, budget, prixMax)
+      : moinsDeVoyages(prix, budget, prixMax)
+  }, [prix, budget, prixMax, strategie])
 
   const groupes = useMemo(() => parMonde(selection), [selection])
   const total = selection.reduce((s, a) => s + a.price, 0)
@@ -149,8 +155,21 @@ export function Market({
             type="number"
             min={0}
             step={10_000}
-            value={budget}
+            value={budget || ''}
+            placeholder={t('marketNoCap')}
             onChange={(e) => setBudget(Math.max(0, Number(e.target.value)))}
+          />
+        </label>
+
+        <label className="market-field">
+          <span>{t('marketMaxPrice')}</span>
+          <input
+            type="number"
+            min={0}
+            step={10_000}
+            value={prixMax || ''}
+            placeholder={t('marketNoCap')}
+            onChange={(e) => setPrixMax(Math.max(0, Number(e.target.value)))}
           />
         </label>
 
@@ -221,18 +240,29 @@ export function Market({
       {erreur && <p className="notice">{erreur}</p>}
 
       {prix && selection.length === 0 && !erreur && (
-        <p className="empty">{t('marketNothing', { budget: gils(budget, lang) })}</p>
+        <p className="empty">
+          {t(prixMax > 0 ? 'marketNothingCap' : 'marketNothing', {
+            budget: gils(budget, lang),
+            max: gils(prixMax, lang),
+          })}
+        </p>
       )}
 
       {selection.length > 0 && (
         <>
           <p className="market-summary">
-            {t('marketSummary', {
-              n: selection.length,
-              worlds: groupes.length,
-              total: gils(total, lang),
-              reste: gils(budget - total, lang),
-            })}
+            {budget > 0
+              ? t('marketSummary', {
+                  n: selection.length,
+                  worlds: groupes.length,
+                  total: gils(total, lang),
+                  reste: gils(Math.max(0, budget - total), lang),
+                })
+              : t('marketSummaryNoBudget', {
+                  n: selection.length,
+                  worlds: groupes.length,
+                  total: gils(total, lang),
+                })}
           </p>
           <div className="market-worlds">
             {groupes.map((g) => (

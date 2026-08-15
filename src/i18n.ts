@@ -128,6 +128,16 @@ const STR = {
     en: 'Bought it: add to my collection',
   },
   marketBudget: { fr: 'Budget en gils', en: 'Budget in gil' },
+  marketMaxPrice: { fr: 'Prix maximum par objet', en: 'Max price per item' },
+  marketNoCap: { fr: 'sans limite', en: 'no limit' },
+  marketSummaryNoBudget: {
+    fr: '{n} objets pour {total} gils, répartis sur {worlds} monde(s).',
+    en: '{n} items for {total} gil, across {worlds} world(s).',
+  },
+  marketNothingCap: {
+    fr: "Rien sous {max} gils par objet. Relève le prix maximum, ou coche d'autres collections.",
+    en: 'Nothing under {max} gil per item. Raise the max price, or tick more collections.',
+  },
   marketSearch: { fr: 'Chercher parmi {n} objets manquants', en: 'Search across {n} missing items' },
   marketSearching: { fr: 'Recherche des prix… {fait}/{total}', en: 'Fetching prices… {fait}/{total}' },
   marketMostItems: { fr: "Le plus d'objets", en: 'Most items' },

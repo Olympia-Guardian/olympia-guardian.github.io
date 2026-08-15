@@ -596,7 +596,9 @@ function IconGrid({
 
 /** Liste groupée par catégorie (orchestrion) : filtres façon Lodestone,
  *  numéro + nom + obtention + rouleau. */
-const ROLL_ICON = `${import.meta.env.BASE_URL}assets/orchestrion_roll.jpg`
+/** Les rouleaux d'orchestrion n'ont pas d'icône propre chez FFXIV Collect :
+ *  c'est le rouleau du jeu qui les représente partout dans l'application. */
+export const ROLL_ICON = `${import.meta.env.BASE_URL}assets/orchestrion_roll.jpg`
 
 /** Ordre des colonnes de la bande de pièces : tête, torse, mains, jambes,
  *  pieds — même lecture verticale sur toutes les lignes. Une pièce d'un autre

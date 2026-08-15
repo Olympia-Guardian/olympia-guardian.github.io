@@ -9,6 +9,7 @@ import {
   type Achat,
   type PriceMap,
 } from '../market'
+import { ROLL_ICON } from './MyPage'
 import type { Db, Member } from '../store'
 import { onItemImgError, TabIcon } from '../ui'
 
@@ -293,7 +294,7 @@ export function Market({
                           {achete ? '✓' : ''}
                         </button>
                         <img
-                          src={it.icon}
+                          src={kind === 'orchestrions' ? ROLL_ICON : it.icon}
                           alt=""
                           width={28}
                           height={28}

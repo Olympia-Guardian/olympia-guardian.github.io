@@ -4146,3 +4146,13 @@ a.player-name:hover {
   content-visibility: auto;
   contain-intrinsic-size: auto 420px;
 }
+
+/* catalogues périmés : le rafraîchissement nocturne ne prévient personne quand
+   il casse, ce bandeau est le seul signal côté joueur */
+.notice-stale {
+  border-left: 3px solid var(--gold);
+  background: var(--surface);
+  padding: 8px 12px;
+  border-radius: var(--radius-s);
+  color: var(--ink-2);
+}

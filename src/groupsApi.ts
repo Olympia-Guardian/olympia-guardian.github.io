@@ -33,11 +33,20 @@ async function call<T>(
   token: string | null,
   init?: { method?: string; body?: unknown },
 ): Promise<T> {
-  const res = await fetch(`${WORKER_API}${path}`, {
-    method: init?.method ?? 'GET',
-    headers: token ? authHeaders(token) : undefined,
-    body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
-  })
+  // Sans délai d'expiration, une requête suspendue laissait les boutons
+  // désactivés indéfiniment : l'utilisateur n'avait plus qu'à recharger.
+  let res: Response
+  try {
+    res = await fetch(`${WORKER_API}${path}`, {
+      method: init?.method ?? 'GET',
+      headers: token ? authHeaders(token) : undefined,
+      body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+      signal: AbortSignal.timeout(15000),
+    })
+  } catch (e) {
+    const nom = e instanceof Error ? e.name : ''
+    throw new Error(nom === 'TimeoutError' ? 'timeout' : 'offline')
+  }
   if (!res.ok) {
     let msg = `HTTP ${res.status}`
     try {

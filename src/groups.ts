@@ -540,6 +540,22 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     [refreshServer],
   )
 
+  // Ces actions étaient lancées sans rien faire de l'échec : sur une coupure
+  // réseau ou une erreur serveur, retirer un membre ou approuver une demande
+  // ne produisait STRICTEMENT rien à l'écran, et l'utilisateur reclique avant
+  // de conclure que la page est cassée. On remonte donc l'erreur dans le
+  // bandeau déjà prévu pour ça.
+  function signale<A extends unknown[], R>(fn: (...a: A) => Promise<R>) {
+    return async (...a: A): Promise<R | undefined> => {
+      try {
+        return await fn(...a)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e))
+        return undefined
+      }
+    }
+  }
+
   return {
     groups,
     active,
@@ -551,14 +567,14 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     dismissError: () => setError(null),
     setActive,
     create,
-    rename,
-    drop,
-    addMember,
-    removeMember,
+    rename: signale(rename),
+    drop: signale(drop),
+    addMember: signale(addMember),
+    removeMember: signale(removeMember),
     share,
-    rotateInvite,
-    requestJoin,
-    handleRequest,
+    rotateInvite: signale(rotateInvite),
+    requestJoin: signale(requestJoin),
+    handleRequest: signale(handleRequest),
     verifiedCharIds,
     refreshServer,
   }

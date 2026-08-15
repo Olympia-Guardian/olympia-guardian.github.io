@@ -113,6 +113,22 @@ const STR = {
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   backToTop: { fr: 'Remonter en haut', en: 'Back to top' },
   crossTitle: { fr: 'Tenues et armoire', en: 'Outfits and armoire' },
+  errTimeout: {
+    fr: "Le serveur met trop de temps à répondre. L'action n'a pas été enregistrée, réessaie dans un instant.",
+    en: 'The server is taking too long. The action was not saved, try again in a moment.',
+  },
+  errOffline: {
+    fr: "Serveur injoignable. L'action n'a pas été enregistrée, vérifie ta connexion.",
+    en: 'Cannot reach the server. The action was not saved, check your connection.',
+  },
+  errAction: {
+    fr: "L'action a échoué : {error}",
+    en: 'The action failed: {error}',
+  },
+  dataStale: {
+    fr: 'Les catalogues datent de {n} jours : le rafraîchissement automatique semble en panne, les nouveautés du dernier patch peuvent manquer.',
+    en: 'Catalogues are {n} days old: the nightly refresh looks broken, items from the latest patch may be missing.',
+  },
   crossToArmoire: {
     fr: "Tenue possédée : ses {n} pièces manquent dans l'armoire, on les coche ?",
     en: 'Outfit owned: its {n} pieces are missing from the armoire, tick them?',

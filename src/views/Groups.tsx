@@ -495,6 +495,8 @@ function GroupCard({
     if (!confirm(t('rotateConfirm'))) return
     try {
       const link = await grp.rotateInvite(g.id)
+      // Échec déjà signalé dans le bandeau d'erreur : rien à copier.
+      if (!link) return
       try {
         await navigator.clipboard.writeText(link)
         setCopied(true)

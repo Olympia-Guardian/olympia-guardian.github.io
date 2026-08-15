@@ -288,7 +288,9 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
   // Nos fichiers statiques d'abord (rafraîchis chaque nuit par GitHub Actions) :
   // FFXIV Collect n'est sollicité en direct qu'en secours.
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}data/${kind}.json`)
+    const res = await fetch(`${import.meta.env.BASE_URL}data/${kind}.json`, {
+      signal: AbortSignal.timeout(30000),
+    })
     if (res.ok) {
       const items = (await res.json()) as Item[]
       if (Array.isArray(items) && items.length > 0) {
@@ -473,7 +475,7 @@ export async function fetchCharacter(lodestoneId: number, force = false): Promis
 
   try {
     const url = `${WORKER_API}/character/${lodestoneId}${force ? '?force=1' : ''}`
-    let res = await fetch(url, { headers: sessionHeaders() })
+    let res = await fetch(url, { headers: sessionHeaders(), signal: AbortSignal.timeout(15000) })
     if (res.status === 404) {
       throw Object.assign(new Error("Personnage introuvable — vérifie l'ID Lodestone."), {
         notFound: true,

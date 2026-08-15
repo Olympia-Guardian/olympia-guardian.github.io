@@ -13,6 +13,7 @@ import { fetchCharacter, invalidateCharacter } from './api'
 import {
   readHashParam,
   setHashParam,
+  useDataAge,
   useDb,
   useMembers,
   useOwnedSets,
@@ -80,6 +81,7 @@ export default function App() {
   }, [lang])
 
   const { db, pending: dbPending, error: dbError } = useDb()
+  const dataAge = useDataAge()
   // Objet neuf à chaque rendu = tous les consommateurs du contexte se
   // re-rendaient, y compris les grandes listes.
   const langValue = useMemo(() => ({ lang, setLang, t }), [lang, t])
@@ -590,9 +592,20 @@ export default function App() {
           )}
 
           <main className="main">
-            {grp.error === 'invite' && (
+            {grp.error && (
               <div className="notice join-banner">
-                <span>{t('inviteInvalid')}</span>
+                {/* Le bandeau ne traitait qu'un cas ; toutes les autres
+                    erreurs étaient enregistrées sans jamais être affichées,
+                    donc une action ratée ne produisait rien à l'écran. */}
+                <span>
+                  {grp.error === 'invite'
+                    ? t('inviteInvalid')
+                    : grp.error === 'timeout'
+                      ? t('errTimeout')
+                      : grp.error === 'offline'
+                        ? t('errOffline')
+                        : t('errAction', { error: grp.error })}
+                </span>
                 <button className="icon-btn" onClick={grp.dismissError} title={t('dismiss')}>
                   ×
                 </button>
@@ -686,6 +699,9 @@ export default function App() {
                   ×
                 </button>
               </div>
+            )}
+            {dataAge !== null && dataAge >= 3 && (
+              <p className="notice notice-stale">{t('dataStale', { n: dataAge })}</p>
             )}
             {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
             {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}

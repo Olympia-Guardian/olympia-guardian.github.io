@@ -74,6 +74,31 @@ export function useDb() {
   return { db, pending, error }
 }
 
+/** Fraîcheur des catalogues. Le cron nocturne peut casser sans que personne
+ *  ne le sache : l'application continue alors à servir sereinement les données
+ *  de la veille jusqu'à ce qu'un joueur remarque qu'un patch entier manque.
+ *  L'horodatage était déjà publié dans meta.json, simplement jamais lu. */
+export function useDataAge(): number | null {
+  const [jours, setJours] = useState<number | null>(null)
+  useEffect(() => {
+    let annule = false
+    fetch(`${import.meta.env.BASE_URL}data/meta.json`, { signal: AbortSignal.timeout(10000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((m) => {
+        if (annule || !m?.updatedAt) return
+        const ms = Date.now() - new Date(m.updatedAt).getTime()
+        setJours(Math.floor(ms / 86_400_000))
+      })
+      .catch(() => {
+        // pas d'horodatage : on n'affiche rien plutôt qu'une fausse alerte
+      })
+    return () => {
+      annule = true
+    }
+  }, [])
+  return jours
+}
+
 /** Base des reliques (chargée en parallèle, la vue Reliques attend son arrivée). */
 export function useRelicDb() {
   const [relicDb, setRelicDb] = useState<RelicDb | null>(null)

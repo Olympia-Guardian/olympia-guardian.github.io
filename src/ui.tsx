@@ -57,14 +57,19 @@ export function Meter({
       <div className="meter-head">
         <span className="meter-label">{label}</span>
         <span className="meter-value">
-          {count}
-          {countAll !== undefined && countAll !== count && (
-            <span className="meter-all"> ({countAll})</span>
-          )}
-          <span className="meter-total">/{total}</span>
-          {totalAll !== undefined && totalAll !== total && (
-            <span className="meter-all"> ({totalAll})</span>
-          )}
+          <span className="meter-now">
+            {count}
+            {countAll !== undefined && countAll !== count && (
+              <i className="meter-all">({countAll})</i>
+            )}
+          </span>
+          <span className="meter-sep">/</span>
+          <span className="meter-max">
+            {total}
+            {totalAll !== undefined && totalAll !== total && (
+              <i className="meter-all">({totalAll})</i>
+            )}
+          </span>
         </span>
       </div>
       <div className="meter-track" role="img" aria-label={`${label}: ${count}/${total}`}>

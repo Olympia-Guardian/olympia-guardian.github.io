@@ -605,11 +605,6 @@ a.player-name:hover {
   font-weight: 600;
 }
 
-.meter-total {
-  color: var(--muted);
-  font-weight: 400;
-}
-
 .meter-track {
   height: 6px;
   border-radius: 4px;
@@ -4275,18 +4270,44 @@ a.player-name:hover {
   margin-right: 8px;
 }
 
-/* compteurs : chiffres boutique comprise, en retrait visuel */
-.meter-all {
-  font-size: 0.78em;
+/* Compteurs : le chiffre atteignable domine, celui de la boutique se lit en
+   second sans encombrer. L'ancien rendu collait tout (« 131 (145)/287 (353) »)
+   et se lisait mal. */
+.meter-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.meter-sep {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.meter-max {
   color: var(--muted);
   font-weight: 400;
 }
 
+.meter-all {
+  font-style: normal;
+  font-size: 0.72em;
+  font-weight: 400;
+  color: var(--muted);
+  opacity: 0.75;
+  margin-left: 3px;
+}
+
 .meter-legend {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
-  border-left: 3px solid var(--gold);
-  padding-left: 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+  padding: 8px 12px;
 }

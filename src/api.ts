@@ -363,6 +363,15 @@ function localPref(key: string): string | null {
   }
 }
 
+/** En-tête de session, s'il y en a une. La fiche d'un personnage ne livre ses
+ *  collections saisies à la main qu'à un visiteur connecté : sans cet en-tête,
+ *  le joueur recevait la vue publique de ses propres personnages, montures et
+ *  mascottes seulement. */
+function sessionHeaders(): HeadersInit {
+  const t = localPref('ogs.session.v1')
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
+
 export const WORKER_API =
   localPref('ogs.apibase.v1') ||
   // `npm run dev:local` : front branché sur le worker local (.env.localworker)
@@ -464,7 +473,7 @@ export async function fetchCharacter(lodestoneId: number, force = false): Promis
 
   try {
     const url = `${WORKER_API}/character/${lodestoneId}${force ? '?force=1' : ''}`
-    let res = await fetch(url)
+    let res = await fetch(url, { headers: sessionHeaders() })
     if (res.status === 404) {
       throw Object.assign(new Error("Personnage introuvable — vérifie l'ID Lodestone."), {
         notFound: true,
@@ -475,7 +484,9 @@ export async function fetchCharacter(lodestoneId: number, force = false): Promis
     if (r.needsSeed) {
       try {
         await seedFromCollect(lodestoneId)
-        const res2 = await fetch(`${WORKER_API}/character/${lodestoneId}`)
+        const res2 = await fetch(`${WORKER_API}/character/${lodestoneId}`, {
+          headers: sessionHeaders(),
+        })
         if (res2.ok) r = await res2.json()
       } catch {
         // pas d'amorçage possible : données Lodestone uniquement pour l'instant

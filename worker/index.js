@@ -396,7 +396,13 @@ async function applySeed(env, id, raw) {
 // plus une fois par jour et par personnage (le TTL d'une heure fait le reste).
 const FORCE_COOLDOWN = 86_400_000
 
-async function getCharacter(env, id, force) {
+// `connecte` : sans compte, on ne renvoie que ce qui est deja ouvert sur le
+// Lodestone (montures et mascottes). Les onze autres collections sont saisies
+// a la main par le joueur, elles ne sont visibles nulle part ailleurs, et les
+// identifiants Lodestone etant sequentiels, une route ouverte laissait aspirer
+// toute la base. Elles repartent marquees non publiques, etat que l'interface
+// sait deja afficher pour les profils Lodestone fermes.
+async function getCharacter(env, id, force, connecte = true) {
   const row = await env.DB.prepare('SELECT * FROM characters WHERE id = ?1').bind(id).first()
   const fresh = row && Date.now() - row.updated < CHAR_TTL
   const allowForce = force && (!row || Date.now() - (row.forced_at ?? 0) >= FORCE_COOLDOWN)
@@ -442,10 +448,27 @@ async function getCharacter(env, id, force) {
         'INSERT INTO collections (char_id, kind, ids, updated, source) VALUES (?1, ?2, ?3, ?4, ?5) ' +
           'ON CONFLICT(char_id, kind) DO UPDATE SET ids=?3, updated=?4, source=?5',
       )
-      await env.DB.batch([
-        up.bind(id, 'mounts', JSON.stringify(scraped.mounts.ids), now, 'lodestone'),
-        up.bind(id, 'minions', JSON.stringify(scraped.minions.ids), now, 'lodestone'),
-      ])
+      // Une page absente ou un balisage change chez Square Enix produit une
+      // liste vide indistinguable d'un joueur sans montures. L'ecrire
+      // effacait la collection du joueur ET la marquait publique, sans un mot
+      // dans les journaux. On refuse donc de remplacer du plein par du vide :
+      // au pire la donnee reste celle d'hier, ce qui est toujours mieux.
+      const ancien = await env.DB.prepare(
+        "SELECT kind, ids FROM collections WHERE char_id = ?1 AND kind IN ('mounts','minions')",
+      )
+        .bind(id)
+        .all()
+      const avant = new Map(ancien.results.map((r) => [r.kind, JSON.parse(r.ids).length]))
+      const ecritures = []
+      for (const kind of ['mounts', 'minions']) {
+        const ids = scraped[kind].ids
+        if (ids.length === 0 && (avant.get(kind) ?? 0) > 0) {
+          console.warn(`scrape ${kind} vide pour ${id} alors que ${avant.get(kind)} etaient connus, ecriture refusee`)
+          continue
+        }
+        ecritures.push(up.bind(id, kind, JSON.stringify(ids), now, 'lodestone'))
+      }
+      if (ecritures.length > 0) await env.DB.batch(ecritures)
       // Pas de seedPlaceholders ici : le contrôle des collections absentes,
       // plus bas, s'en charge quand il en manque vraiment. L'appeler à chaque
       // scrape coûtait 15 écritures D1 par consultation de fiche, toutes les
@@ -485,12 +508,18 @@ async function getCharacter(env, id, force) {
     byKind.outfits = [...stored]
   }
 
-  const block = (kind, isPublic = true) => ({
-    count: (byKind[kind] ?? []).length,
-    total: totals[kind] ?? 0,
-    public: isPublic,
-    ids: byKind[kind] ?? [],
-  })
+  const OUVERTES = new Set(['mounts', 'minions'])
+  const block = (kind, isPublic = true) => {
+    if (!connecte && !OUVERTES.has(kind)) {
+      return { count: 0, total: totals[kind] ?? 0, public: false, ids: [] }
+    }
+    return {
+      count: (byKind[kind] ?? []).length,
+      total: totals[kind] ?? 0,
+      public: isPublic,
+      ids: byKind[kind] ?? [],
+    }
+  }
 
   let extended = null
   try {
@@ -612,20 +641,45 @@ async function authDiscordStart(env, url) {
     dest.hash = `login=${token}`
     return Response.redirect(dest.toString(), 302)
   }
-  const state = await signState(env, { r: ret, x: Date.now() + 600_000 })
+  // L'état est lié au navigateur par un nonce dépose en cookie : sans ça, un
+  // attaquant pouvait démarrer la connexion, garder son état valide, puis
+  // faire visiter le lien de retour à sa victime, qui se retrouvait connectée
+  // sur le compte de l'attaquant et y liait son personnage sans rien voir.
+  const nonce = randomToken()
+  const state = await signState(env, { r: ret, x: Date.now() + 600_000, n: nonce })
   const auth = new URL(DISCORD_AUTH)
   auth.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
   auth.searchParams.set('response_type', 'code')
   auth.searchParams.set('redirect_uri', CALLBACK)
   auth.searchParams.set('scope', 'identify')
   auth.searchParams.set('state', state)
-  return Response.redirect(auth.toString(), 302)
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: auth.toString(),
+      'Set-Cookie': `ogs_state=${nonce}; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax`,
+    },
+  })
 }
 
-async function authDiscordCallback(env, url) {
+function lireCookie(req, nom) {
+  const brut = req.headers.get('Cookie') ?? ''
+  for (const part of brut.split(';')) {
+    const [k, ...v] = part.trim().split('=')
+    if (k === nom) return v.join('=')
+  }
+  return null
+}
+
+async function authDiscordCallback(env, url, req) {
   const payload = await verifyState(env, url.searchParams.get('state'))
   const code = url.searchParams.get('code')
   if (!payload || !code) return response('{"error":"invalid state"}', 400)
+  // Le nonce doit venir du même navigateur que celui qui a démarré la
+  // connexion : un état volé et rejoué ailleurs n'a pas le cookie.
+  if (!payload.n || lireCookie(req, 'ogs_state') !== payload.n) {
+    return response('{"error":"invalid state"}', 400)
+  }
 
   const tokenRes = await fetch(DISCORD_TOKEN, {
     method: 'POST',
@@ -2531,7 +2585,7 @@ const routes = {
       return authDiscordStart(env, url)
     }
     if (url.pathname === '/auth/discord/callback' && req.method === 'GET') {
-      return authDiscordCallback(env, url)
+      return authDiscordCallback(env, url, req)
     }
     if (url.pathname === '/me' && req.method === 'GET') {
       const user = await authenticate(env, req)
@@ -2598,7 +2652,10 @@ const routes = {
       }
       if (!charMatch[2] && req.method === 'GET') {
         try {
-          const char = await getCharacter(env, id, url.searchParams.has('force'))
+          // Authentification facultative : elle ne conditionne pas l'accès à la
+          // fiche, seulement le niveau de détail (voir getCharacter).
+          const visiteur = await authenticate(env, req)
+          const char = await getCharacter(env, id, url.searchParams.has('force'), !!visiteur)
           if (!char) return response('{"error":"character not found"}', 404)
           return response(JSON.stringify(char))
         } catch (e) {

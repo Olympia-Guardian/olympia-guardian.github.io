@@ -99,8 +99,16 @@ const STR = {
     fr: 'catalogues rafraîchis chaque nuit',
     en: 'catalogues refreshed nightly',
   },
-  dataBy: { fr: 'Catalogues', en: 'Catalogues by' },
+  sourceCode: { fr: 'le code source', en: 'source code' },
+  footerStats: {
+    fr: '{kinds} collections suivies, {items} objets répertoriés',
+    en: '{kinds} collections tracked, {items} items catalogued',
+  },
   feedback: { fr: 'un souci, une idée ?', en: 'issues & ideas' },
+  support: {
+    fr: "Tu veux soutenir l'application ? Achète-nous un café ! ☕",
+    en: 'Want to support the app? Buy us a coffee! ☕',
+  },
 
   // Comptes & Mon Journal
   myPage: { fr: 'Mon Journal', en: 'My Journal' },

@@ -3208,11 +3208,25 @@ a.player-name:hover {
 
 .footer {
   margin-top: 40px;
-  padding-top: 16px;
+  padding-top: 18px;
   border-top: 1px solid var(--hairline);
   font-size: 12px;
   color: var(--muted);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 24px;
+}
+
+.footer-meta,
+.footer-legal {
+  margin: 0;
+}
+
+.footer-legal {
+  opacity: 0.6;
 }
 
 @media (max-width: 700px) {
@@ -4310,4 +4324,38 @@ a.player-name:hover {
   background: var(--surface-2);
   border-radius: var(--radius-s);
   padding: 8px 12px;
+}
+
+/* Soutien au développement : sur sa propre ligne et dans une pastille, pour
+   qu'on le lise comme une invitation et non comme une mention légale de plus. */
+.footer-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: var(--gold);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.footer-support:hover {
+  border-color: var(--gold);
+  background: var(--surface-2);
+}
+
+.footer-link {
+  color: inherit;
+  text-decoration: underline;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.footer-stats {
+  margin: 0;
+  opacity: 0.75;
 }

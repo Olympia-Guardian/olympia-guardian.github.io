@@ -567,7 +567,11 @@ export default function App() {
         )}
 
         <div className="layout">
-          {tab !== 'mypage' && tab !== 'market' && tab !== 'groups' && tab !== 'admin' && (
+          {tab !== 'mypage' &&
+            tab !== 'market' &&
+            tab !== 'groups' &&
+            tab !== 'admin' &&
+            tab !== 'guide' && (
           <RosterBar
             members={members}
             activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}
@@ -912,19 +916,31 @@ export default function App() {
         <ScrollTop />
 
         <footer className="footer">
-          {t('dataBy')}{' '}
-          <a href="https://ffxivcollect.com" target="_blank" rel="noreferrer">
-            FFXIV Collect
-          </a>{' '}
-          · {t('footer')} ·{' '}
           <a
-            href="https://github.com/Olympia-Guardian/olympia-guardian.github.io/issues"
+            className="footer-support"
+            href="https://buymeacoffee.com/derp4kiin"
             target="_blank"
             rel="noreferrer"
           >
-            {t('feedback')}
-          </a>{' '}
-          · FINAL FANTASY XIV © SQUARE ENIX
+            {t('support')}
+          </a>
+          <p className="footer-meta">
+            <button className="footer-link" onClick={() => setTab('guide')}>
+              {t('guideTitle')}
+            </button>
+            {db && (
+              <>
+                {' · '}
+                {t('footerStats', {
+                  kinds: KINDS.length,
+                  items: KINDS.reduce((n, k) => n + db[k].length, 0).toLocaleString(
+                    lang === 'fr' ? 'fr-FR' : 'en-US',
+                  ),
+                })}
+              </>
+            )}
+          </p>
+          <p className="footer-legal">FINAL FANTASY XIV © SQUARE ENIX</p>
         </footer>
       </div>
     </LangContext.Provider>

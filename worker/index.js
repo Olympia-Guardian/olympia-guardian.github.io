@@ -114,14 +114,71 @@ async function catalogs() {
 
 // ----------------------------------------------------------------- lodestone
 
+// Le Lodestone n'est pas une API : c'est le site de Square Enix, que nous
+// lisons depuis les adresses partagées de Cloudflare. Une page de groupe de
+// 50 membres dont le cache expire en même temps lançait 250 requêtes en
+// rafale, de quoi faire bloquer l'ensemble des workers de la plateforme. Trois
+// garde-fous : pas plus de 4 appels simultanés, une attente courte avant de
+// renoncer, et un délai d'expiration pour qu'un Lodestone lent ne fasse pas
+// pendre la requête indéfiniment. Renoncer n'est pas grave : l'appelant sert
+// alors la fiche déjà en base et retente cinq minutes plus tard.
+const LODESTONE_MAX_PARALLEL = 4
+const LODESTONE_MAX_WAIT = 3000
+const LODESTONE_TIMEOUT = 8000
+let lodestoneActive = 0
+const lodestoneQueue = []
+
+function acquireLodestone() {
+  if (lodestoneActive < LODESTONE_MAX_PARALLEL) {
+    lodestoneActive++
+    return Promise.resolve()
+  }
+  return new Promise((resolve, reject) => {
+    const attente = { resolve, timer: null }
+    attente.timer = setTimeout(() => {
+      const i = lodestoneQueue.indexOf(attente)
+      if (i !== -1) lodestoneQueue.splice(i, 1)
+      reject(new Error('Lodestone saturé'))
+    }, LODESTONE_MAX_WAIT)
+    lodestoneQueue.push(attente)
+  })
+}
+
+function releaseLodestone() {
+  const suivant = lodestoneQueue.shift()
+  if (suivant) {
+    clearTimeout(suivant.timer)
+    suivant.resolve()
+  } else lodestoneActive--
+}
+
 async function lodestoneGet(path, lang = 'en') {
   const base = lang === 'fr' ? 'https://fr.finalfantasyxiv.com/lodestone' : LODESTONE
-  const res = await fetch(`${base}${path}`, {
-    headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': lang },
-  })
-  if (res.status === 404) return null
-  if (!res.ok) throw new Error(`Lodestone ${res.status}`)
-  return res.text()
+  await acquireLodestone()
+  try {
+    const res = await fetch(`${base}${path}`, {
+      headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': lang },
+      signal: AbortSignal.timeout(LODESTONE_TIMEOUT),
+    })
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error(`Lodestone ${res.status}`)
+    return await res.text()
+  } finally {
+    releaseLodestone()
+  }
+}
+
+// Deux visiteurs qui ouvrent la même fiche au même moment ne doivent pas
+// déclencher deux lectures du Lodestone : le second attend le résultat du
+// premier.
+const scrapesEnCours = new Map()
+
+function scrapeOnce(id) {
+  const encours = scrapesEnCours.get(id)
+  if (encours) return encours
+  const p = scrapeCharacter(id).finally(() => scrapesEnCours.delete(id))
+  scrapesEnCours.set(id, p)
+  return p
 }
 
 function extract(html, regex) {
@@ -338,7 +395,7 @@ async function getCharacter(env, id, force) {
     // retente dans 5 minutes plutôt que de marteler à chaque requête.
     let scraped = null
     try {
-      scraped = await scrapeCharacter(id)
+      scraped = await scrapeOnce(id)
     } catch {
       scraped = null
     }
@@ -377,7 +434,10 @@ async function getCharacter(env, id, force) {
         up.bind(id, 'mounts', JSON.stringify(scraped.mounts.ids), now, 'lodestone'),
         up.bind(id, 'minions', JSON.stringify(scraped.minions.ids), now, 'lodestone'),
       ])
-      await seedPlaceholders(env, id)
+      // Pas de seedPlaceholders ici : le contrôle des collections absentes,
+      // plus bas, s'en charge quand il en manque vraiment. L'appeler à chaque
+      // scrape coûtait 15 écritures D1 par consultation de fiche, toutes les
+      // heures et par personnage, pour ne rien insérer la plupart du temps.
     }
   }
 
@@ -2242,11 +2302,26 @@ async function searchCharacter(env, url) {
   const target = new URL('https://eu.finalfantasyxiv.com/lodestone/character/')
   target.searchParams.set('q', name)
   if (server) target.searchParams.set('worldname', server)
-  const res = await fetch(target.toString(), {
-    headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': 'fr' },
-  })
-  if (!res.ok) return response('{"error":"lodestone unavailable"}', 502)
-  const html = await res.text()
+  // Même file d'attente que les lectures de fiche : la recherche part vers le
+  // Lodestone, elle compte dans le même budget d'appels simultanés.
+  let html
+  try {
+    await acquireLodestone()
+  } catch {
+    return response('{"error":"lodestone busy"}', 503)
+  }
+  try {
+    const res = await fetch(target.toString(), {
+      headers: { 'User-Agent': MOBILE_UA, 'Accept-Language': 'fr' },
+      signal: AbortSignal.timeout(LODESTONE_TIMEOUT),
+    })
+    if (!res.ok) return response('{"error":"lodestone unavailable"}', 502)
+    html = await res.text()
+  } catch {
+    return response('{"error":"lodestone unavailable"}', 502)
+  } finally {
+    releaseLodestone()
+  }
   const unescape = (s) =>
     s.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&')
   const results = []

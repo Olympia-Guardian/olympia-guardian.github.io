@@ -129,11 +129,17 @@ export interface Member {
 
 /** Fiches des membres d'une liste d'ids (le groupe actif) : chargement,
  *  rafraîchissement — la composition de la liste vit dans useGroups. */
+/** Fiches chargées de front. Au-delà, le worker enchaîne les lectures du
+ *  Lodestone plus vite que Square Enix ne les tolère. */
+const MAX_PARALLEL_CHARS = 4
+
 export function useMembers(ids: number[]) {
   const [members, setMembers] = useState<Member[]>(() =>
     ids.map((id) => ({ id, status: 'loading' as const })),
   )
   const inFlight = useRef(new Set<number>())
+  // Relance la file quand une fiche se libère, sans dépendre du rendu.
+  const [tick, setTick] = useState(0)
 
   const load = useCallback(async (id: number, force: boolean) => {
     if (inFlight.current.has(id)) return
@@ -148,6 +154,7 @@ export function useMembers(ids: number[]) {
       )
     } finally {
       inFlight.current.delete(id)
+      setTick((n) => n + 1)
     }
   }, [])
 
@@ -161,11 +168,20 @@ export function useMembers(ids: number[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
+  // Un groupe de 50 membres lançait 50 chargements d'un coup, soit jusqu'à
+  // 250 lectures du Lodestone en rafale côté worker. On n'en laisse partir que
+  // quelques-unes à la fois : le premier membre s'affiche aussi vite, les
+  // suivants s'enchaînent, et le site de Square Enix ne nous bloque pas.
   useEffect(() => {
+    let libres = MAX_PARALLEL_CHARS - inFlight.current.size
     for (const m of members) {
-      if (m.status === 'loading') void load(m.id, false)
+      if (libres <= 0) break
+      if (m.status === 'loading' && !inFlight.current.has(m.id)) {
+        libres--
+        void load(m.id, false)
+      }
     }
-  }, [members, load])
+  }, [members, load, tick])
 
   const refresh = useCallback(
     (id: number) => {

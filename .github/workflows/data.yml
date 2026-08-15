@@ -23,8 +23,8 @@ jobs:
       - name: Commit & push si changement
         id: commit
         run: |
-          git config user.name "Codex Olympia"
-          git config user.email "codex-olympia@users.noreply.github.com"
+          git config user.name "Olympia Guardian"
+          git config user.email "olympia-guardian@users.noreply.github.com"
           git add public/data
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"

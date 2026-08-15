@@ -425,15 +425,125 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
         'Tribal',
       ],
     ]
+    // Garland Tools met une majuscule à chaque mot : le francais n'en met pas
+    // sur les particules au milieu d'un nom. Sept noms concernes, corrigés
+    // nommement plutôt qu'à la règle (aucun risque d'abîmer un nom propre).
+    const NPC_FIXES = {
+      "Numismate De L'expédition": "Numismate de l'Expédition",
+      'Préposé Aux Lots': 'Préposé aux lots',
+      'Préposée Aux Lots': 'Préposée aux lots',
+      'Dure À Cuire': 'Dure à cuire',
+      'Fournisseuse De La Confédération': 'Fournisseuse de la Confédération',
+      'Quartier-maître Du Maelstrom': 'Quartier-maître du Maelstrom',
+      'Système De Synthèse': 'Système de synthèse',
+    }
+    const fixNpcCase = (s) => {
+      const i = s.text.indexOf(' - ')
+      const npc = i === -1 ? s.text : s.text.slice(0, i)
+      const fixed = NPC_FIXES[npc]
+      if (!fixed) return s
+      return { ...s, text: i === -1 ? fixed : fixed + s.text.slice(i) }
+    }
     const refineType = (s) => {
       for (const [re, type] of CURRENCY_TYPE) {
         if (re.test(s.textEn)) return { ...s, type }
       }
       return s
     }
+    // Portraits nommés d'après leur contenu : ni FFXIV Collect ni Garland ne
+    // leur donnent de source, mais le nom court la porte. « (standard) » est
+    // le portrait par défaut d'une classe ou d'un job, « (fatal) » un raid
+    // ultime, et « Front : Maelstrom » une grande compagnie aux Fronts (le
+    // camp JcJ, pas l'intendant à sceaux).
+    const JOBS = new Set([
+      'Gladiator', 'Marauder', 'Conjurer', 'Pugilist', 'Lancer', 'Rogue', 'Archer',
+      'Thaumaturge', 'Arcanist', 'Paladin', 'Warrior', 'Dark Knight', 'Gunbreaker',
+      'White Mage', 'Scholar', 'Astrologian', 'Sage', 'Monk', 'Dragoon', 'Ninja',
+      'Samurai', 'Reaper', 'Bard', 'Machinist', 'Dancer', 'Black Mage', 'Summoner',
+      'Red Mage', 'Blue Mage', 'Viper', 'Pictomancer', 'Carpenter', 'Blacksmith',
+      'Armorer', 'Goldsmith', 'Leatherworker', 'Weaver', 'Alchemist', 'Culinarian',
+      'Miner', 'Botanist', 'Fisher',
+    ])
+    // Cartes et camps JcJ, par mode de jeu.
+    const PVP_MAPS = {
+      'Fields of Glory': 'Fronts', 'Onsal Hakair': 'Fronts', 'Seal Rock': 'Fronts',
+      'Borderland Ruins (Secure)': 'Fronts', 'The Maelstrom': 'Fronts',
+      'The Order of the Twin Adder': 'Fronts', 'The Immortal Flames': 'Fronts',
+      'Hidden Gorge': 'Ailes rivales',
+      'Volcanic Heart': 'Conflit crystallin', 'Clockwork Castletown': 'Conflit crystallin',
+      'Bayside Battleground': 'Conflit crystallin', 'Red Sands': 'Conflit crystallin',
+    }
+    const PVP_MODE_EN = {
+      Fronts: 'Frontline', 'Ailes rivales': 'Rival Wings',
+      'Conflit crystallin': 'Crystalline Conflict',
+    }
+    const ULTIMATES = new Set([
+      'Unending Coil of Bahamut', "Weapon's Refrain", 'Epic of Alexander',
+      "Dragonsong's Reprise", 'Omega Protocol', 'Futures Rewritten',
+    ])
+    // Séries de quêtes : le portrait récompense la ligne entière, pas un
+    // contenu instancié précis (pas de carte de planning fantôme).
+    const QUESTLINES = new Set(['Four Lords', 'Dreaming Ways'])
+    const EVENTS = new Set(['Ten Year Anniversary', 'Yo-kai Watch'])
+    // Les derniers cas, vérifiés un par un (le nom seul ne suffisait pas) :
+    // deux paliers de série JcJ, un concours de Fan Festival, une quête de
+    // job, et les deux jeux exclusifs de l'application mobile Companion.
+    const ONE_OFFS = {
+      'Archeia Harmonias': {
+        type: 'PvP',
+        text: 'Série JcJ 11 - niveau 10',
+        textEn: 'PvP Series 11 - level 10',
+      },
+      'Worqor Chirteh': {
+        type: 'PvP',
+        text: 'Série JcJ 10 - niveau 20',
+        textEn: 'PvP Series 10 - level 20',
+      },
+      'Special Accolades': {
+        type: 'Event',
+        text: 'Fan Festival 2026 - lauréats des concours Art et Vidéo',
+        textEn: 'Fan Festival 2026 - Art and Video contest winners',
+      },
+      'Sheet Music': {
+        type: 'Quest',
+        text: 'Progression des quêtes de Barde',
+        textEn: 'Bard job quest progression',
+      },
+      'Companion 1': {
+        type: 'Other',
+        text: 'Application mobile FFXIV Companion',
+        textEn: 'FFXIV Companion mobile app',
+      },
+      'Companion 2': {
+        type: 'Premium',
+        text: 'Application mobile FFXIV Companion (abonnement premium)',
+        textEn: 'FFXIV Companion mobile app (premium subscription)',
+      },
+    }
+    const nameSource = (it) => {
+      if (JOBS.has(it.nameEn.replace(/ \(Simple\)$/, ''))) {
+        return {
+          type: 'Quest',
+          text: 'Débloquer la classe ou le job',
+          textEn: 'Unlock the class or job',
+        }
+      }
+      const mode = PVP_MAPS[it.nameEn]
+      if (mode) {
+        return {
+          type: 'PvP',
+          text: `${mode} : ${it.name.replace(/^Front\s*:\s*/, '')}`,
+          textEn: `${PVP_MODE_EN[mode]}: ${it.nameEn}`,
+        }
+      }
+      if (ULTIMATES.has(it.nameEn)) return { type: 'Raid', text: it.name, textEn: it.nameEn }
+      if (QUESTLINES.has(it.nameEn)) return { type: 'Quest', text: it.name, textEn: it.nameEn }
+      if (EVENTS.has(it.nameEn)) return { type: 'Event', text: it.name, textEn: it.nameEn }
+      return ONE_OFFS[it.nameEn] ?? null
+    }
     let n = 0
     for (const it of items) {
-      const sources = (FRAME_SOURCES[it.id] ?? []).map(refineType)
+      const sources = (FRAME_SOURCES[it.id] ?? []).map(refineType).map(fixNpcCase)
       const ach = byReward.get((it.itemNameEn ?? '').toLowerCase())
       if (ach && !sources.some((s) => s.type === 'Achievement')) {
         sources.push({ type: 'Achievement', text: ach.name, textEn: ach.nameEn })
@@ -445,6 +555,10 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
           text: `Conflit crystallin classé - saison ${cc[2]} (rang ${CC_RANKS[cc[1]]})`,
           textEn: `Ranked Crystalline Conflict - Season ${cc[2]} (${cc[1]} tier)`,
         })
+      }
+      if (sources.length === 0) {
+        const byName = nameSource(it)
+        if (byName) sources.push(byName)
       }
       if (sources.length > 0) {
         it.sources = sources

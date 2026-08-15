@@ -139,6 +139,10 @@ export function needLabel(need: GroupNeed, lang: Lang = 'fr'): string {
 /** Extension courante : son contenu à haut niveau ne se solote pas encore. */
 const CURRENT_EXPANSION = 7
 
+/** Les six raids ultimes, reconnus dans le texte de source (nom du contenu). */
+const ULTIMATE_RE =
+  /unending coil|weapon's refrain|epic of alexander|dragonsong's reprise|omega protocol|futures rewritten/i
+
 export function sourceGroupNeed(
   type: string,
   textEn: string,
@@ -170,6 +174,9 @@ function baseGroupNeed(type: string, textEn: string, patch: string): GroupNeed {
     case 'Trial':
       return v >= CURRENT_EXPANSION ? 'group' : 'solo'
     case 'Raid':
+      // Raids ultimes : huit joueurs rodés, jamais solotables même des
+      // années après leur sortie, contrairement au reste des raids.
+      if (ULTIMATE_RE.test(t)) return 'group'
       if (t.includes('savage')) {
         if (v >= CURRENT_EXPANSION) return 'group'
         return v >= CURRENT_EXPANSION - 1 ? 'advised' : 'solo'

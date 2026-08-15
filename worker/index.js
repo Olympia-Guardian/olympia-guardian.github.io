@@ -43,6 +43,18 @@ const HIDDEN_KINDS = ALL_KINDS.filter((k) => k !== 'mounts' && k !== 'minions')
 const MAX_DOC_BYTES = 16_384
 const MAX_MEMBERS = 100
 
+// D1 plafonne le nombre de paramètres liés par requête. Au-delà, la requête
+// est rejetée et l'appelant reçoit une erreur opaque : « Tout accepter »
+// cassait dès la 100e suggestion en attente, et la page Contacts au 100e ami.
+// On découpe donc systématiquement les listes passées à un IN (...).
+const D1_MAX_PARAMS = 90
+
+function parLots(liste, taille = D1_MAX_PARAMS) {
+  const lots = []
+  for (let i = 0; i < liste.length; i += taille) lots.push(liste.slice(i, i + taille))
+  return lots
+}
+
 // ---------------------------------------------------------------- catalogues
 
 // Cache par isolate : nameEn (normalisé) → id, + totaux par collection.
@@ -1535,15 +1547,19 @@ async function resolveSuggestions(env, user, raw) {
   const accept = body?.accept === true
   if (ids.length === 0 || ids.length > 500) return response('{"error":"invalid ids"}', 422)
 
-  const marks = ids.map(() => '?').join(',')
-  const rows = await env.DB.prepare(
-    `SELECT s.id, s.char_id, s.kind, s.item_id, s.from_user_id FROM suggestions s ` +
-      `JOIN bindings b ON b.char_id = s.char_id AND b.verified = 1 AND b.user_id = ? ` +
-      `WHERE s.id IN (${marks})`,
-  )
-    .bind(user.id, ...ids)
-    .all()
-  const mine = rows.results
+  // Un paramètre est déjà pris par user.id, d'où le lot réduit d'une unité.
+  const mine = []
+  for (const lot of parLots(ids, D1_MAX_PARAMS - 1)) {
+    const marks = lot.map(() => '?').join(',')
+    const rows = await env.DB.prepare(
+      `SELECT s.id, s.char_id, s.kind, s.item_id, s.from_user_id FROM suggestions s ` +
+        `JOIN bindings b ON b.char_id = s.char_id AND b.verified = 1 AND b.user_id = ? ` +
+        `WHERE s.id IN (${marks})`,
+    )
+      .bind(user.id, ...lot)
+      .all()
+    mine.push(...rows.results)
+  }
   if (mine.length === 0) return response('{"ok":true,"accepted":0,"dismissed":0}')
 
   const now = Date.now()
@@ -1572,8 +1588,13 @@ async function resolveSuggestions(env, user, raw) {
       stmts.push(upsert.bind(Number(charId), kind, JSON.stringify(merged), now, 'user'))
     }
   }
-  const del = env.DB.prepare(`DELETE FROM suggestions WHERE id IN (${mine.map(() => '?').join(',')})`)
-  stmts.push(del.bind(...mine.map((s) => s.id)))
+  for (const lot of parLots(mine.map((s) => s.id))) {
+    stmts.push(
+      env.DB.prepare(
+        `DELETE FROM suggestions WHERE id IN (${lot.map(() => '?').join(',')})`,
+      ).bind(...lot),
+    )
+  }
   await env.DB.batch(stmts)
   // Temps réel : les expéditeurs voient leur ✓ dorée se résoudre ; si accepté,
   // les co-membres voient la fiche du perso changer.
@@ -1672,14 +1693,18 @@ async function listContacts(env, user) {
   }
   // Persos vérifiés des amis : la fiche contact montre leur progression.
   if (friends.length > 0) {
-    const marks = friends.map(() => '?').join(',')
-    const chars = await env.DB.prepare(
-      `SELECT user_id, char_id FROM bindings WHERE verified = 1 AND user_id IN (${marks})`,
-    )
-      .bind(...friends.map((f) => f.userId))
-      .all()
+    const lignes = []
+    for (const lot of parLots(friends.map((f) => f.userId))) {
+      const marks = lot.map(() => '?').join(',')
+      const chars = await env.DB.prepare(
+        `SELECT user_id, char_id FROM bindings WHERE verified = 1 AND user_id IN (${marks})`,
+      )
+        .bind(...lot)
+        .all()
+      lignes.push(...chars.results)
+    }
     const byUser = new Map()
-    for (const c of chars.results) {
+    for (const c of lignes) {
       if (!byUser.has(c.user_id)) byUser.set(c.user_id, [])
       byUser.get(c.user_id).push(c.char_id)
     }
@@ -2389,10 +2414,23 @@ export class LiveHub {
 
 /** Envoie un événement aux salons des utilisateurs visés (au mieux : un salon
  *  sans connexion avale le message sans bruit). */
+// Le plan gratuit plafonne à 50 sous-requêtes par requête, et chaque
+// destinataire en coûte une, même déconnecté. Un groupe de plus de 48 comptes
+// faisait donc échouer la requête APRÈS l'écriture en base : la coche était
+// bien enregistrée mais l'utilisateur voyait une erreur. On plafonne les
+// envois directs ; les comptes au-delà verront le changement au sondage
+// suivant, dans les 90 secondes, ce qui est le rôle de ce filet.
+const MAX_NOTIFY = 25
+
 async function notify(env, userIds, event) {
   const body = JSON.stringify(event)
+  const cibles = [...new Set(userIds)].filter(Boolean)
+  const directs = cibles.slice(0, MAX_NOTIFY)
+  if (cibles.length > directs.length) {
+    console.warn(`notify : ${cibles.length - directs.length} comptes laissés au sondage de 90 s`)
+  }
   await Promise.all(
-    [...new Set(userIds)].filter(Boolean).map((id) =>
+    directs.map((id) =>
       env.LIVE.get(env.LIVE.idFromName(`user:${id}`))
         .fetch('https://live/send', { method: 'POST', body })
         .catch(() => {}),
@@ -2446,8 +2484,11 @@ function sanitizeRoom(raw) {
   return JSON.stringify({ v: 1, roster: { ids, t } })
 }
 
-export default {
-  async fetch(req, env) {
+// `ctx` sert à différer le travail qui n'a pas à retarder la réponse (l'envoi
+// des notifications temps réel), et l'enveloppe plus bas transforme une
+// exception en 500 JSON tracé plutôt qu'en erreur 1101 muette de Cloudflare.
+const routes = {
+  async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
     const url = new URL(req.url)
 
@@ -2719,5 +2760,26 @@ export default {
     }
 
     return response('{"error":"not found"}', 404)
+  },
+}
+
+export default {
+  async fetch(req, env, ctx) {
+    try {
+      return await routes.fetch(req, env, ctx)
+    } catch (e) {
+      // Sans ce filet, une requête D1 qui dépasse une limite ou une réponse
+      // Discord inattendue renvoyaient une erreur générique de la plateforme,
+      // sans rien dans les journaux pour comprendre.
+      const chemin = (() => {
+        try {
+          return new URL(req.url).pathname
+        } catch {
+          return '?'
+        }
+      })()
+      console.error('erreur non rattrapée', req.method, chemin, e?.stack ?? String(e))
+      return response('{"error":"internal"}', 500)
+    }
   },
 }

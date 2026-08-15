@@ -5,6 +5,11 @@ main = "index.js"
 compatibility_date = "2026-08-01"
 workers_dev = true
 
+# Journaux consultables (wrangler tail, tableau de bord Cloudflare) : sans ça,
+# une panne en production ne laisse aucune trace exploitable.
+[observability]
+enabled = true
+
 [vars]
 DISCORD_CLIENT_ID = "1537099783573995522"
 APP_URL = "https://olympia-guardian.github.io"

@@ -2797,9 +2797,41 @@ const routes = {
   },
 }
 
+// Routes qui déclenchent une lecture du site de Square Enix : budget serré.
+// Une fiche non lue depuis une heure coûte jusqu'à 5 requêtes chez eux, et une
+// recherche par nom une de plus.
+const SORT_VERS_LODESTONE = /^\/(character\/\d+$|search-character$|bind$)/
+
+/** Vrai si la requête doit être refusée faute de budget. Le WebSocket et les
+ *  requêtes préparatoires CORS ne comptent pas : le premier reste ouvert des
+ *  heures, les secondes ne touchent à rien. */
+async function debitDepasse(req, env, url) {
+  if (req.method === 'OPTIONS' || url.pathname === '/ws') return false
+  const ip = req.headers.get('CF-Connecting-IP')
+  // Pas d'en-tête (développement local) ou binding absent : pas de limite.
+  if (!ip) return false
+  const seau = SORT_VERS_LODESTONE.test(url.pathname) ? env.RL_LODESTONE : env.RL_GENERAL
+  if (!seau) return false
+  try {
+    const { success } = await seau.limit({ key: ip })
+    return !success
+  } catch {
+    // Le limiteur ne doit jamais faire tomber le service.
+    return false
+  }
+}
+
 export default {
   async fetch(req, env, ctx) {
     try {
+      const url = new URL(req.url)
+      if (await debitDepasse(req, env, url)) {
+        // Retry-After : le client sait quand réessayer au lieu d'insister.
+        return new Response('{"error":"too many requests"}', {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '60', ...CORS },
+        })
+      }
       return await routes.fetch(req, env, ctx)
     } catch (e) {
       // Sans ce filet, une requête D1 qui dépasse une limite ou une réponse

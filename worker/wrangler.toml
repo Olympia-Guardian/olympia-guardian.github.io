@@ -10,6 +10,22 @@ workers_dev = true
 [observability]
 enabled = true
 
+# Limite de débit par adresse IP. Le limiteur natif de Cloudflare est gratuit
+# et ne consomme ni écriture D1 ni Durable Object, contrairement à un compteur
+# maison. Deux budgets distincts : les routes qui sortent vers le Lodestone
+# (site de Square Enix, à ménager) sont bien plus serrées que le reste.
+[[unsafe.bindings]]
+name = "RL_LODESTONE"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }
+
+[[unsafe.bindings]]
+name = "RL_GENERAL"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 300, period = 60 }
+
 [vars]
 DISCORD_CLIENT_ID = "1537099783573995522"
 APP_URL = "https://olympia-guardian.github.io"

@@ -1804,6 +1804,7 @@ export function MyPage({
                   </span>
                 </div>
                 {char.profile && <CharStats profile={char.profile} />}
+                <p className="meter-legend">{t('shopExcluded')}</p>
                 <div className="meter-grid mypage-meters">
                   {KINDS.filter((k) => k !== 'facewear' && k !== 'hairstyles').map((k) => {
                     // « Mode » : accessoires + lunettes + coiffures fusionnés.
@@ -1814,12 +1815,20 @@ export function MyPage({
                     const total = merged
                       ? char.fashions.total + char.facewear.total + char.hairstyles.total
                       : char[k].total
+                    const countAll = merged
+                      ? char.fashions.countAll + char.facewear.countAll + char.hairstyles.countAll
+                      : char[k].countAll
+                    const totalAll = merged
+                      ? char.fashions.totalAll + char.facewear.totalAll + char.hairstyles.totalAll
+                      : char[k].totalAll
                     return (
                       <Meter
                         key={k}
                         label={merged ? t('fashionFamily') : kindLabel(lang, k, 'short')}
                         count={count}
                         total={total}
+                        countAll={countAll}
+                        totalAll={totalAll}
                         colored
                       />
                     )

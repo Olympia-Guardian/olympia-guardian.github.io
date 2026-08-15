@@ -4274,3 +4274,19 @@ a.player-name:hover {
   letter-spacing: 0.06em;
   margin-right: 8px;
 }
+
+/* compteurs : chiffres boutique comprise, en retrait visuel */
+.meter-all {
+  font-size: 0.78em;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.meter-legend {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+}

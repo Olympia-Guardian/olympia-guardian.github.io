@@ -158,6 +158,9 @@ export interface Item {
 export interface CharCollection {
   count: number
   total: number
+  /** Les mêmes, objets de boutique compris : affichés entre parenthèses. */
+  countAll: number
+  totalAll: number
   isPublic: boolean
   ids: number[]
 }
@@ -243,7 +246,7 @@ const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du m
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
-const CHAR_V = 'v10' // fiches de personnage (v10 : pièces de tenues)
+const CHAR_V = 'v11' // fiches de personnage (v11 : compteurs avec et sans boutique)
 
 /** Purge les caches des versions précédentes : ils ne servent plus et
  *  encombrent un localStorage déjà juste. */
@@ -386,6 +389,8 @@ function mapCharacter(r: any): Character {
   const col = (c: any): CharCollection => ({
     count: c?.count ?? 0,
     total: c?.total ?? 0,
+    countAll: c?.count_all ?? c?.count ?? 0,
+    totalAll: c?.total_all ?? c?.total ?? 0,
     isPublic: c?.public !== false,
     ids: (c?.ids ?? []) as number[],
   })

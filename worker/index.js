@@ -521,10 +521,15 @@ async function getCharacter(env, id, force, connecte = true) {
     }
     const ids = byKind[kind] ?? []
     const exclus = horsTotal?.[kind]
+    const brut = totals[kind] ?? 0
     return {
       // `ids` reste complet : l'objet de boutique demeure coché dans la liste.
       count: exclus ? ids.filter((id) => !exclus.has(id)).length : ids.length,
-      total: totals[kind] ?? 0,
+      total: brut,
+      // Les mêmes chiffres boutique comprise : l'interface affiche les deux,
+      // « 130 (146) / 287 (353) », pour que rien ne paraisse avoir disparu.
+      count_all: ids.length,
+      total_all: brut + (exclus ? exclus.size : 0),
       public: isPublic,
       ids,
     }

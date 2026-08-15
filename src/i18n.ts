@@ -113,6 +113,10 @@ const STR = {
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   backToTop: { fr: 'Remonter en haut', en: 'Back to top' },
   crossTitle: { fr: 'Tenues et armoire', en: 'Outfits and armoire' },
+  shopExcluded: {
+    fr: "Les objets de la boutique en ligne restent dans tes collections et se cochent normalement, mais ils ne comptent pas dans les totaux : le 100 % doit s'atteindre en jouant, sans payer. Entre parenthèses, les chiffres boutique comprise.",
+    en: 'Online store items stay in your collections and can be ticked as usual, but they are not counted in the totals: 100% should be reachable by playing, without paying. In brackets, the figures including store items.',
+  },
   market: { fr: 'Mon Marché', en: 'My Market' },
   marketIntro: {
     fr: "Ce qui te manque et qui s'achète à l'hôtel des ventes, sur ton centre de données {dc}. Les prix viennent d'Universalis.",

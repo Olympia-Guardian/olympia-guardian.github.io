@@ -27,11 +27,18 @@ export function Meter({
   label,
   count,
   total,
+  countAll,
+  totalAll,
   colored,
 }: {
   label: string
   count: number
   total: number
+  /** Mêmes chiffres, objets de boutique compris. Affichés entre parenthèses
+   *  en plus petit quand ils diffèrent : la progression se juge sur ce qui est
+   *  atteignable sans payer, mais rien ne doit sembler avoir disparu. */
+  countAll?: number
+  totalAll?: number
   /** Couleur par palier d'avancement (rouge → orange → bleu → vert). */
   colored?: boolean
 }) {
@@ -51,7 +58,13 @@ export function Meter({
         <span className="meter-label">{label}</span>
         <span className="meter-value">
           {count}
+          {countAll !== undefined && countAll !== count && (
+            <span className="meter-all"> ({countAll})</span>
+          )}
           <span className="meter-total">/{total}</span>
+          {totalAll !== undefined && totalAll !== total && (
+            <span className="meter-all"> ({totalAll})</span>
+          )}
         </span>
       </div>
       <div className="meter-track" role="img" aria-label={`${label}: ${count}/${total}`}>

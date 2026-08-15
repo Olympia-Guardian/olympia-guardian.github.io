@@ -112,6 +112,16 @@ const STR = {
   },
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   backToTop: { fr: 'Remonter en haut', en: 'Back to top' },
+  crossToArmoire: {
+    fr: "Tu viens de valider la tenue « {name} ». Ses {n} pièces existent aussi dans l'armoire, on les coche là-bas ?",
+    en: 'You just completed the "{name}" outfit. Its {n} pieces also exist in the armoire, tick them there too?',
+  },
+  crossToOutfit: {
+    fr: "Tu as toutes les pièces de « {name} » dans l'armoire. On valide la tenue ?",
+    en: 'You own every piece of "{name}" in the armoire. Mark the outfit as owned?',
+  },
+  crossYes: { fr: 'Oui, cocher', en: 'Yes, tick them' },
+  crossNo: { fr: 'Non merci', en: 'No thanks' },
   bindTitle: { fr: 'Lier mon personnage', en: 'Link my character' },
   bindIntro: {
     fr: 'Choisis ton perso dans le groupe ou colle son ID Lodestone. Une vérification par le Lodestone prouve qu\'il est à toi.',

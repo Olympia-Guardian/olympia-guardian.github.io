@@ -4112,3 +4112,29 @@ a.player-name:hover {
   content-visibility: auto;
   contain-intrinsic-size: auto 40px auto 40px;
 }
+
+/* proposition croisée tenue <-> armoire : les mêmes pièces vivent dans les
+   deux collections, on propose de reporter au lieu de cocher d'office */
+.cross-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-s);
+  font-size: 14px;
+}
+
+.cross-prompt > span {
+  flex: 1 1 260px;
+  color: var(--ink-2);
+}
+
+.cross-prompt .btn {
+  padding: 5px 12px;
+  font-size: 13px;
+}

@@ -396,6 +396,7 @@ function mergeUpgradeTiers(series, relics) {
 await mkdir(OUT, { recursive: true })
 
 let achievementsItems = null
+let outfitsItems = null
 
 for (const [kind, path] of Object.entries(KIND_PATHS)) {
   const [en, fr] = await Promise.all([
@@ -405,6 +406,7 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   const items = mergeDb(en, fr)
   if (kind === 'spells') refineSpellSources(items)
   if (kind === 'achievements') achievementsItems = items
+  if (kind === 'outfits') outfitsItems = items
   // Armoire : chaque entrée reçoit son emplacement d'équipement.
   if (kind === 'armoires') {
     for (const it of items) {
@@ -644,6 +646,42 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
     console.warn(`${kind}: filtre limited ignoré, ${e.message}`)
   }
   await writeCatalog(kind, items)
+
+  // Une même pièce existe parfois dans les deux collections : cochée dans
+  // l'armoire, elle l'est aussi dans la tenue, et l'inverse. L'appariement se
+  // fait sur le nom anglais ET l'icône (le nom seul laisse passer des
+  // homonymes de couleurs différentes), et il n'est posé que s'il est exact.
+  // L'armoire passe après les tenues, d'où la réécriture du fichier.
+  if (kind === 'armoires' && outfitsItems) {
+    const cle = (nomEn, icone) =>
+      `${(nomEn ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/['’]/g, "'").trim().toLowerCase()}|${icone ?? ''}`
+    const parCle = new Map()
+    for (const a of items) {
+      const m = String(a.icon).match(/(\d{6})_hr1/)
+      const k = cle(a.nameEn, m ? m[1] : '')
+      if (!parCle.has(k)) parCle.set(k, a.id)
+    }
+    let apparies = 0
+    let tenuesCompletes = 0
+    for (const o of outfitsItems) {
+      const pieces = o.pieces ?? []
+      if (pieces.length === 0) continue
+      let tout = true
+      for (const pc of pieces) {
+        const id = parCle.get(cle(pc.nameEn, pc.icon))
+        if (id === undefined) tout = false
+        else {
+          pc.armoireId = id
+          apparies++
+        }
+      }
+      if (tout) tenuesCompletes++
+    }
+    await writeCatalog('outfits', outfitsItems)
+    console.log(
+      `armoire <-> tenues : ${apparies} pièces appariées, ${tenuesCompletes} tenues entièrement présentes dans l'armoire`,
+    )
+  }
 }
 
 {

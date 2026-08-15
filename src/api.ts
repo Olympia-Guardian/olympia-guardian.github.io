@@ -139,7 +139,16 @@ export interface Item {
   /** Tenues : pièces qui composent l'ensemble, suivies individuellement.
    *  icon = planche d'icône du jeu ; slot = emplacement (3 tête, 4 torse,
    *  5 mains, 7 jambes, 8 pieds…) pour l'alignement en colonnes. */
-  pieces?: { id: number; name: string; nameEn: string; icon?: string; slot?: number }[]
+  pieces?: {
+    id: number
+    name: string
+    nameEn: string
+    icon?: string
+    slot?: number
+    /** Même pièce dans l'armoire, quand elle y existe : cocher l'un propose
+     *  de cocher l'autre. Absent pour les pièces sans équivalent. */
+    armoireId?: number
+  }[]
   /** type = enum anglais stable de l'API (la logique de catégories s'appuie dessus) ; text = français. */
   sources: Source[]
 }
@@ -228,7 +237,7 @@ const CACHE_MAX_CHARS = 300_000
 // Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
-const DB_V = 'v13' // catalogues par collection (v13 : pièces de tenues avec ids)
+const DB_V = 'v14' // catalogues par collection (v14 : lien pièces de tenues <-> armoire)
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.

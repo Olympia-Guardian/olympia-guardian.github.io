@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchCharacter, type Kind, type RelicDb } from './api'
+import type { CrossSuggestion } from './crossOutfits'
 import type { ApiFriendRequest, ApiGroupInvite, ApiSuggestion } from './groupsApi'
 import { kindLabel, useI18n } from './i18n'
 import type { Db } from './store'
@@ -118,28 +119,35 @@ export function NotificationsPanel({
   suggestions,
   friendRequests,
   groupInvites,
+  crossItems,
   verifiedIds,
   db,
   relicDb,
   onResolve,
   onRespondFriend,
   onRespondInvite,
+  onRespondCross,
   onClose,
 }: {
   suggestions: ApiSuggestion[]
   friendRequests: ApiFriendRequest[]
   groupInvites: ApiGroupInvite[]
+  /** Reports possibles entre tenues et armoire (calculés côté navigateur). */
+  crossItems: CrossSuggestion[]
   verifiedIds: number[]
   db: Db | null
   relicDb: RelicDb | null
   onResolve: (ids: number[], accept: boolean) => void
   onRespondFriend: (userId: string, accept: boolean) => void
   onRespondInvite: (groupId: string, accept: boolean, charId?: number) => void
+  onRespondCross: (item: CrossSuggestion, accept: boolean) => void
   onClose: () => void
 }) {
   const { t } = useI18n()
   const showChar = new Set(suggestions.map((s) => s.charId)).size > 1
-  const total = suggestions.length + friendRequests.length + groupInvites.length
+  const total =
+    suggestions.length + friendRequests.length + groupInvites.length + crossItems.length
+  const plusieursPersos = new Set(crossItems.map((c) => c.charId)).size > 1
   return (
     <div className="notif-panel">
       <div className="notif-head">
@@ -159,6 +167,32 @@ export function NotificationsPanel({
                 verifiedIds={verifiedIds}
                 onRespond={(accept, charId) => onRespondInvite(inv.groupId, accept, charId)}
               />
+            ))}
+          </div>
+        </>
+      )}
+      {crossItems.length > 0 && (
+        <>
+          <p className="notif-section">{t('crossTitle')}</p>
+          <div className="notif-list">
+            {crossItems.map((c) => (
+              <div className="notif-row" key={c.key}>
+                <span className="notif-text">
+                  <b>{c.outfitName}</b>
+                  <small>
+                    {t(c.target === 'armoires' ? 'crossToArmoire' : 'crossToOutfit', {
+                      n: c.ids.length,
+                    })}
+                    {plusieursPersos ? ` (${c.charName})` : ''}
+                  </small>
+                </span>
+                <button className="btn btn-primary" onClick={() => onRespondCross(c, true)}>
+                  {t('crossYes')}
+                </button>
+                <button className="btn ghost" onClick={() => onRespondCross(c, false)}>
+                  {t('crossNo')}
+                </button>
+              </div>
             ))}
           </div>
         </>

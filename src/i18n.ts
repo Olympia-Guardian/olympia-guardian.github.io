@@ -112,13 +112,14 @@ const STR = {
   },
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   backToTop: { fr: 'Remonter en haut', en: 'Back to top' },
+  crossTitle: { fr: 'Tenues et armoire', en: 'Outfits and armoire' },
   crossToArmoire: {
-    fr: "Tu viens de valider la tenue « {name} ». Ses {n} pièces existent aussi dans l'armoire, on les coche là-bas ?",
-    en: 'You just completed the "{name}" outfit. Its {n} pieces also exist in the armoire, tick them there too?',
+    fr: "Tenue possédée : ses {n} pièces manquent dans l'armoire, on les coche ?",
+    en: 'Outfit owned: its {n} pieces are missing from the armoire, tick them?',
   },
   crossToOutfit: {
-    fr: "Tu as toutes les pièces de « {name} » dans l'armoire. On valide la tenue ?",
-    en: 'You own every piece of "{name}" in the armoire. Mark the outfit as owned?',
+    fr: "Toutes ses pièces sont dans l'armoire, on valide la tenue ?",
+    en: 'Every piece is in the armoire, mark the outfit as owned?',
   },
   crossYes: { fr: 'Oui, cocher', en: 'Yes, tick them' },
   crossNo: { fr: 'Non merci', en: 'No thanks' },

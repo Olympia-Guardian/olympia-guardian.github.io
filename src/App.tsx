@@ -21,6 +21,7 @@ import {
 } from './store'
 import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
+import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
@@ -82,6 +83,7 @@ export default function App() {
   // Objet neuf à chaque rendu = tous les consommateurs du contexte se
   // re-rendaient, y compris les grandes listes.
   const langValue = useMemo(() => ({ lang, setLang, t }), [lang, t])
+
   const relicDb = useRelicDb()
 
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
@@ -103,6 +105,49 @@ export default function App() {
   const { members, refresh, reload } = useMembers(grp.active?.members ?? [])
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
+
+  // Reports possibles entre tenues et armoire, proposés dans la cloche. Un
+  // refus est mémorisé sur l'appareil : sans ça, la même proposition
+  // reviendrait à chaque chargement et deviendrait du harcèlement.
+  const [crossIgnored, setCrossIgnored] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(lsGet('ogs.crossignored.v1') ?? '[]') as string[])
+    } catch {
+      return new Set()
+    }
+  })
+  const ignoreCross = (key: string) => {
+    setCrossIgnored((prev) => {
+      const next = new Set(prev).add(key)
+      lsSet('ogs.crossignored.v1', JSON.stringify([...next]))
+      return next
+    })
+  }
+  const crossItems = useMemo(
+    () =>
+      crossSuggestions(
+        db,
+        ready
+          .filter((m) => verifiedIds.includes(m.id))
+          .map((m) => ({ id: m.id, name: m.data.name, data: m.data })),
+        lang,
+        crossIgnored,
+      ),
+    [db, ready, verifiedIds, lang, crossIgnored],
+  )
+  async function respondCross(item: CrossSuggestion, accept: boolean) {
+    if (!accept) {
+      ignoreCross(item.key)
+      return
+    }
+    try {
+      await auth.saveCollections(item.charId, { [item.target]: { add: item.ids } })
+      invalidateCharacter(item.charId)
+      reload(item.charId)
+    } catch {
+      // le report reste proposé, l'utilisateur peut réessayer
+    }
+  }
 
   // Temps réel : le worker pousse un événement à chaque mutation qui nous
   // concerne — on rafraîchit la donnée visée sans attendre le poll.
@@ -400,13 +445,16 @@ export default function App() {
                     onClick={() => setBellOpen((v) => !v)}
                   >
                     <TabIcon k="bell" />
-                    {sugg.count > 0 && <span className="bell-badge">{sugg.count}</span>}
+                    {sugg.count + crossItems.length > 0 && (
+                      <span className="bell-badge">{sugg.count + crossItems.length}</span>
+                    )}
                   </button>
                   {bellOpen && (
                     <NotificationsPanel
                       suggestions={sugg.list}
                       friendRequests={sugg.friendRequests}
                       groupInvites={sugg.groupInvites}
+                      crossItems={crossItems}
                       verifiedIds={verifiedIds}
                       db={db}
                       relicDb={relicDb}
@@ -422,6 +470,7 @@ export default function App() {
                       onRespondFriend={(userId, accept) =>
                         void sugg.respondFriend(userId, accept).then(() => contacts.refresh())
                       }
+                      onRespondCross={(item, accept) => void respondCross(item, accept)}
                       onRespondInvite={(groupId, accept, charId) =>
                         void sugg.respondInvite(groupId, accept, charId).then(() => grp.refreshServer())
                       }

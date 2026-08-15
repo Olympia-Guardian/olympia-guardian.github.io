@@ -1353,12 +1353,6 @@ export function MyPage({
     }
   }, [verifiedIds])
 
-  const [croisement, setCroisement] = useState<{
-    nom: string
-    cible: Kind
-    ids: number[]
-  } | null>(null)
-
   if (!auth.user) {
     return (
       <div className="view mypage">
@@ -1520,80 +1514,11 @@ export function MyPage({
       invalidateCharacter(verified.charId)
       onCharacterUpdated(verified.charId)
       showToast(t('saved'))
-      chercherCroisement(k, ids)
     } catch {
       setNotice(t('saveError'))
     }
   }
 
-  // --- tenues et armoire : les mêmes pièces, dans deux collections
-  //
-  // 468 tenues sur 1086 existent aussi dans l'armoire, pièce pour pièce. Cocher
-  // d'un côté sans l'autre laisse une des deux listes fausse, mais cocher
-  // d'office serait pire : on ne décide pas à la place du joueur, on propose.
-
-  /** Tenues dont chaque pièce a un équivalent dans l'armoire. */
-  function tenuesLiees(): Item[] {
-    return db.outfits.filter(
-      (o) => (o.pieces?.length ?? 0) > 0 && o.pieces!.every((p) => p.armoireId !== undefined),
-    )
-  }
-
-  function chercherCroisement(k: Kind | 'relics' | 'outfitpieces', ids: number[]) {
-    if (!char) return
-    const liees = tenuesLiees()
-
-    // `char` porte encore l'état d'AVANT cette sauvegarde : la différence donne
-    // ce que le joueur vient de cocher. Sans ce filtre, la proposition portait
-    // sur n'importe quelle tenue éligible au lieu de celle qu'il venait de
-    // compléter, ce qui donnait l'impression d'un message hors sujet.
-    if (k === 'outfits' || k === 'outfitpieces') {
-      const avantTenues = new Set(char.outfits.ids)
-      const avantPieces = new Set(char.outfitPieceIds)
-      const piecesPossedees = new Set(k === 'outfitpieces' ? ids : char.outfitPieceIds)
-      const tenuesPossedees = new Set(k === 'outfits' ? ids : char.outfits.ids)
-      const dansArmoire = new Set(char.armoires.ids)
-      for (const o of liees) {
-        const complete =
-          tenuesPossedees.has(o.id) || o.pieces!.every((p) => piecesPossedees.has(p.id))
-        if (!complete) continue
-        const touchee =
-          (k === 'outfits' && !avantTenues.has(o.id)) ||
-          (k === 'outfitpieces' && o.pieces!.some((p) => !avantPieces.has(p.id)))
-        if (!touchee) continue
-        const manquantes = o.pieces!.map((p) => p.armoireId!).filter((a) => !dansArmoire.has(a))
-        if (manquantes.length === 0) continue
-        setCroisement({ nom: localName(o, lang), cible: 'armoires', ids: manquantes })
-        return
-      }
-    }
-
-    if (k === 'armoires') {
-      const avant = new Set(char.armoires.ids)
-      const dansArmoire = new Set(ids)
-      const tenuesPossedees = new Set(char.outfits.ids)
-      const piecesPossedees = new Set(char.outfitPieceIds)
-      for (const o of liees) {
-        // Déjà possédée, en bloc ou par ses pièces : rien à proposer.
-        if (tenuesPossedees.has(o.id)) continue
-        if (o.pieces!.every((p) => piecesPossedees.has(p.id))) continue
-        if (!o.pieces!.every((p) => dansArmoire.has(p.armoireId!))) continue
-        if (!o.pieces!.some((p) => !avant.has(p.armoireId!))) continue
-        const manquantes = o.pieces!.map((p) => p.id).filter((p) => !piecesPossedees.has(p))
-        if (manquantes.length === 0) continue
-        setCroisement({ nom: localName(o, lang), cible: 'outfits', ids: [o.id] })
-        return
-      }
-    }
-  }
-
-  async function accepterCroisement() {
-    if (!char || !croisement) return
-    const { cible, ids } = croisement
-    setCroisement(null)
-    const actuels = cible === 'outfits' ? char.outfits.ids : char.armoires.ids
-    await save(cible, [...new Set([...actuels, ...ids])])
-  }
 
   // Les reliques se cochent une par une ; les totaux de matériaux se recalculent
   // à chaque clic, l'envoi au serveur est groupé après une courte pause.
@@ -1615,23 +1540,6 @@ export function MyPage({
     <div className="view mypage">
       {toast && <div className="toast">{toast}</div>}
 
-      {croisement && (
-        <div className="cross-prompt">
-          <TabIcon k={croisement.cible === 'armoires' ? 'collections' : 'quick'} />
-          <span>
-            {t(croisement.cible === 'armoires' ? 'crossToArmoire' : 'crossToOutfit', {
-              name: croisement.nom,
-              n: croisement.ids.length,
-            })}
-          </span>
-          <button className="btn" onClick={accepterCroisement}>
-            {t('crossYes')}
-          </button>
-          <button className="btn ghost" onClick={() => setCroisement(null)}>
-            {t('crossNo')}
-          </button>
-        </div>
-      )}
 
       {verifiedList.length > 0 && (
         <nav className="char-switch">

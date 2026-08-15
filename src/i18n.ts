@@ -130,6 +130,8 @@ const STR = {
   marketBudget: { fr: 'Budget en gils', en: 'Budget in gil' },
   marketMaxPrice: { fr: 'Prix maximum par objet', en: 'Max price per item' },
   marketNoCap: { fr: 'sans limite', en: 'no limit' },
+  marketAll: { fr: 'Tout sélectionner', en: 'Select all' },
+  marketNone: { fr: 'Tout désélectionner', en: 'Clear all' },
   marketSummaryNoBudget: {
     fr: '{n} objets pour {total} gils, répartis sur {worlds} monde(s).',
     en: '{n} items for {total} gil, across {worlds} world(s).',

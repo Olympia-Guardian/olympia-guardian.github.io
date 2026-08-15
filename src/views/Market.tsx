@@ -50,7 +50,9 @@ export function Market({
   // Zéro = pas de plafond. Les deux champs sont facultatifs et se combinent :
   // le prix maximum écarte les objets trop chers un par un, le budget arrête
   // la liste quand l'enveloppe est épuisée.
-  const [budget, setBudget] = useState(1_000_000)
+  // Pas de budget par défaut : c'est au joueur de dire ce qu'il a en poche,
+  // une valeur imposée d'avance ne voudrait rien dire.
+  const [budget, setBudget] = useState(0)
   const [prixMax, setPrixMax] = useState(0)
   const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
@@ -188,6 +190,16 @@ export function Market({
       </div>
 
       <div className="market-kinds">
+        <button
+          className={`cat-chip ${kinds.size === ACHETABLES.length ? 'is-active' : ''}`}
+          onClick={() =>
+            setKinds((prev) =>
+              prev.size === ACHETABLES.length ? new Set() : new Set(ACHETABLES),
+            )
+          }
+        >
+          {kinds.size === ACHETABLES.length ? t('marketNone') : t('marketAll')}
+        </button>
         {ACHETABLES.map((k) => {
           const actif = kinds.has(k)
           const dispo = db[k].filter((it) => it.itemId && it.tradeable).length

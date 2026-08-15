@@ -143,6 +143,7 @@ const TAB_ICONS: Record<string, string> = {
   admin: '060840',
   guide: '000065',
   top: '060541',
+  market: '065002',
   // Boutons d'action (règle : uniquement des icônes du jeu)
   lodestone: '000014',
   sync: '000073',

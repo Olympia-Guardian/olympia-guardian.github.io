@@ -29,11 +29,12 @@ import { NotificationsPanel } from './Notifications'
 import { useSuggestions } from './suggestions'
 import { AdminPage } from './views/Admin'
 import { GroupCreateDialog, GroupsPage } from './views/Groups'
+import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
 
-type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'groups' | 'admin' | 'guide'
+type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'market' | 'groups' | 'admin' | 'guide'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -233,6 +234,7 @@ export default function App() {
     if (
       t === 'relics' ||
       t === 'mypage' ||
+      t === 'market' ||
       t === 'groups' ||
       t === 'fashion' ||
       t === 'admin' ||
@@ -418,6 +420,12 @@ export default function App() {
               </>
             ) : (
               <>
+                <button
+                  className={`btn btn-ghost account-btn ${tab === 'market' ? 'is-active' : ''}`}
+                  onClick={() => setTab('market')}
+                >
+                  <TabIcon k="market" /> {t('market')}
+                </button>
                 <button
                   className={`btn btn-ghost account-btn ${tab === 'mypage' ? 'is-active' : ''}`}
                   onClick={() => setTab('mypage')}
@@ -773,6 +781,7 @@ export default function App() {
               tab !== 'planning' &&
               tab !== 'relics' &&
               tab !== 'mypage' &&
+              tab !== 'market' &&
               tab !== 'groups' &&
               tab !== 'admin' &&
               tab !== 'guide' &&
@@ -783,6 +792,7 @@ export default function App() {
               tab !== 'planning' &&
               tab !== 'relics' &&
               tab !== 'mypage' &&
+              tab !== 'market' &&
               tab !== 'groups' &&
               tab !== 'admin' &&
               tab !== 'guide' &&
@@ -849,6 +859,10 @@ export default function App() {
               <AdminPage token={auth.token} />
             )}
             {tab === 'guide' && <GuidePage />}
+            {db && tab === 'market' && (
+              <Market db={db} chars={ready.filter((m) => verifiedIds.includes(m.id))} />
+            )}
+
             {db && tab === 'mypage' && (
               <MyPage
                 db={db}

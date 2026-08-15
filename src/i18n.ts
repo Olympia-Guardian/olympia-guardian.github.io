@@ -113,6 +113,38 @@ const STR = {
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
   backToTop: { fr: 'Remonter en haut', en: 'Back to top' },
   crossTitle: { fr: 'Tenues et armoire', en: 'Outfits and armoire' },
+  market: { fr: 'Mon Marché', en: 'My Market' },
+  marketIntro: {
+    fr: "Ce qui te manque et qui s'achète à l'hôtel des ventes, sur ton centre de données {dc}. Les prix viennent d'Universalis.",
+    en: 'What you are missing and can buy on the market board, across your {dc} data centre. Prices come from Universalis.',
+  },
+  marketNeedChar: {
+    fr: 'Lie et vérifie un personnage dans Mon Journal : le marché a besoin de savoir ce qui te manque et sur quel centre de données tu joues.',
+    en: 'Link and verify a character in My Journal: the market needs to know what you are missing and which data centre you play on.',
+  },
+  marketChar: { fr: 'Personnage', en: 'Character' },
+  marketBudget: { fr: 'Budget en gils', en: 'Budget in gil' },
+  marketSearch: { fr: 'Chercher parmi {n} objets manquants', en: 'Search across {n} missing items' },
+  marketSearching: { fr: 'Recherche des prix… {fait}/{total}', en: 'Fetching prices… {fait}/{total}' },
+  marketMostItems: { fr: "Le plus d'objets", en: 'Most items' },
+  marketFewestTrips: { fr: 'Le moins de voyages', en: 'Fewest trips' },
+  marketSummary: {
+    fr: 'Pour {total} gils, {n} objets répartis sur {worlds} monde(s). Il te resterait {reste} gils.',
+    en: 'For {total} gil, {n} items across {worlds} world(s). You would have {reste} gil left.',
+  },
+  marketWorldLine: { fr: '{n} objets · {total} gils', en: '{n} items · {total} gil' },
+  marketNothing: {
+    fr: "Rien de disponible sous {budget} gils. Augmente le budget, ou coche d'autres collections.",
+    en: 'Nothing available under {budget} gil. Raise the budget, or tick more collections.',
+  },
+  marketNoPrice: {
+    fr: "Aucune offre en vente pour ces objets sur ton centre de données en ce moment.",
+    en: 'No listings for these items on your data centre right now.',
+  },
+  marketError: {
+    fr: "Impossible de joindre Universalis. Réessaie dans un instant.",
+    en: 'Cannot reach Universalis. Try again in a moment.',
+  },
   errTimeout: {
     fr: "Le serveur met trop de temps à répondre. L'action n'a pas été enregistrée, réessaie dans un instant.",
     en: 'The server is taking too long. The action was not saved, try again in a moment.',

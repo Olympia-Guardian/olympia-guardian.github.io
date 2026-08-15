@@ -164,6 +164,9 @@ function mergeDb(jsonEn, jsonFr) {
       patch: r.patch,
       order: r.order ?? r.number ?? 0,
       tradeable: !!r.tradeable,
+      // Identifiant de l'objet marchand : c'est la clé d'entrée d'Universalis
+      // pour connaître les prix. Absent des collections non échangeables.
+      ...(r.item_id ? { itemId: r.item_id } : {}),
       ownedPct: r.owned ?? '',
       // Catégorie (orchestrion : Lieux, Donjons…) et numéro d'album quand présents
       ...(r.category ? { group: fr?.category?.name ?? r.category.name, groupEn: r.category.name } : {}),

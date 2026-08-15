@@ -105,6 +105,8 @@ export interface Item {
   patch: string
   order: number
   tradeable: boolean
+  /** Objet marchand correspondant : clé d'entrée d'Universalis pour les prix. */
+  itemId?: number
   /** Plus aucune voie d'obtention active (drapeau « limited » FFXIV Collect). */
   unobtainable?: boolean
   /** Collection d'origine dans les vues fusionnées (onglet « Mode »). */
@@ -237,7 +239,7 @@ const CACHE_MAX_CHARS = 300_000
 // Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
-const DB_V = 'v14' // catalogues par collection (v14 : lien pièces de tenues <-> armoire)
+const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.

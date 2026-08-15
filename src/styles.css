@@ -4156,3 +4156,101 @@ a.player-name:hover {
   border-radius: var(--radius-s);
   color: var(--ink-2);
 }
+
+/* ---------------------------------------------------------- Mon Marché */
+
+.market-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.market-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 18px 0 12px;
+}
+
+.market-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.market-field input,
+.market-field select {
+  height: 36px;
+  min-width: 180px;
+}
+
+.market-presets,
+.market-kinds {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.market-kinds {
+  margin-bottom: 16px;
+}
+
+.market-count {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.market-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.market-summary {
+  color: var(--gold);
+  font-weight: 550;
+  margin: 0 0 14px;
+}
+
+.market-worlds {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.market-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.market-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--hairline);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px;
+}
+
+.market-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-price {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}

@@ -801,6 +801,7 @@ export default function App() {
         )}
 
         <ActiveHelp topicKey={helpTopic} />
+        <ScrollTop />
 
         <footer className="footer">
           {t('dataBy')}{' '}
@@ -819,5 +820,28 @@ export default function App() {
         </footer>
       </div>
     </LangContext.Provider>
+  )
+}
+
+/** Bouton flottant de retour en haut : apparaît après un écran de défilement. */
+function ScrollTop() {
+  const { t } = useI18n()
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setShown(window.scrollY > 500)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  return (
+    <button
+      className={`icon-btn scroll-top ${shown ? 'is-shown' : ''}`}
+      title={t('backToTop')}
+      aria-hidden={!shown}
+      tabIndex={shown ? 0 : -1}
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+    >
+      <TabIcon k="top" />
+    </button>
   )
 }

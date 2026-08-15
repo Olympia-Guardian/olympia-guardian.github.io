@@ -132,8 +132,13 @@ export interface Item {
   reward?: string
   rewardEn?: string
   rewardType?: string
-  /** Tenues : pièces qui composent l'ensemble. */
-  pieces?: string[]
+  /** Armoire : emplacement d'équipement (1/2/13 mains, 3-8 armure, 9-12
+   *  accessoire) pour séparer les familles dans la grille. */
+  slot?: number
+  /** Tenues : pièces qui composent l'ensemble, suivies individuellement.
+   *  icon = planche d'icône du jeu ; slot = emplacement (3 tête, 4 torse,
+   *  5 mains, 7 jambes, 8 pieds…) pour l'alignement en colonnes. */
+  pieces?: { id: number; name: string; nameEn: string; icon?: string; slot?: number }[]
   /** type = enum anglais stable de l'API (la logique de catégories s'appuie dessus) ; text = français. */
   sources: Source[]
 }
@@ -185,6 +190,8 @@ export type Character = { [K in Kind]: CharCollection } & {
   lastParsed: string
   /** IDs de reliques possédées, toutes catégories confondues (armes, ultimate, armures, outils). */
   relicIds: number[]
+  /** Pièces de tenues possédées (un ensemble complet devient possédé tout seul). */
+  outfitPieceIds: number[]
   /** Profil Lodestone étendu (absent tant que la fiche n'a pas été re-scrapée). */
   profile: CharProfile | null
   /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
@@ -220,11 +227,11 @@ const CACHE_MAX_CHARS = 300_000
 // Versions de cache. Les bumper suffit à forcer un retéléchargement chez tout
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
-const DB_V = 'v12' // catalogues par collection (v12 : Sanctuaire des pèlerins en donjon sans fond)
+const DB_V = 'v13' // catalogues par collection (v13 : pièces de tenues avec ids)
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
-const CHAR_V = 'v9' // fiches de personnage (v9 : ré-amorçage des succès des membres)
+const CHAR_V = 'v10' // fiches de personnage (v10 : pièces de tenues)
 
 /** Purge les caches des versions précédentes : ils ne servent plus et
  *  encombrent un localStorage déjà juste. */
@@ -357,6 +364,7 @@ function mapCharacter(r: any): Character {
     lastParsed: r.last_parsed,
     profile: r.profile ?? null,
     nextForceAt: r.next_force_at ?? 0,
+    outfitPieceIds: (r.outfit_piece_ids as number[] | undefined) ?? [],
     ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??

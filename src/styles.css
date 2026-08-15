@@ -394,6 +394,45 @@ button:focus-visible {
   background: var(--surface-2);
 }
 
+/* bouton flottant de retour en haut de page — même dégaine que les boutons
+   du header, invisible tant qu'on n'a pas défilé */
+.scroll-top {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 80;
+  width: 56px;
+  height: 56px;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.scroll-top.is-shown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.scroll-top:hover {
+  border-color: var(--gold);
+  background: var(--surface-2);
+}
+
+.scroll-top .kind-icon {
+  width: 34px;
+  height: 34px;
+}
+
 /* ---------------------------------------------------------------- roster */
 
 .player-card {
@@ -1949,6 +1988,102 @@ a.player-name:hover {
   margin-left: auto;
 }
 
+/* Tenues : progression des pièces (« 3/6 ») et pièces cochables du panneau */
+.chip-pieces {
+  color: var(--muted);
+}
+
+.chip-pieces.is-partial {
+  color: var(--gold, #c8a464);
+  border-color: var(--gold, #c8a464);
+}
+
+/* Tenues : bande des pièces dans la liste, une colonne par emplacement
+   (tête, torse, mains, jambes, pieds) — le nom passe en largeur fixe pour
+   que les colonnes s'alignent verticalement d'une ligne à l'autre. */
+.checklist-row.has-pieces .checklist-name {
+  flex: 0 0 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.piece-strip {
+  display: inline-flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.piece-cell {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.piece-cell img {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: block;
+}
+
+.piece-cell.is-missing img {
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.35;
+}
+
+.piece-cell.is-clickable {
+  cursor: pointer;
+}
+
+.piece-cell.is-clickable:hover {
+  outline: 1px solid var(--gold, #c8a464);
+}
+
+.piece-cell.is-clickable.is-missing:hover img {
+  filter: none;
+  opacity: 0.75;
+}
+
+/* écran étroit : on rend la largeur au nom, l'alignement en colonnes est
+   sacrifié mais les icônes restent visibles */
+@media (max-width: 900px) {
+  .checklist-row.has-pieces .checklist-name {
+    flex: 1 1 auto;
+  }
+}
+
+.panel-pieces-check {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.piece-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+.piece-row:hover {
+  background: var(--surface-2);
+}
+
+.piece-row.is-owned {
+  color: var(--ink);
+}
+
 .onboard-fallback {
   margin-top: 12px;
   color: var(--muted);
@@ -2591,6 +2726,45 @@ a.player-name:hover {
 
 .editor-controls {
   align-items: center;
+}
+
+/* Le haut du rail de tri s'aligne sur la ligne de recherche : quand la vue
+   possède un rail, l'éditeur devient une grille (rail à gauche sur deux
+   rangées, recherche puis contenu à droite) et les conteneurs intermédiaires
+   s'effacent avec display: contents. Les vues sans rail ne changent pas. */
+@media (min-width: 901px) {
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) {
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr);
+    /* auto + 1fr : la hauteur du rail (2 rangées) est absorbée par la rangée
+       du contenu — sinon une liste filtrée courte gonfle la rangée de la
+       recherche et creuse un vide sous elle */
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'rail controls'
+      'rail body';
+    column-gap: 20px;
+    row-gap: 18px;
+    align-items: start;
+  }
+
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-controls {
+    grid-area: controls;
+  }
+
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-layout,
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-layout > .editor-body,
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-layout > .editor-body > .cat-layout {
+    display: contents;
+  }
+
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) .cat-rail {
+    grid-area: rail;
+  }
+
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) .cat-content {
+    grid-area: body;
+  }
 }
 
 .editor-controls .search {
@@ -3454,7 +3628,8 @@ a.player-name:hover {
   color: var(--ink-2);
 }
 
-.panel-pieces li::before {
+/* puce décorative de la liste en lecture seule — jamais sur les lignes cochables */
+.panel-pieces:not(.panel-pieces-check) li::before {
   content: '· ';
   color: var(--muted);
 }

@@ -70,6 +70,12 @@ async function catalogs() {
     if (kind === 'mounts' || kind === 'minions') {
       maps[kind] = new Map(items.map((it) => [norm(it.nameEn), it.id]))
     }
+    if (kind === 'outfits') {
+      // tenue -> ids de ses pièces (dérivation « ensemble complet »)
+      maps.outfitPieces = new Map(
+        items.map((it) => [it.id, (it.pieces ?? []).map((p) => p.id).filter(Boolean)]),
+      )
+    }
   }
   if (!maps.mounts || !maps.minions) throw new Error('catalogues montures/mascottes indisponibles')
   const relics = await fetch(`${CATALOG_BASE}relics.json`)
@@ -364,7 +370,21 @@ async function getCharacter(env, id, force) {
   if (missingKinds.length > 0) await seedPlaceholders(env, id)
   const needsSeed =
     missingKinds.length > 0 || colRows.results.some((r) => r.source === 'empty')
-  const { totals } = await catalogs()
+  const { maps, totals } = await catalogs()
+
+  // Tenues : un ensemble dont TOUTES les pièces sont possédées est possédé,
+  // même s'il n'a jamais été coché en entier (règle « coché OU complet »).
+  const pieceIds = byKind.outfitpieces ?? []
+  if (pieceIds.length > 0 && maps.outfitPieces) {
+    const ownedPieces = new Set(pieceIds)
+    const stored = new Set(byKind.outfits ?? [])
+    for (const [outfitId, pieces] of maps.outfitPieces) {
+      if (pieces.length > 0 && !stored.has(outfitId) && pieces.every((p) => ownedPieces.has(p))) {
+        stored.add(outfitId)
+      }
+    }
+    byKind.outfits = [...stored]
+  }
 
   const block = (kind, isPublic = true) => ({
     count: (byKind[kind] ?? []).length,
@@ -395,6 +415,7 @@ async function getCharacter(env, id, force) {
     minions: block('minions', !!char.public_minions),
     ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),
     relicIds: byKind.relics ?? [],
+    outfit_piece_ids: byKind.outfitpieces ?? [],
     needsSeed,
   }
 }
@@ -678,7 +699,9 @@ async function putCollections(env, user, charId, raw) {
   const now = Date.now()
   // Montures/mascottes acceptées aussi : validation temporaire — la prochaine
   // synchro Lodestone réécrit ces deux collections (source lodestone).
-  for (const kind of [...ALL_KINDS, 'relics']) {
+  // outfitpieces : pièces de tenues possédées (stockage auxiliaire, comme
+  // relics — un ensemble dont toutes les pièces sont là devient possédé).
+  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces']) {
     const ids = doc?.[kind]
     if (ids === undefined) continue
     if (!validIds(ids, 6000)) return response('{"error":"invalid ids"}', 422)

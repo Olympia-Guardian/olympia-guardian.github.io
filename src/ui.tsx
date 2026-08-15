@@ -142,6 +142,7 @@ const TAB_ICONS: Record<string, string> = {
   logout: '000026',
   admin: '060840',
   guide: '000065',
+  top: '060541',
   // Boutons d'action (règle : uniquement des icônes du jeu)
   lodestone: '000014',
   sync: '000073',
@@ -160,9 +161,13 @@ const TAB_ICONS: Record<string, string> = {
   purge: '000029',
 }
 
+/** URL d'un asset d'icône du jeu (planche ui/icon) via XIVAPI. */
+export function xivIconUrl(id: string): string {
+  return `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/${id.slice(0, 3)}000/${id}_hr1.tex`)}`
+}
+
 export function TabIcon({ k }: { k: string }) {
   const id = TAB_ICONS[k]
   if (!id) return null
-  const src = `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/${id.slice(0, 3)}000/${id}_hr1.tex`)}`
-  return <img className="kind-icon" src={src} alt="" width={22} height={22} loading="lazy" onError={onItemImgError} />
+  return <img className="kind-icon" src={xivIconUrl(id)} alt="" width={22} height={22} loading="lazy" onError={onItemImgError} />
 }

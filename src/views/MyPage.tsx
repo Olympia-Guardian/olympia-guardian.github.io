@@ -19,7 +19,7 @@ import { kindLabel, localName, useI18n } from '../i18n'
 import { sourceIcon, typeLabel } from '../sources'
 import { GiCheckMark, GiPadlock, GiRoundStar } from 'react-icons/gi'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
-import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
+import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError, xivIconUrl } from '../ui'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
@@ -27,14 +27,22 @@ import { Relics } from './Relics'
 const EDITABLE = HIDDEN_KINDS
 
 // Collections où le nom et l'obtention comptent plus que la vignette : liste.
-const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings', 'mounts', 'minions', 'achievements']
+const LIST_KINDS: Kind[] = ['emotes', 'frames', 'bardings', 'mounts', 'minions', 'achievements', 'outfits']
 
-/** L'armoire mélange armes esthétiques et pièces d'armure : les icônes du jeu
- *  rangent les armes/outils dans les planches 030000-039999. */
-function isArmoireWeapon(it: Item): boolean {
-  const m = String(it.icon).match(/0(\d{5})_hr1/)
-  const n = m ? Number(m[1]) : 0
-  return n >= 30000 && n < 40000
+/** L'armoire mélange quatre familles. L'emplacement d'équipement (résolu via
+ *  XIVAPI, attaché par fetch-data) sépare armures et accessoires ; pour les
+ *  mains, la planche d'icônes distingue les outils d'artisan et de récolteur
+ *  (035/038/039) des armes. Emplacement inconnu ou combiné : armure. */
+function armoireSectionKey(it: Item): 'armoireArmor' | 'armoireAcc' | 'armoireWeapons' | 'armoireTools' {
+  const slot = it.slot ?? 0
+  if (slot >= 9 && slot <= 12) return 'armoireAcc'
+  if (slot === 1 || slot === 2 || slot === 13 || slot === 0) {
+    const m = String(it.icon).match(/0(\d{5})_hr1/)
+    const sheet = m ? Math.floor(Number(m[1]) / 1000) : 0
+    if (sheet === 35 || sheet === 38 || sheet === 39) return 'armoireTools'
+    if (sheet >= 30 && sheet < 40) return 'armoireWeapons'
+  }
+  return 'armoireArmor'
 }
 
 const ACTIVE_CHAR_KEY = 'ogs.activeChar.v1'
@@ -140,12 +148,17 @@ function ItemPanel({
   readOnly,
   onToggle,
   onClose,
+  pieceOwned,
+  onTogglePiece,
 }: {
   item: Item
   owned: boolean
   readOnly?: boolean
   onToggle: () => void
   onClose: () => void
+  /** Tenues : pièces possédées + coche pièce par pièce. */
+  pieceOwned?: Set<number>
+  onTogglePiece?: (id: number) => void
 }) {
   const { lang, t } = useI18n()
   const description = lang === 'fr' ? item.description : item.descriptionEn
@@ -171,10 +184,26 @@ function ItemPanel({
       </p>
       {description && <p className="modal-desc">{description}</p>}
       {item.pieces && item.pieces.length > 0 && (
-        <ul className="panel-pieces">
-          {item.pieces.map((p, i) => (
-            <li key={i}>{p}</li>
-          ))}
+        <ul className={`panel-pieces ${pieceOwned ? 'panel-pieces-check' : ''}`}>
+          {item.pieces.map((p) => {
+            // L'ensemble coché en bloc vaut possession de chaque pièce.
+            const hasPiece = owned || (pieceOwned?.has(p.id) ?? false)
+            if (!pieceOwned) return <li key={p.id}>{lang === 'fr' ? p.name : p.nameEn}</li>
+            return (
+              <li key={p.id}>
+                <button
+                  className={`piece-row ${hasPiece ? 'is-owned' : ''}`}
+                  disabled={!onTogglePiece}
+                  onClick={() => onTogglePiece?.(p.id)}
+                >
+                  <span className={`checklist-box ${hasPiece ? 'is-owned' : ''}`}>
+                    {hasPiece ? '\u2713' : ''}
+                  </span>
+                  {lang === 'fr' ? p.name : p.nameEn}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
       {item.sources.length > 0 && (
@@ -457,12 +486,15 @@ function IconGrid({
   ids,
   onItemClick,
   sectionOf,
+  sectionOrder,
 }: {
   items: Item[]
   ids: Set<number>
   onItemClick: (it: Item) => void
   /** Découpe visuelle de la grille en sections titrées (armoire : armes/armures). */
   sectionOf?: (it: Item) => string
+  /** Ordre imposé des sections (défaut : ordre d'apparition). */
+  sectionOrder?: string[]
 }) {
   const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
@@ -511,9 +543,15 @@ function IconGrid({
           if (arr) arr.push(it)
           else secs.set(s, [it])
         }
+        const rank = (l: string) => {
+          const i = sectionOrder?.indexOf(l) ?? -1
+          return i === -1 ? Number.MAX_SAFE_INTEGER : i
+        }
         return (
           <div className="icon-sections">
-            {[...secs.entries()].map(([label, list]) => {
+            {[...secs.entries()]
+              .sort((a, b) => rank(a[0]) - rank(b[0]))
+              .map(([label, list]) => {
               const owned = list.reduce((sum, it) => sum + (ids.has(it.id) ? 1 : 0), 0)
               return (
                 <section key={label}>
@@ -558,12 +596,33 @@ function IconGrid({
  *  numéro + nom + obtention + rouleau. */
 const ROLL_ICON = `${import.meta.env.BASE_URL}assets/orchestrion_roll.jpg`
 
+/** Ordre des colonnes de la bande de pièces : tête, torse, mains, jambes,
+ *  pieds — même lecture verticale sur toutes les lignes. Une pièce d'un autre
+ *  emplacement (arme, accessoire…) s'ajoute à droite ; un emplacement absent
+ *  laisse une case vide pour préserver l'alignement. */
+const PIECE_SLOTS = [3, 4, 5, 7, 8]
+type Piece = NonNullable<Item['pieces']>[number]
+function pieceCellsOf(it: Item): (Piece | null)[] | null {
+  const pieces = it.pieces
+  if (!pieces?.length) return null
+  const used = new Set<number>()
+  const cells: (Piece | null)[] = PIECE_SLOTS.map((s) => {
+    const p = pieces.find((pc) => pc.slot === s && !used.has(pc.id))
+    if (p) used.add(p.id)
+    return p ?? null
+  })
+  for (const p of pieces) if (!used.has(p.id)) cells.push(p)
+  return cells
+}
+
 function GroupedChecklist({
   items,
   ids,
   onItemClick,
   variant = 'orchestrion',
   groupOrder,
+  pieceOwned,
+  onPieceToggle,
 }: {
   items: Item[]
   ids: Set<number>
@@ -572,6 +631,9 @@ function GroupedChecklist({
   variant?: 'orchestrion' | 'icon'
   /** Ordre imposé des groupes (défaut : alphabétique). */
   groupOrder?: string[]
+  /** Tenues : pièces possédées — active la bande d'icônes par emplacement et le chip « 3/6 ». */
+  pieceOwned?: Set<number>
+  onPieceToggle?: (it: Item, id: number) => void
 }) {
   const { lang } = useI18n()
   const [cat, setCat] = useState<string | null>(null)
@@ -638,10 +700,11 @@ function GroupedChecklist({
             <ul className="checklist-rows">
               {list.map((it) => {
                 const has = ids.has(it.id)
+                const cells = pieceOwned ? pieceCellsOf(it) : null
                 return (
                   <li key={it.id}>
                     <button
-                      className={`checklist-row ${has ? 'is-owned' : ''}`}
+                      className={`checklist-row ${has ? 'is-owned' : ''} ${cells ? 'has-pieces' : ''}`}
                       onClick={() => onItemClick(it)}
                     >
                       <span className={`checklist-box ${has ? 'is-owned' : ''}`}>
@@ -669,8 +732,54 @@ function GroupedChecklist({
                       >
                         {localName(it, lang)}
                       </span>
+                      {cells && (
+                        <span className="piece-strip">
+                          {cells.map((pc, i) => {
+                            if (!pc || !pc.icon) return <span key={`e${i}`} className="piece-cell is-empty" />
+                            // La tenue cochée en bloc vaut possession de tout :
+                            // pièces en couleur, plus rien à cocher une par une.
+                            const hasPiece = has || pieceOwned!.has(pc.id)
+                            return (
+                              <span
+                                key={pc.id}
+                                className={`piece-cell ${hasPiece ? 'is-owned' : 'is-missing'} ${onPieceToggle ? 'is-clickable' : ''}`}
+                                title={lang === 'fr' ? pc.name : pc.nameEn}
+                                onClick={
+                                  onPieceToggle
+                                    ? (e) => {
+                                        e.stopPropagation()
+                                        onPieceToggle(it, pc.id)
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <img
+                                  src={xivIconUrl(pc.icon)}
+                                  alt=""
+                                  width={26}
+                                  height={26}
+                                  loading="lazy"
+                                  onError={onItemImgError}
+                                />
+                              </span>
+                            )
+                          })}
+                        </span>
+                      )}
                       {it.command && <span className="chip chip-cmd">{it.command}</span>}
                       {it.patch && <span className="chip chip-patch">{it.patch}</span>}
+                      {(() => {
+                        if (!pieceOwned || !it.pieces?.length || has) return null
+                        const owned = it.pieces.filter((pc) => pieceOwned.has(pc.id)).length
+                        return (
+                          <span
+                            className={`chip chip-pieces ${owned > 0 ? 'is-partial' : ''}`}
+                            title={`${owned}/${it.pieces.length}`}
+                          >
+                            {owned}/{it.pieces.length}
+                          </span>
+                        )
+                      })()}
                       <span className="checklist-src">
                         {it.sources[0] && <SourceIcon s={it.sources[0]} />}
                         <span className="checklist-src-text">
@@ -844,26 +953,46 @@ function CollectionEditor({
   kind,
   charId,
   owned,
+  pieceOwned,
   readOnly,
   onSave,
+  onSavePieces,
 }: {
   db: Db
   kind: Kind
   charId: number
   owned: number[]
+  /** Tenues : pièces possédées (suivi individuel). */
+  pieceOwned?: number[]
   readOnly?: boolean
   onSave: (kind: Kind, ids: number[]) => void
+  onSavePieces?: (ids: number[]) => void
 }) {
   const { lang, t } = useI18n()
   const [ids, setIds] = useState<Set<number>>(() => new Set(owned))
+  const [pieceIds, setPieceIds] = useState<Set<number>>(() => new Set(pieceOwned ?? []))
+  const pieceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [search, setSearch] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setIds(new Set(owned))
+    setPieceIds(new Set(pieceOwned ?? []))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [charId, kind])
+
+  function togglePiece(id: number) {
+    if (readOnly) return
+    setPieceIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      if (pieceTimer.current) clearTimeout(pieceTimer.current)
+      pieceTimer.current = setTimeout(() => onSavePieces?.([...next]), 1200)
+      return next
+    })
+  }
 
   function toggle(id: number) {
     if (readOnly) return
@@ -877,6 +1006,32 @@ function CollectionEditor({
     })
   }
 
+  /** Tenues : coche/décoche une pièce. Retirer une pièce d'un ensemble coché
+   *  en bloc le convertit en pièces individuelles (toutes sauf celle retirée)
+   *  au lieu de tout décocher. */
+  function togglePieceOf(it: Item, pieceId: number) {
+    if (readOnly) return
+    if (!ids.has(it.id)) {
+      togglePiece(pieceId)
+      return
+    }
+    setIds((prev) => {
+      const next = new Set(prev)
+      next.delete(it.id)
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => onSave(kind, [...next]), 1200)
+      return next
+    })
+    setPieceIds((prev) => {
+      const next = new Set(prev)
+      for (const pc of it.pieces ?? []) if (pc.id !== pieceId) next.add(pc.id)
+      next.delete(pieceId)
+      if (pieceTimer.current) clearTimeout(pieceTimer.current)
+      pieceTimer.current = setTimeout(() => onSavePieces?.([...next]), 1200)
+      return next
+    })
+  }
+
   const [mode, setMode] = useState<'quick' | 'inspect'>('inspect')
   const [selected, setSelected] = useState<Item | null>(null)
   const inspect = readOnly || mode === 'inspect'
@@ -885,6 +1040,17 @@ function CollectionEditor({
     if (inspect) setSelected(it)
     else toggle(it.id)
   }
+
+  // Tenues : un ensemble dont toutes les pièces locales sont cochées
+  // s'affiche possédé sans attendre le serveur (même règle que le worker).
+  const shownIds = useMemo(() => {
+    if (kind !== 'outfits') return ids
+    const s = new Set(ids)
+    for (const it of db.outfits) {
+      if ((it.pieces?.length ?? 0) > 0 && it.pieces!.every((pc) => pieceIds.has(pc.id))) s.add(it.id)
+    }
+    return s
+  }, [ids, pieceIds, db, kind])
 
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -895,7 +1061,7 @@ function CollectionEditor({
           it.nameEn.toLowerCase().includes(q) ||
           it.description.toLowerCase().includes(q) ||
           it.descriptionEn.toLowerCase().includes(q)) &&
-        (!onlyMissing || !ids.has(it.id)),
+        (!onlyMissing || !shownIds.has(it.id)),
     )
     // Tenues, bardes, montures, mascottes : classées par méthode d'obtention —
     // le rail de gauche sert de tri/filtre.
@@ -979,21 +1145,29 @@ function CollectionEditor({
       <div className="editor-layout">
         <div className="editor-body">
           {kind === 'cards' ? (
-            <CardAlbum allItems={db[kind]} visible={visible} ids={ids} onItemClick={handleItem} />
+            <CardAlbum allItems={db[kind]} visible={visible} ids={shownIds} onItemClick={handleItem} />
           ) : kind === 'orchestrions' ? (
-            <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} />
+            <GroupedChecklist items={items} ids={shownIds} onItemClick={handleItem} />
           ) : kind === 'spells' ? (
-            <SpellBook items={items} ids={ids} onItemClick={handleItem} />
+            <SpellBook items={items} ids={shownIds} onItemClick={handleItem} />
           ) : LIST_KINDS.includes(kind) ? (
-            <GroupedChecklist items={items} ids={ids} onItemClick={handleItem} variant="icon" />
+            <GroupedChecklist
+              items={items}
+              ids={shownIds}
+              onItemClick={handleItem}
+              variant="icon"
+              pieceOwned={kind === 'outfits' ? pieceIds : undefined}
+              onPieceToggle={kind === 'outfits' && !readOnly ? togglePieceOf : undefined}
+            />
           ) : (
             <IconGrid
               items={items}
-              ids={ids}
+              ids={shownIds}
               onItemClick={handleItem}
-              sectionOf={
+              sectionOf={kind === 'armoires' ? (it) => t(armoireSectionKey(it)) : undefined}
+              sectionOrder={
                 kind === 'armoires'
-                  ? (it) => t(isArmoireWeapon(it) ? 'armoireWeapons' : 'armoireArmor')
+                  ? [t('armoireArmor'), t('armoireAcc'), t('armoireWeapons'), t('armoireTools')]
                   : undefined
               }
             />
@@ -1002,10 +1176,14 @@ function CollectionEditor({
         {selected && (
           <ItemPanel
             item={selected}
-            owned={ids.has(selected.id)}
+            owned={shownIds.has(selected.id)}
             readOnly={readOnly}
             onToggle={() => toggle(selected.id)}
             onClose={() => setSelected(null)}
+            pieceOwned={kind === 'outfits' ? pieceIds : undefined}
+            onTogglePiece={
+              kind === 'outfits' && !readOnly ? (pid: number) => togglePieceOf(selected, pid) : undefined
+            }
           />
         )}
       </div>
@@ -1242,7 +1420,7 @@ export function MyPage({
     relicSaveTimer.current = setTimeout(() => save('relics', relicIdsRef.current), 1200)
   }
 
-  async function save(k: Kind | 'relics', ids: number[]) {
+  async function save(k: Kind | 'relics' | 'outfitpieces', ids: number[]) {
     if (!verified) return
     try {
       await auth.saveCollections(verified.charId, { [k]: ids })
@@ -1632,8 +1810,10 @@ export function MyPage({
               kind={kind}
               charId={verified.charId}
               owned={char[kind].ids}
+              pieceOwned={kind === 'outfits' ? char.outfitPieceIds : undefined}
               readOnly={!EDITABLE.includes(kind)}
               onSave={save}
+              onSavePieces={kind === 'outfits' ? (ids) => save('outfitpieces', ids) : undefined}
             />
           )}
         </>

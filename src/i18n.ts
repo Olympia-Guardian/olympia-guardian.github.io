@@ -110,6 +110,7 @@ const STR = {
     en: 'Sign in to link one or more characters and fill in your collections directly: cards, fashion, outfits, emotes, orchestrion, blue magic, relics…',
   },
   logout: { fr: 'Se déconnecter', en: 'Sign out' },
+  backToTop: { fr: 'Remonter en haut', en: 'Back to top' },
   bindTitle: { fr: 'Lier mon personnage', en: 'Link my character' },
   bindIntro: {
     fr: 'Choisis ton perso dans le groupe ou colle son ID Lodestone. Une vérification par le Lodestone prouve qu\'il est à toi.',
@@ -319,8 +320,10 @@ const STR = {
     fr: 'Perso vérifié ✓, tes collections étaient déjà à jour.',
     en: 'Character verified ✓, your collections were already up to date.',
   },
-  armoireWeapons: { fr: 'Armes & outils', en: 'Weapons & tools' },
-  armoireArmor: { fr: 'Armures & accessoires', en: 'Armor & accessories' },
+  armoireWeapons: { fr: 'Armes', en: 'Weapons' },
+  armoireTools: { fr: 'Outils', en: 'Tools' },
+  armoireArmor: { fr: 'Armures', en: 'Armor' },
+  armoireAcc: { fr: 'Accessoires', en: 'Accessories' },
   invite: { fr: 'Inviter', en: 'Invite' },
   inviteTitle: {
     fr: "Copier le lien d'invitation du groupe",

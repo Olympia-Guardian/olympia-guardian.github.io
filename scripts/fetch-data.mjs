@@ -24,6 +24,28 @@ try {
   console.warn("frame-sources.json absent, portraits sans voie d'obtention")
 }
 
+// Icônes et emplacements des pièces de tenues (cache committé, rempli par
+// resolve-piece-icons.mjs via la feuille Item de XIVAPI).
+let PIECE_ICONS = {}
+try {
+  PIECE_ICONS = JSON.parse(
+    await readFile(new URL('./piece-icons.json', import.meta.url), 'utf8'),
+  )
+} catch {
+  console.warn('piece-icons.json absent, pièces de tenues sans icône')
+}
+
+// Emplacements d'équipement des entrées de l'armoire (cache committé, rempli
+// par resolve-armoire-slots.mjs) : sépare armures/accessoires/armes/outils.
+let ARMOIRE_SLOTS = {}
+try {
+  ARMOIRE_SLOTS = JSON.parse(
+    await readFile(new URL('./armoire-slots.json', import.meta.url), 'utf8'),
+  )
+} catch {
+  console.warn('armoire-slots.json absent, armoire sans emplacements')
+}
+
 // Types de contenu des sources de sorts de magie bleue (cache committé, rempli
 // par resolve-spell-duties.mjs) : FFXIV Collect les type toutes « Other ».
 let SPELL_DUTIES = {}
@@ -144,9 +166,16 @@ function mergeDb(jsonEn, jsonFr) {
         : {}),
       // Portraits : le vrai nom affiché est celui du kit d'encadrement.
       ...(r.item_name ? { itemName: fr?.item_name ?? r.item_name, itemNameEn: r.item_name } : {}),
-      // Tenues : les pièces qui composent l'ensemble.
+      // Tenues : les pièces qui composent l'ensemble, avec leur id d'objet —
+      // la possession se suit pièce par pièce.
       ...(r.items?.length
-        ? { pieces: r.items.map((p, i) => fr?.items?.[i]?.name ?? p.name) }
+        ? {
+            pieces: r.items.map((p, i) => ({
+              id: p.id,
+              name: fr?.items?.[i]?.name ?? p.name,
+              nameEn: p.name,
+            })),
+          }
         : {}),
       sources: sourcesEn.map((s, i) => ({
         type: s.type,
@@ -344,6 +373,25 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   const items = mergeDb(en, fr)
   if (kind === 'spells') refineSpellSources(items)
   if (kind === 'achievements') achievementsItems = items
+  // Armoire : chaque entrée reçoit son emplacement d'équipement.
+  if (kind === 'armoires') {
+    for (const it of items) {
+      const slot = ARMOIRE_SLOTS[it.id]
+      if (slot !== undefined) it.slot = slot
+    }
+  }
+  // Tenues : chaque pièce reçoit son icône et son emplacement (tête, torse…)
+  if (kind === 'outfits') {
+    for (const it of items) {
+      for (const pc of it.pieces ?? []) {
+        const info = PIECE_ICONS[pc.id]
+        if (info) {
+          pc.icon = info.icon
+          pc.slot = info.slot
+        }
+      }
+    }
+  }
   // Portraits : voies d'obtention maison (Garland) + récompenses de hauts
   // faits déduites de notre propre catalogue de succès + saisons JcJ déduites
   // du nom (« Gold Conflict 19 » = rang Or de la saison 19 du Conflit).

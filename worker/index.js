@@ -10,7 +10,10 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  // X-Admin-Pin doit y figurer : un en-tête personnalisé non déclaré ici est
+  // refusé par le navigateur AVANT l'envoi, et la page d'administration
+  // signalait un espace indisponible sans que le worker soit jamais appelé.
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Admin-Pin',
 }
 
 const LODESTONE = 'https://eu.finalfantasyxiv.com/lodestone'

@@ -82,8 +82,9 @@ async function getJsonOrNull(url, ms = 8000) {
  *  totals.json, et seuls montures, mascottes et tenues sont téléchargés en
  *  entier (1,9 Mo au lieu de 8,2, et 4 sous-requêtes au lieu de 16). */
 async function loadCatalogs() {
-  const [totals, mounts, minions, outfits] = await Promise.all([
+  const [totals, boutique, mounts, minions, outfits] = await Promise.all([
     getJsonOrNull(`${CATALOG_BASE}totals.json`),
+    getJsonOrNull(`${CATALOG_BASE}premium.json`),
     getJsonOrNull(`${CATALOG_BASE}mounts.json`),
     getJsonOrNull(`${CATALOG_BASE}minions.json`),
     getJsonOrNull(`${CATALOG_BASE}outfits.json`),
@@ -103,7 +104,12 @@ async function loadCatalogs() {
       outfits.map((it) => [it.id, (it.pieces ?? []).map((p) => p.id).filter(Boolean)]),
     )
   }
-  return { maps, totals: totals ?? {} }
+  // Objets de la boutique en ligne : ils restent dans les listes mais sortent
+  // des compteurs, des deux côtés. Les retirer du total sans les retirer du
+  // nombre possédé aurait donné des 148/143.
+  const horsTotal = {}
+  for (const [kind, ids] of Object.entries(boutique ?? {})) horsTotal[kind] = new Set(ids)
+  return { maps, totals: totals ?? {}, horsTotal }
 }
 
 async function catalogs() {
@@ -492,7 +498,7 @@ async function getCharacter(env, id, force, connecte = true) {
   if (missingKinds.length > 0) await seedPlaceholders(env, id)
   const needsSeed =
     missingKinds.length > 0 || colRows.results.some((r) => r.source === 'empty')
-  const { maps, totals } = await catalogs()
+  const { maps, totals, horsTotal } = await catalogs()
 
   // Tenues : un ensemble dont TOUTES les pièces sont possédées est possédé,
   // même s'il n'a jamais été coché en entier (règle « coché OU complet »).
@@ -513,11 +519,14 @@ async function getCharacter(env, id, force, connecte = true) {
     if (!connecte && !OUVERTES.has(kind)) {
       return { count: 0, total: totals[kind] ?? 0, public: false, ids: [] }
     }
+    const ids = byKind[kind] ?? []
+    const exclus = horsTotal?.[kind]
     return {
-      count: (byKind[kind] ?? []).length,
+      // `ids` reste complet : l'objet de boutique demeure coché dans la liste.
+      count: exclus ? ids.filter((id) => !exclus.has(id)).length : ids.length,
       total: totals[kind] ?? 0,
       public: isPublic,
-      ids: byKind[kind] ?? [],
+      ids,
     }
   }
 

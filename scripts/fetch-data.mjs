@@ -96,6 +96,14 @@ const OUT = new URL('../public/data/', import.meta.url)
  *  entier pour lire un `.length` lui coûtait 6,3 Mo à chaque démarrage. */
 const TOTALS = {}
 
+// Objets de la boutique en ligne. Ils restent dans les collections, mais ne
+// comptent plus dans les totaux : personne ne doit avoir à payer en plus pour
+// atteindre 100 %. La liste est publiée à part pour que le worker puisse aussi
+// les retirer du nombre d'objets possédés, sinon on afficherait 148/143.
+const BOUTIQUE = {}
+
+const vientDeLaBoutique = (it) => it.sources.some((s) => s.type === 'Premium')
+
 async function writeCatalog(kind, items) {
   const dest = new URL(`${kind}.json`, OUT)
   if (!Array.isArray(items) || items.length === 0) {
@@ -115,8 +123,13 @@ async function writeCatalog(kind, items) {
     throw new Error(`${kind} : ${items.length} entrées contre ${avant} avant, écriture refusée`)
   }
   await writeFile(dest, JSON.stringify(items))
-  TOTALS[kind] = items.length
-  console.log(`${kind}: ${items.length}${avant ? ` (avant ${avant})` : ''}`)
+  const boutique = items.filter(vientDeLaBoutique).map((it) => it.id)
+  if (boutique.length > 0) BOUTIQUE[kind] = boutique
+  TOTALS[kind] = items.length - boutique.length
+  console.log(
+    `${kind}: ${items.length}${avant ? ` (avant ${avant})` : ''}` +
+      (boutique.length ? `, dont ${boutique.length} de la boutique hors total` : ''),
+  )
 }
 
 const KIND_PATHS = {
@@ -699,6 +712,7 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   console.log(`relics: ${db.relics.length} (${db.series.length} séries)`)
 }
 
+await writeFile(new URL('premium.json', OUT), JSON.stringify(BOUTIQUE))
 await writeFile(new URL('totals.json', OUT), JSON.stringify(TOTALS))
 console.log(`totals: ${Object.keys(TOTALS).length} collections`)
 

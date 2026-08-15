@@ -26,6 +26,7 @@ import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
+import { ReportDialog } from './Report'
 import { useSuggestions } from './suggestions'
 import { AdminPage } from './views/Admin'
 import { GroupCreateDialog, GroupsPage } from './views/Groups'
@@ -255,6 +256,8 @@ export default function App() {
   })
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
+  const [reporting, setReporting] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
 
   // Sélecteur de groupes : bascule instantanée — la gestion vit dans l'onglet
   // « Groupes » (création, invitations, demandes, renommage, suppression…).
@@ -432,22 +435,6 @@ export default function App() {
                 >
                   <TabIcon k="journal" /> {t('myPage')}
                 </button>
-                <button
-                  className={`btn btn-ghost btn-icon-only guide-btn ${tab === 'guide' ? 'is-active' : ''}`}
-                  title={t('guideTitle')}
-                  onClick={() => setTab('guide')}
-                >
-                  <TabIcon k="guide" />
-                </button>
-                {auth.user.isAdmin && (
-                  <button
-                    className={`btn btn-ghost btn-icon-only admin-btn ${tab === 'admin' ? 'is-active' : ''}`}
-                    title={t('adminTitle')}
-                    onClick={() => setTab('admin')}
-                  >
-                    <TabIcon k="admin" />
-                  </button>
-                )}
                 <span className="bell-wrap">
                   <button
                     className={`btn btn-ghost btn-icon-only bell-btn ${bellOpen ? 'is-active' : ''}`}
@@ -488,16 +475,74 @@ export default function App() {
                     />
                   )}
                 </span>
-                {/* Le compte n'est affiché qu'ici : plus de doublon dans Mon Journal. */}
-                <span className="account-chip" title={auth.user.name}>
-                  {auth.user.avatar && <img src={auth.user.avatar} alt="" width={20} height={20} />}
-                  <span className="account-name">{auth.user.name}</span>
-                  <button className="icon-btn logout-btn" title={t('logout')} onClick={auth.logout}>
-                    <TabIcon k="logout" />
+                {/* Un seul point d'entrée pour tout ce qui touche au compte :
+                    la barre était devenue une rangée d'icônes sans hiérarchie. */}
+                <span className="account-wrap">
+                  <button
+                    className={`btn btn-ghost account-chip ${accountOpen ? 'is-active' : ''}`}
+                    title={auth.user.name}
+                    onClick={() => setAccountOpen((v) => !v)}
+                  >
+                    {auth.user.avatar && (
+                      <img src={auth.user.avatar} alt="" width={20} height={20} />
+                    )}
+                    <span className="account-name">{auth.user.name}</span>
+                    <TabIcon k="top" />
                   </button>
+                  {accountOpen && (
+                    <>
+                      <div className="account-shade" onClick={() => setAccountOpen(false)} />
+                      <div className="account-menu">
+                        <div className="account-menu-lang">
+                          {(['fr', 'en'] as Lang[]).map((l) => (
+                            <button
+                              key={l}
+                              className={`lang-btn ${lang === l ? 'is-active' : ''}`}
+                              onClick={() => setLang(l)}
+                            >
+                              {l.toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          className="account-menu-item"
+                          onClick={() => {
+                            setTab('guide')
+                            setAccountOpen(false)
+                          }}
+                        >
+                          <TabIcon k="guide" /> {t('guideTitle')}
+                        </button>
+                        <button
+                          className="account-menu-item"
+                          onClick={() => {
+                            setReporting(true)
+                            setAccountOpen(false)
+                          }}
+                        >
+                          <TabIcon k="quick" /> {t('reportLink')}
+                        </button>
+                        {auth.user.isAdmin && (
+                          <button
+                            className="account-menu-item"
+                            onClick={() => {
+                              setTab('admin')
+                              setAccountOpen(false)
+                            }}
+                          >
+                            <TabIcon k="admin" /> {t('adminTitle')}
+                          </button>
+                        )}
+                        <button className="account-menu-item is-danger" onClick={auth.logout}>
+                          <TabIcon k="logout" /> {t('logout')}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </span>
               </>
             )}
+            {!auth.user && (
             <div className="lang-switch" role="group" aria-label="Language">
               {(['fr', 'en'] as Lang[]).map((l) => (
                 <button
@@ -509,6 +554,7 @@ export default function App() {
                 </button>
               ))}
             </div>
+            )}
           </div>
         </header>
 
@@ -914,6 +960,14 @@ export default function App() {
 
         <ActiveHelp topicKey={helpTopic} />
         <ScrollTop />
+        {reporting && auth.token && (
+          <ReportDialog
+            token={auth.token}
+            tab={tab}
+            charId={verifiedIds[0] ?? null}
+            onClose={() => setReporting(false)}
+          />
+        )}
 
         <footer className="footer">
           <a
@@ -928,6 +982,14 @@ export default function App() {
             <button className="footer-link" onClick={() => setTab('guide')}>
               {t('guideTitle')}
             </button>
+            {auth.token && (
+              <>
+                {' · '}
+                <button className="footer-link" onClick={() => setReporting(true)}>
+                  {t('reportLink')}
+                </button>
+              </>
+            )}
             {db && (
               <>
                 {' · '}

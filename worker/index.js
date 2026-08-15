@@ -933,6 +933,70 @@ async function putCollections(env, user, charId, raw) {
   return response('{"ok":true}')
 }
 
+
+// ---------------------------------------------------------------- signalements
+
+// Protection en couches, sans captcha : l'obligation d'un compte connecté est
+// déjà l'anti-robot le plus efficace ici (un robot n'a pas de compte Discord,
+// et un compte abusif se bannit). S'y ajoutent un quota par compte, une borne
+// de longueur, un champ piège que seul un robot remplit, et la limite de débit
+// par IP posée à l'entrée du worker.
+const MAX_REPORTS_PAR_JOUR = 5
+const REPORT_MIN = 10
+const REPORT_MAX = 2000
+
+async function createReport(env, user, raw) {
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  // Champ piège : invisible à l'écran, donc rempli uniquement par un automate
+  // qui remplit tout ce qu'il trouve. On répond « ok » pour ne pas lui
+  // apprendre qu'il est repéré.
+  if (typeof doc?.website === 'string' && doc.website.length > 0) {
+    return response('{"ok":true}')
+  }
+  const message = String(doc?.message ?? '').trim()
+  if (message.length < REPORT_MIN || message.length > REPORT_MAX) {
+    return response('{"error":"message length"}', 422)
+  }
+  const depuis = Date.now() - 86_400_000
+  const recents = await env.DB.prepare(
+    'SELECT COUNT(*) AS n FROM reports WHERE user_id = ?1 AND created > ?2',
+  )
+    .bind(user.id, depuis)
+    .first()
+  if ((recents?.n ?? 0) >= MAX_REPORTS_PAR_JOUR) {
+    return response('{"error":"quota"}', 429)
+  }
+  const charId = Number.isInteger(doc?.charId) ? doc.charId : null
+  const tab = typeof doc?.tab === 'string' ? doc.tab.slice(0, 40) : null
+  await env.DB.prepare(
+    'INSERT INTO reports (id, user_id, user_name, char_id, tab, message, created, handled) ' +
+      'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0)',
+  )
+    .bind('rep-' + crypto.randomUUID(), user.id, user.name ?? null, charId, tab, message, Date.now())
+    .run()
+  return response('{"ok":true}')
+}
+
+async function listReports(env) {
+  const rows = await env.DB.prepare(
+    'SELECT id, user_id, user_name, char_id, tab, message, created, handled FROM reports ' +
+      'ORDER BY handled ASC, created DESC LIMIT 200',
+  ).all()
+  return response(JSON.stringify({ reports: rows.results }))
+}
+
+async function setReportHandled(env, id, handled) {
+  await env.DB.prepare('UPDATE reports SET handled = ?2 WHERE id = ?1')
+    .bind(id, handled ? 1 : 0)
+    .run()
+  return response('{"ok":true}')
+}
+
 // ------------------------------------------------------------------- groupes
 // Deux natures : privé (shared=0, visible du seul propriétaire) et synchronisé
 // (shared=1, lisible par quiconque a le lien — l'id fait office de secret).
@@ -2601,6 +2665,13 @@ const routes = {
     if (url.pathname === '/auth/discord/callback' && req.method === 'GET') {
       return authDiscordCallback(env, url, req)
     }
+    if (url.pathname === '/report' && req.method === 'POST') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      const raw = await req.text()
+      if (raw.length > 8192) return response('{"error":"too large"}', 413)
+      return createReport(env, user, raw)
+    }
     if (url.pathname === '/me' && req.method === 'GET') {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
@@ -2721,6 +2792,18 @@ const routes = {
       const user = await authenticate(env, req)
       if (!isAdmin(env, user)) return response('{"error":"not found"}', 404)
       if (url.pathname === '/admin/overview' && req.method === 'GET') return adminOverview(env)
+      if (url.pathname === '/admin/reports' && req.method === 'GET') return listReports(env)
+      const repMatch = url.pathname.match(/^\/admin\/reports\/(rep-[\w-]{10,60})$/)
+      if (repMatch && req.method === 'POST') {
+        const raw = await req.text()
+        let doc = {}
+        try {
+          doc = JSON.parse(raw)
+        } catch {
+          // corps absent : on considere le signalement comme traite
+        }
+        return setReportHandled(env, repMatch[1], doc?.handled !== false)
+      }
       if (url.pathname === '/admin/purge-tokens' && req.method === 'POST')
         return adminPurgeTokens(env)
       const chr = url.pathname.match(/^\/admin\/character\/(\d{1,12})\/refresh$/)

@@ -4359,3 +4359,144 @@ a.player-name:hover {
   margin: 0;
   opacity: 0.75;
 }
+
+/* ------------------------------------------------- signalement d'un problème */
+
+.report-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.report-dialog {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.report-text {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  padding: 10px;
+}
+
+/* Champ piège : hors de l'écran plutôt que display:none, que certains
+   automates savent détecter et ignorer. */
+.report-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.report-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-ok {
+  color: var(--gold);
+  margin: 0;
+}
+
+/* ------------------------------------------------------- menu du compte */
+
+/* Tout ce qui touche au compte tient dans un seul point d'entrée : la barre
+   du haut accumulait langue, aide, admin et déconnexion en icônes isolées,
+   sans hiérarchie et sans place pour en ajouter une de plus. */
+.account-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.account-chip .kind-icon {
+  width: 14px;
+  height: 14px;
+  transform: rotate(180deg);
+  opacity: 0.7;
+}
+
+.account-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.account-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  min-width: 230px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-s);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+.account-menu-lang {
+  display: flex;
+  gap: 4px;
+  padding: 2px 2px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.account-menu-lang .lang-btn {
+  flex: 1;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--hairline);
+}
+
+.account-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.account-menu-item:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.account-menu-item.is-danger:hover {
+  color: var(--critical);
+}
+
+.account-menu-item .kind-icon {
+  width: 20px;
+  height: 20px;
+}

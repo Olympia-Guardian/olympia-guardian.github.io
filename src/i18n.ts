@@ -99,7 +99,30 @@ const STR = {
     fr: 'catalogues rafraîchis chaque nuit',
     en: 'catalogues refreshed nightly',
   },
-  sourceCode: { fr: 'le code source', en: 'source code' },
+  reportLink: { fr: 'signaler un problème', en: 'report a problem' },
+  reportTitle: { fr: 'Signaler un problème', en: 'Report a problem' },
+  reportIntro: {
+    fr: "Décris ce qui ne va pas, le plus simplement possible. L'écran où tu te trouves et ton personnage sont joints automatiquement, pas besoin de les préciser.",
+    en: 'Describe what went wrong, as plainly as possible. The screen you are on and your character are attached automatically, no need to mention them.',
+  },
+  reportPlaceholder: {
+    fr: "Exemple : le bouton Synchroniser ne fait rien depuis ce matin.",
+    en: 'Example: the Sync button does nothing since this morning.',
+  },
+  reportSend: { fr: 'Envoyer', en: 'Send' },
+  reportSending: { fr: 'Envoi…', en: 'Sending…' },
+  reportThanks: {
+    fr: "C'est envoyé, merci. Chaque signalement est lu.",
+    en: 'Sent, thank you. Every report gets read.',
+  },
+  reportQuota: {
+    fr: "Tu as déjà envoyé plusieurs signalements aujourd'hui. Reviens demain, ou ajoute le reste à un message existant.",
+    en: 'You have already sent several reports today. Come back tomorrow, or add the rest to an existing message.',
+  },
+  reportError: {
+    fr: "L'envoi a échoué. Réessaie dans un instant.",
+    en: 'Sending failed. Try again in a moment.',
+  },
   footerStats: {
     fr: '{kinds} collections suivies, {items} objets répertoriés',
     en: '{kinds} collections tracked, {items} items catalogued',

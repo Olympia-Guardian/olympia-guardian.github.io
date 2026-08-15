@@ -133,6 +133,34 @@ async function catalogs() {
   return catalogLoading
 }
 
+// ------------------------------------------------------------------ mesures
+
+// Trois signaux ne laissent aucune trace ailleurs : un scrape qui échoue, une
+// erreur du worker, une requête refusée par la limite de débit. Sans ce
+// comptage, une panne du Lodestone ou un changement de son HTML resteraient
+// invisibles jusqu'à ce qu'un joueur s'en plaigne.
+//
+// L'écriture ne doit jamais faire échouer la requête qu'elle observe, ni la
+// retarder : elle est volontairement silencieuse, et une ligne par jour et par
+// clé garde le volume négligeable.
+function jourCourant() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function compter(env, cle, n = 1) {
+  try {
+    return env.DB.prepare(
+      'INSERT INTO metrics (jour, cle, n) VALUES (?1, ?2, ?3) ' +
+        'ON CONFLICT(jour, cle) DO UPDATE SET n = n + ?3',
+    )
+      .bind(jourCourant(), cle, n)
+      .run()
+      .catch(() => {})
+  } catch {
+    return Promise.resolve()
+  }
+}
+
 // ----------------------------------------------------------------- lodestone
 
 // Le Lodestone n'est pas une API : c'est le site de Square Enix, que nous
@@ -423,8 +451,10 @@ async function getCharacter(env, id, force, connecte = true) {
     let scraped = null
     try {
       scraped = await scrapeOnce(id)
+      void compter(env, 'lodestone_ok')
     } catch {
       scraped = null
+      void compter(env, 'lodestone_echec')
     }
     if (!scraped && !row) return null
     if (!scraped && row) {
@@ -983,6 +1013,17 @@ async function createReport(env, user, raw) {
     .bind('rep-' + crypto.randomUUID(), user.id, user.name ?? null, charId, tab, message, Date.now())
     .run()
   return response('{"ok":true}')
+}
+
+/** Compteurs des 14 derniers jours, pour les courbes de l'administration. */
+async function listMetrics(env) {
+  const depuis = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10)
+  const rows = await env.DB.prepare(
+    'SELECT jour, cle, n FROM metrics WHERE jour >= ?1 ORDER BY jour ASC',
+  )
+    .bind(depuis)
+    .all()
+  return response(JSON.stringify({ metrics: rows.results }))
 }
 
 async function listReports(env) {
@@ -2812,6 +2853,7 @@ const routes = {
       }
       if (url.pathname === '/admin/overview' && req.method === 'GET') return adminOverview(env)
       if (url.pathname === '/admin/reports' && req.method === 'GET') return listReports(env)
+      if (url.pathname === '/admin/metrics' && req.method === 'GET') return listMetrics(env)
       const repMatch = url.pathname.match(/^\/admin\/reports\/(rep-[\w-]{10,60})$/)
       if (repMatch && req.method === 'POST') {
         const raw = await req.text()
@@ -2999,6 +3041,7 @@ export default {
     try {
       const url = new URL(req.url)
       if (await debitDepasse(req, env, url)) {
+        void compter(env, 'debit_refuse')
         // Retry-After : le client sait quand réessayer au lieu d'insister.
         return new Response('{"error":"too many requests"}', {
           status: 429,
@@ -3018,6 +3061,7 @@ export default {
         }
       })()
       console.error('erreur non rattrapée', req.method, chemin, e?.stack ?? String(e))
+      void compter(env, 'erreur_worker')
       return response('{"error":"internal"}', 500)
     }
   },

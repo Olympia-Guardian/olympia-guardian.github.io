@@ -567,7 +567,7 @@ export default function App() {
         )}
 
         <div className="layout">
-          {tab !== 'mypage' && tab !== 'groups' && tab !== 'admin' && (
+          {tab !== 'mypage' && tab !== 'market' && tab !== 'groups' && tab !== 'admin' && (
           <RosterBar
             members={members}
             activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}

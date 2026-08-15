@@ -4500,3 +4500,27 @@ a.player-name:hover {
   width: 20px;
   height: 20px;
 }
+
+/* seconde serrure de l'administration */
+.admin-lock {
+  max-width: 420px;
+  margin: 12vh auto;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.admin-lock form {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.admin-lock input {
+  flex: 1;
+  height: 38px;
+  text-align: center;
+  letter-spacing: 0.3em;
+}

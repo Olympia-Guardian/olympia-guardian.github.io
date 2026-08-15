@@ -80,24 +80,59 @@ function ago(ts: number | null, lang: string): string {
   return `${Math.round(h / 24)} j`
 }
 
+// Le code n'est gardé que le temps de l'onglet : il ne survit ni à une
+// fermeture ni à un autre onglet, et n'est jamais écrit sur le disque.
+const PIN_KEY = 'ogs.adminpin'
+
+function lirePin(): string {
+  try {
+    return sessionStorage.getItem(PIN_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 export function AdminPage({ token }: { token: string }) {
   const { lang, t } = useI18n()
   const [data, setData] = useState<Overview | null>(null)
   const [error, setError] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
+  const [pin, setPin] = useState(lirePin)
+  const [saisie, setSaisie] = useState('')
+  const [verrouille, setVerrouille] = useState(false)
+
+  const entetes = useCallback(
+    () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
+    [token, pin],
+  )
 
   const load = useCallback(async () => {
+    if (!pin) {
+      setVerrouille(true)
+      return
+    }
     try {
-      const res = await fetch(`${WORKER_API}/admin/overview`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await fetch(`${WORKER_API}/admin/overview`, { headers: entetes() })
+      // 403 : le code ne correspond pas. On le jette plutôt que de le garder,
+      // sinon chaque rechargement retenterait le même code faux.
+      if (res.status === 403) {
+        try {
+          sessionStorage.removeItem(PIN_KEY)
+        } catch {
+          // rien à nettoyer
+        }
+        setPin('')
+        setVerrouille(true)
+        return
+      }
       if (!res.ok) throw new Error(String(res.status))
       setData(await res.json())
+      setVerrouille(false)
       setError(false)
     } catch {
       setError(true)
     }
-  }, [token])
+  }, [pin, entetes])
 
   useEffect(() => {
     void load()
@@ -107,14 +142,49 @@ export function AdminPage({ token }: { token: string }) {
     if (confirmMsg && !confirm(confirmMsg)) return
     setBusy(label)
     try {
-      await fetch(`${WORKER_API}${path}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      await fetch(`${WORKER_API}${path}`, { method, headers: entetes() })
       await load()
     } finally {
       setBusy(null)
     }
+  }
+
+  if (verrouille || !pin) {
+    return (
+      <div className="view admin">
+        <div className="admin-lock">
+          <h2>{t('adminTitle')}</h2>
+          <p className="muted">{t('adminPinIntro')}</p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const v = saisie.trim()
+              if (!v) return
+              try {
+                sessionStorage.setItem(PIN_KEY, v)
+              } catch {
+                // stockage refusé : le code vaudra pour cette page seulement
+              }
+              setPin(v)
+              setVerrouille(false)
+              setSaisie('')
+            }}
+          >
+            <input
+              type="password"
+              inputMode="numeric"
+              autoFocus
+              value={saisie}
+              placeholder={t('adminPinField')}
+              onChange={(e) => setSaisie(e.target.value)}
+            />
+            <button className="btn btn-primary" type="submit">
+              {t('adminPinUnlock')}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   if (error) return <p className="empty">{t('adminError')}</p>

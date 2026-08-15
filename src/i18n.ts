@@ -100,6 +100,12 @@ const STR = {
     en: 'catalogues refreshed nightly',
   },
   reportLink: { fr: 'signaler un problème', en: 'report a problem' },
+  adminPinIntro: {
+    fr: "Cette page demande un code en plus de ton compte. Il n'est gardé que le temps de cet onglet.",
+    en: 'This page needs a code on top of your account. It is only kept for this tab.',
+  },
+  adminPinField: { fr: 'Code', en: 'Code' },
+  adminPinUnlock: { fr: 'Déverrouiller', en: 'Unlock' },
   reportTitle: { fr: 'Signaler un problème', en: 'Report a problem' },
   reportIntro: {
     fr: "Décris ce qui ne va pas, le plus simplement possible. L'écran où tu te trouves et ton personnage sont joints automatiquement, pas besoin de les préciser.",

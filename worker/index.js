@@ -2789,8 +2789,24 @@ const routes = {
 
     // --- admin : réservé à ADMIN_USER_ID — 404 pour tout le monde ailleurs
     if (url.pathname.startsWith('/admin/')) {
+      // L'identité d'abord : un inconnu doit recevoir 404, pour que rien ne
+      // trahisse l'existence de ces routes. Le code ne se verifie qu'ensuite.
       const user = await authenticate(env, req)
       if (!isAdmin(env, user)) return response('{"error":"not found"}', 404)
+      // Seconde serrure : le compte admin ne suffit pas, il faut aussi le code
+      // connu de lui seul. Il est envoyé à chaque appel plutôt que stocké dans
+      // une session, et n'existe côté navigateur que le temps de l'onglet.
+      // Comparaison à longueur constante : une comparaison naïve laisse
+      // deviner le code chiffre par chiffre en mesurant le temps de réponse.
+      const attendu = env.ADMIN_PIN
+      if (attendu) {
+        const fourni = req.headers.get('X-Admin-Pin') ?? ''
+        let diff = fourni.length === attendu.length ? 0 : 1
+        for (let i = 0; i < attendu.length; i++) {
+          diff |= (fourni.charCodeAt(i) || 0) ^ attendu.charCodeAt(i)
+        }
+        if (diff !== 0) return response('{"error":"locked"}', 403)
+      }
       if (url.pathname === '/admin/overview' && req.method === 'GET') return adminOverview(env)
       if (url.pathname === '/admin/reports' && req.method === 'GET') return listReports(env)
       const repMatch = url.pathname.match(/^\/admin\/reports\/(rep-[\w-]{10,60})$/)

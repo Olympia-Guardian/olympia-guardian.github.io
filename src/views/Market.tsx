@@ -3,6 +3,7 @@ import type { Character, Item, Kind } from '../api'
 import { kindLabel, useI18n } from '../i18n'
 import {
   fetchPrices,
+  centreDe,
   fetchRegion,
   moinsDeVoyages,
   parMonde,
@@ -317,7 +318,12 @@ export function Market({
             {groupes.map((g) => (
               <section key={g.world} className="market-world">
                 <header className="album-page-head">
-                  <b>{g.world}</b>
+                  <b>
+                    {centreDe(g.world) && (
+                      <span className="market-dc">{centreDe(g.world)!.toUpperCase()}</span>
+                    )}
+                    {g.world}
+                  </b>
                   <span className="mypage-count">
                     {t('marketWorldLine', { n: g.achats.length, total: gils(g.total, lang) })}
                   </span>

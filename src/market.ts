@@ -33,21 +33,43 @@ const memoire = new Map<string, Cache>()
 // Europe). La liste vient d'Universalis plutôt que d'être écrite en dur, pour
 // suivre l'ajout de nouveaux centres.
 let regions: Map<string, string> | null = null
+/** Monde -> centre de données : en portée régionale, savoir qu'un monde est
+ *  sur l'autre centre change le coût du voyage, donc l'information doit être
+ *  visible et pas devinée. */
+let centreDuMonde: Map<string, string> | null = null
+
+async function chargerCentres(): Promise<void> {
+  if (regions) return
+  try {
+    const [rdc, rw] = await Promise.all([
+      fetch('https://universalis.app/api/v2/data-centers', { signal: AbortSignal.timeout(10000) }),
+      fetch('https://universalis.app/api/v2/worlds', { signal: AbortSignal.timeout(10000) }),
+    ])
+    if (!rdc.ok || !rw.ok) return
+    const dcs = (await rdc.json()) as { name: string; region: string; worlds: number[] }[]
+    const mondes = (await rw.json()) as { id: number; name: string }[]
+    const nomParId = new Map(mondes.map((w) => [w.id, w.name]))
+    regions = new Map(dcs.map((d) => [d.name, d.region]))
+    centreDuMonde = new Map()
+    for (const d of dcs) {
+      for (const id of d.worlds) {
+        const nom = nomParId.get(id)
+        if (nom) centreDuMonde.set(nom, d.name)
+      }
+    }
+  } catch {
+    // sans cette correspondance, on affichera le monde seul
+  }
+}
 
 export async function fetchRegion(dc: string): Promise<string | null> {
-  if (!regions) {
-    try {
-      const res = await fetch('https://universalis.app/api/v2/data-centers', {
-        signal: AbortSignal.timeout(10000),
-      })
-      if (!res.ok) return null
-      const j = (await res.json()) as { name: string; region: string }[]
-      regions = new Map(j.map((d) => [d.name, d.region]))
-    } catch {
-      return null
-    }
-  }
-  return regions.get(dc) ?? null
+  await chargerCentres()
+  return regions?.get(dc) ?? null
+}
+
+/** Centre d'un monde, ou null si la correspondance n'a pas pu être chargée. */
+export function centreDe(monde: string): string | null {
+  return centreDuMonde?.get(monde) ?? null
 }
 
 /** Offres les moins chères de chaque objet sur un centre de données.

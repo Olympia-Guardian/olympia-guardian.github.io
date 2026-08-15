@@ -4265,3 +4265,12 @@ a.player-name:hover {
 .market-list .checklist-box {
   flex-shrink: 0;
 }
+
+/* centre de données devant le monde : en portée régionale, il dit d'un coup
+   d'œil si le voyage reste chez soi ou demande de changer de centre */
+.market-dc {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  margin-right: 8px;
+}

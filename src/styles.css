@@ -4095,3 +4095,20 @@ a.player-name:hover {
   overflow-x: auto;
   white-space: pre-wrap;
 }
+
+/* ------------------------------------------- listes longues : virtualisation */
+
+/* Le navigateur saute la mise en page et le dessin de ce qui est hors écran.
+   L'onglet Succès monte 3946 lignes, soit 32 000 nœuds à disposer à chaque
+   rendu : le défilement saccadait sur une machine modeste. La hauteur annoncée
+   (mesurée : 41 px par ligne, 40 px par tuile) garde la barre de défilement
+   juste et la position stable. */
+.checklist-rows > li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 41px;
+}
+
+.mypage-grid > .mypage-tile {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px auto 40px;
+}

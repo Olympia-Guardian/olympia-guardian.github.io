@@ -21,6 +21,7 @@ import { sourceIcon, typeLabel } from '../sources'
 import { GiCheckMark, GiPadlock, GiRoundStar } from 'react-icons/gi'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
 import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError, xivIconUrl } from '../ui'
+import { useFlushOnHide } from '../useFlushOnHide'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
@@ -983,14 +984,55 @@ function CollectionEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [charId, kind])
 
+  // La charge en attente est memorisee a part : sans elle, impossible de forcer
+  // l'envoi quand la page passe en arriere-plan, et la coche etait perdue.
+  const enAttente = useRef<number[] | null>(null)
+  const piecesEnAttente = useRef<number[] | null>(null)
+
+  function planifierSave(next: Set<number>) {
+    enAttente.current = [...next]
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(viderSave, 1200)
+  }
+
+  function planifierPieces(next: Set<number>) {
+    piecesEnAttente.current = [...next]
+    if (pieceTimer.current) clearTimeout(pieceTimer.current)
+    pieceTimer.current = setTimeout(viderPieces, 1200)
+  }
+
+  function viderSave() {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    const ids = enAttente.current
+    enAttente.current = null
+    if (ids) onSave(kind, ids)
+  }
+
+  function viderPieces() {
+    if (pieceTimer.current) {
+      clearTimeout(pieceTimer.current)
+      pieceTimer.current = null
+    }
+    const ids = piecesEnAttente.current
+    piecesEnAttente.current = null
+    if (ids) onSavePieces?.(ids)
+  }
+
+  useFlushOnHide(() => {
+    viderSave()
+    viderPieces()
+  })
+
   function togglePiece(id: number) {
     if (readOnly) return
     setPieceIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      if (pieceTimer.current) clearTimeout(pieceTimer.current)
-      pieceTimer.current = setTimeout(() => onSavePieces?.([...next]), 1200)
+      planifierPieces(next)
       return next
     })
   }
@@ -1001,8 +1043,7 @@ function CollectionEditor({
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => onSave(kind, [...next]), 1200)
+      planifierSave(next)
       return next
     })
   }
@@ -1017,8 +1058,7 @@ function CollectionEditor({
       setPieceIds((prev) => {
         const next = new Set(prev)
         for (const pc of it.pieces ?? []) next.delete(pc.id)
-        if (pieceTimer.current) clearTimeout(pieceTimer.current)
-        pieceTimer.current = setTimeout(() => onSavePieces?.([...next]), 1200)
+        planifierPieces(next)
         return next
       })
       return
@@ -1038,16 +1078,14 @@ function CollectionEditor({
     setIds((prev) => {
       const next = new Set(prev)
       next.delete(it.id)
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => onSave(kind, [...next]), 1200)
+      planifierSave(next)
       return next
     })
     setPieceIds((prev) => {
       const next = new Set(prev)
       for (const pc of it.pieces ?? []) if (pc.id !== pieceId) next.add(pc.id)
       next.delete(pieceId)
-      if (pieceTimer.current) clearTimeout(pieceTimer.current)
-      pieceTimer.current = setTimeout(() => onSavePieces?.([...next]), 1200)
+      planifierPieces(next)
       return next
     })
   }
@@ -1261,6 +1299,15 @@ export function MyPage({
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const relicSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const relicIdsRef = useRef<number[]>([])
+
+  // Les reliques suivent la même règle que les collections : ce qui est en
+  // attente part tout de suite si la page passe en arrière-plan.
+  useFlushOnHide(() => {
+    if (!relicSaveTimer.current) return
+    clearTimeout(relicSaveTimer.current)
+    relicSaveTimer.current = null
+    void save('relics', relicIdsRef.current)
+  })
 
   function showToast(msg: string) {
     setToast(msg)

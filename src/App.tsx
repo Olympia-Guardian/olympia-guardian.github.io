@@ -79,6 +79,9 @@ export default function App() {
   }, [lang])
 
   const { db, pending: dbPending, error: dbError } = useDb()
+  // Objet neuf à chaque rendu = tous les consommateurs du contexte se
+  // re-rendaient, y compris les grandes listes.
+  const langValue = useMemo(() => ({ lang, setLang, t }), [lang, t])
   const relicDb = useRelicDb()
 
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
@@ -306,7 +309,7 @@ export default function App() {
   ]
 
   return (
-    <LangContext.Provider value={{ lang, setLang, t }}>
+    <LangContext.Provider value={langValue}>
       <div className="app">
         <header className="topbar">
           <div className="brand">
@@ -719,6 +722,7 @@ export default function App() {
               tab !== 'fashion' &&
               !dbPending.has(tab) && (
               <Matrix
+                key={tab}
                 kind={tab}
                 items={db[tab]}
                 ready={activeReady}

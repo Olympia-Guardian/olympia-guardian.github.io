@@ -4254,3 +4254,14 @@ a.player-name:hover {
   color: var(--gold);
   font-variant-numeric: tabular-nums;
 }
+
+/* objet du marché déjà acheté : reste visible pour garder la trace du total */
+.market-list li.is-bought .market-name,
+.market-list li.is-bought .market-price {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.market-list .checklist-box {
+  flex-shrink: 0;
+}

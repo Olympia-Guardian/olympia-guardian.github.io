@@ -34,7 +34,16 @@ function gils(n: number, lang: string): string {
   return n.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US')
 }
 
-export function Market({ db, chars }: { db: Db; chars: Ready[] }) {
+export function Market({
+  db,
+  chars,
+  onBuy,
+}: {
+  db: Db
+  chars: Ready[]
+  /** Coche « acheté » : verse l'objet dans la collection du personnage. */
+  onBuy: (charId: number, kind: Kind, id: number) => Promise<void>
+}) {
   const { lang, t } = useI18n()
   const [charId, setCharId] = useState<number | null>(chars[0]?.id ?? null)
   const [budget, setBudget] = useState(1_000_000)
@@ -43,23 +52,34 @@ export function Market({ db, chars }: { db: Db; chars: Ready[] }) {
   const [prix, setPrix] = useState<PriceMap | null>(null)
   const [avancement, setAvancement] = useState<{ fait: number; total: number } | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
+  // Coché tout de suite pour que le geste réponde, sans attendre l'aller-retour
+  // serveur ni le rechargement de la fiche.
+  // Une fois acheté, l'objet ne « manque » plus et sortirait de la liste : on
+  // garde de quoi l'afficher, sinon la liste de courses se vide au fur et à
+  // mesure qu'on la suit, et le total ne correspond plus à ce qu'on a dépensé.
+  const [achetes, setAchetes] = useState<Map<number, { item: Item; kind: Kind }>>(
+    () => new Map(),
+  )
 
   const perso = chars.find((c) => c.id === charId) ?? chars[0] ?? null
 
   /** Ce qui manque au personnage ET qui a un prix possible. */
   const manquants = useMemo(() => {
     if (!perso) return []
-    const out: Item[] = []
+    const out: { item: Item; kind: Kind }[] = []
     for (const k of kinds) {
       const possedes = new Set(perso.data[k].ids)
       for (const it of db[k]) {
-        if (it.itemId && it.tradeable && !possedes.has(it.id)) out.push(it)
+        if (it.itemId && it.tradeable && !possedes.has(it.id)) out.push({ item: it, kind: k })
       }
     }
     return out
   }, [perso, kinds, db])
 
-  const parItemId = useMemo(() => new Map(manquants.map((it) => [it.itemId!, it])), [manquants])
+  const parItemId = useMemo(
+    () => new Map(manquants.map((m) => [m.item.itemId!, m])),
+    [manquants],
+  )
 
   async function chercher() {
     if (!perso) return
@@ -69,7 +89,7 @@ export function Market({ db, chars }: { db: Db; chars: Ready[] }) {
     try {
       const p = await fetchPrices(
         perso.data.dataCenter,
-        manquants.map((it) => it.itemId!),
+        manquants.map((m) => m.item.itemId!),
         (fait, total) => setAvancement({ fait, total }),
       )
       setPrix(p)
@@ -225,10 +245,23 @@ export function Market({ db, chars }: { db: Db; chars: Ready[] }) {
                 </header>
                 <ul className="market-list">
                   {g.achats.map((a) => {
-                    const it = parItemId.get(a.itemId)
-                    if (!it) return null
+                    const m = parItemId.get(a.itemId) ?? achetes.get(a.itemId)
+                    if (!m) return null
+                    const { item: it, kind } = m
+                    const achete = achetes.has(a.itemId)
                     return (
-                      <li key={a.itemId}>
+                      <li key={a.itemId} className={achete ? 'is-bought' : ''}>
+                        <button
+                          className={`checklist-box ${achete ? 'is-owned' : ''}`}
+                          title={t('marketBought')}
+                          disabled={achete || !perso}
+                          onClick={() => {
+                            setAchetes((prev) => new Map(prev).set(a.itemId, m))
+                            void onBuy(perso.id, kind, it.id)
+                          }}
+                        >
+                          {achete ? '✓' : ''}
+                        </button>
                         <img
                           src={it.icon}
                           alt=""

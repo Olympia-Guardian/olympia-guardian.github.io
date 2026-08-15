@@ -860,7 +860,15 @@ export default function App() {
             )}
             {tab === 'guide' && <GuidePage />}
             {db && tab === 'market' && (
-              <Market db={db} chars={ready.filter((m) => verifiedIds.includes(m.id))} />
+              <Market
+                db={db}
+                chars={ready.filter((m) => verifiedIds.includes(m.id))}
+                onBuy={async (charId, kind, id) => {
+                  await auth.saveCollections(charId, { [kind]: { add: [id] } })
+                  invalidateCharacter(charId)
+                  reload(charId)
+                }}
+              />
             )}
 
             {db && tab === 'mypage' && (

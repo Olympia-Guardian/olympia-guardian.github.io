@@ -123,6 +123,10 @@ const STR = {
     en: 'Link and verify a character in My Journal: the market needs to know what you are missing and which data centre you play on.',
   },
   marketChar: { fr: 'Personnage', en: 'Character' },
+  marketBought: {
+    fr: "Je l'ai acheté : ajouter à ma collection",
+    en: 'Bought it: add to my collection',
+  },
   marketBudget: { fr: 'Budget en gils', en: 'Budget in gil' },
   marketSearch: { fr: 'Chercher parmi {n} objets manquants', en: 'Search across {n} missing items' },
   marketSearching: { fr: 'Recherche des prix… {fait}/{total}', en: 'Fetching prices… {fait}/{total}' },

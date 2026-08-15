@@ -4575,3 +4575,49 @@ a.player-name:hover {
   color: var(--ink-2);
   white-space: pre-wrap;
 }
+
+/* onglet Santé : quatre cartes qui se lisent d'un coup d'œil, la couleur
+   portant le verdict plutôt qu'un chiffre à interpréter */
+.admin-health {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.admin-health-card {
+  padding: 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+  border-left: 3px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-health-card b {
+  font-size: 24px;
+  color: var(--ink);
+}
+
+.admin-health-card span {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.admin-health-card small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.admin-health-card.is-done {
+  border-left-color: var(--good, #4caf50);
+}
+
+.admin-health-card.lvl-mid {
+  border-left-color: var(--gold);
+}
+
+.admin-health-card.lvl-low {
+  border-left-color: var(--critical);
+}

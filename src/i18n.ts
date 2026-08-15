@@ -107,6 +107,27 @@ const STR = {
   adminPinField: { fr: 'Code', en: 'Code' },
   adminTabOverview: { fr: "Vue d'ensemble", en: 'Overview' },
   adminTabReports: { fr: 'Signalements', en: 'Reports' },
+  adminTabHealth: { fr: 'Santé', en: 'Health' },
+  adminHealthFresh: { fr: 'Âge des catalogues', en: 'Catalogue age' },
+  adminHealthFreshHint: {
+    fr: 'Au-delà de 72 h, le rafraîchissement nocturne est en panne.',
+    en: 'Past 72 h, the nightly refresh is broken.',
+  },
+  adminHealthLodestone: { fr: "Échecs de lecture du Lodestone", en: 'Lodestone read failures' },
+  adminHealthLodestoneHint: {
+    fr: '{ok} réussies, {ko} échouées sur 14 jours. Une hausse annonce un blocage ou un changement de leur HTML.',
+    en: '{ok} succeeded, {ko} failed over 14 days. A rise signals a block or a change in their HTML.',
+  },
+  adminHealthErrors: { fr: 'Erreurs du serveur', en: 'Server errors' },
+  adminHealthErrorsHint: {
+    fr: 'Sur 14 jours. Le détail est dans les journaux Cloudflare.',
+    en: 'Over 14 days. Details are in the Cloudflare logs.',
+  },
+  adminHealthThrottle: { fr: 'Requêtes freinées', en: 'Throttled requests' },
+  adminHealthThrottleHint: {
+    fr: "Sur 14 jours. Quelques-unes sont saines ; une explosion signale un abus ou un réglage trop serré.",
+    en: 'Over 14 days. A few are healthy; a spike means abuse or a setting that is too tight.',
+  },
   adminTabAccounts: { fr: 'Comptes', en: 'Accounts' },
   adminTabGroups: { fr: 'Groupes', en: 'Groups' },
   adminNoReport: { fr: 'Aucun signalement pour le moment.', en: 'No reports yet.' },

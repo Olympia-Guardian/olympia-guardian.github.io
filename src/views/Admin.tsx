@@ -103,6 +103,12 @@ interface Report {
   handled: number
 }
 
+interface Metric {
+  jour: string
+  cle: string
+  n: number
+}
+
 export function AdminPage({ token }: { token: string }) {
   const { lang, t } = useI18n()
   const [data, setData] = useState<Overview | null>(null)
@@ -111,8 +117,10 @@ export function AdminPage({ token }: { token: string }) {
   const [pin, setPin] = useState(lirePin)
   const [saisie, setSaisie] = useState('')
   const [verrouille, setVerrouille] = useState(false)
-  const [onglet, setOnglet] = useState<'apercu' | 'reports' | 'comptes' | 'groupes'>('apercu')
+  const [onglet, setOnglet] = useState<'apercu' | 'sante' | 'reports' | 'comptes' | 'groupes'>('apercu')
   const [reports, setReports] = useState<Report[] | null>(null)
+  const [metrics, setMetrics] = useState<Metric[] | null>(null)
+  const [fraicheur, setFraicheur] = useState<number | null>(null)
 
   const entetes = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
@@ -168,6 +176,29 @@ export function AdminPage({ token }: { token: string }) {
   useEffect(() => {
     if (onglet === 'reports' && reports === null) void loadReports()
   }, [onglet, reports, loadReports])
+
+  // Santé : les compteurs du worker, plus l'âge des catalogues. Ce dernier ne
+  // vient pas de la base mais du fichier publié par le cron : c'est justement
+  // le signal qui dit si ce cron tourne encore.
+  useEffect(() => {
+    if (onglet !== 'sante' || metrics !== null || !pin) return
+    void (async () => {
+      try {
+        const res = await fetch(`${WORKER_API}/admin/metrics`, { headers: entetes() })
+        setMetrics(res.ok ? ((await res.json()) as { metrics: Metric[] }).metrics : [])
+      } catch {
+        setMetrics([])
+      }
+      try {
+        const m = await fetch(`${import.meta.env.BASE_URL}data/meta.json`).then((r) => r.json())
+        if (m?.updatedAt) {
+          setFraicheur(Math.floor((Date.now() - new Date(m.updatedAt).getTime()) / 3_600_000))
+        }
+      } catch {
+        setFraicheur(null)
+      }
+    })()
+  }, [onglet, metrics, pin, entetes])
 
   async function marquerTraite(id: string, handled: boolean) {
     setReports((prev) => prev?.map((r) => (r.id === id ? { ...r, handled: handled ? 1 : 0 } : r)) ?? null)
@@ -276,6 +307,7 @@ export function AdminPage({ token }: { token: string }) {
         {(
           [
             ['apercu', t('adminTabOverview')],
+            ['sante', t('adminTabHealth')],
             ['reports', t('adminTabReports')],
             ['comptes', t('adminTabAccounts')],
             ['groupes', t('adminTabGroups')],
@@ -293,6 +325,61 @@ export function AdminPage({ token }: { token: string }) {
           </button>
         ))}
       </div>
+
+      {onglet === 'sante' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabHealth')}</h4>
+          </header>
+          {metrics === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : (
+            (() => {
+              const somme = (cle: string, jours = 14) => {
+                const depuis = new Date(Date.now() - jours * 86_400_000)
+                  .toISOString()
+                  .slice(0, 10)
+                return metrics
+                  .filter((m) => m.cle === cle && m.jour >= depuis)
+                  .reduce((n, m) => n + m.n, 0)
+              }
+              const ok = somme('lodestone_ok')
+              const ko = somme('lodestone_echec')
+              const tauxEchec = ok + ko > 0 ? Math.round((ko / (ok + ko)) * 100) : 0
+              const erreurs = somme('erreur_worker')
+              const refus = somme('debit_refuse')
+              // Seuils : au-dela, il se passe quelque chose qui demande a etre
+              // regarde. En dessous, c'est le bruit normal d'un service vivant.
+              const etat = (v: number, alerte: number) =>
+                v >= alerte ? 'lvl-low' : v > 0 ? 'lvl-mid' : 'is-done'
+              return (
+                <div className="admin-health">
+                  <div className={`admin-health-card ${fraicheur === null ? '' : fraicheur > 72 ? 'lvl-low' : fraicheur > 36 ? 'lvl-mid' : 'is-done'}`}>
+                    <b>{fraicheur === null ? '?' : `${fraicheur} h`}</b>
+                    <span>{t('adminHealthFresh')}</span>
+                    <small>{t('adminHealthFreshHint')}</small>
+                  </div>
+                  <div className={`admin-health-card ${etat(tauxEchec, 20)}`}>
+                    <b>{tauxEchec} %</b>
+                    <span>{t('adminHealthLodestone')}</span>
+                    <small>{t('adminHealthLodestoneHint', { ok, ko })}</small>
+                  </div>
+                  <div className={`admin-health-card ${etat(erreurs, 10)}`}>
+                    <b>{erreurs}</b>
+                    <span>{t('adminHealthErrors')}</span>
+                    <small>{t('adminHealthErrorsHint')}</small>
+                  </div>
+                  <div className={`admin-health-card ${etat(refus, 200)}`}>
+                    <b>{refus}</b>
+                    <span>{t('adminHealthThrottle')}</span>
+                    <small>{t('adminHealthThrottleHint')}</small>
+                  </div>
+                </div>
+              )
+            })()
+          )}
+        </section>
+      )}
 
       {onglet === 'reports' && (
         <section className="relic-series group-card">

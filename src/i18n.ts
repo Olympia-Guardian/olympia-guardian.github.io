@@ -105,6 +105,13 @@ const STR = {
     en: 'This page needs a code on top of your account. It is only kept for this tab.',
   },
   adminPinField: { fr: 'Code', en: 'Code' },
+  adminTabOverview: { fr: "Vue d'ensemble", en: 'Overview' },
+  adminTabReports: { fr: 'Signalements', en: 'Reports' },
+  adminTabAccounts: { fr: 'Comptes', en: 'Accounts' },
+  adminTabGroups: { fr: 'Groupes', en: 'Groups' },
+  adminNoReport: { fr: 'Aucun signalement pour le moment.', en: 'No reports yet.' },
+  adminMarkDone: { fr: 'Marquer traité', en: 'Mark handled' },
+  adminReopen: { fr: 'Rouvrir', en: 'Reopen' },
   adminPinUnlock: { fr: 'Déverrouiller', en: 'Unlock' },
   reportTitle: { fr: 'Signaler un problème', en: 'Report a problem' },
   reportIntro: {

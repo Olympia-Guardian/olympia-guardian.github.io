@@ -4524,3 +4524,54 @@ a.player-name:hover {
   text-align: center;
   letter-spacing: 0.3em;
 }
+
+/* onglets et signalements de l'administration */
+.admin-tabs {
+  margin-bottom: 18px;
+}
+
+.admin-tabs .kind-btn {
+  position: relative;
+}
+
+.admin-reports {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-reports li {
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+  border-left: 3px solid var(--gold);
+}
+
+.admin-reports li.is-handled {
+  border-left-color: var(--hairline);
+  opacity: 0.55;
+}
+
+.admin-report-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.admin-report-head .btn {
+  margin-left: auto;
+}
+
+.admin-report-msg {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}

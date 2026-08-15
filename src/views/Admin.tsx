@@ -92,6 +92,17 @@ function lirePin(): string {
   }
 }
 
+interface Report {
+  id: string
+  user_id: string
+  user_name: string | null
+  char_id: number | null
+  tab: string | null
+  message: string
+  created: number
+  handled: number
+}
+
 export function AdminPage({ token }: { token: string }) {
   const { lang, t } = useI18n()
   const [data, setData] = useState<Overview | null>(null)
@@ -100,6 +111,8 @@ export function AdminPage({ token }: { token: string }) {
   const [pin, setPin] = useState(lirePin)
   const [saisie, setSaisie] = useState('')
   const [verrouille, setVerrouille] = useState(false)
+  const [onglet, setOnglet] = useState<'apercu' | 'reports' | 'comptes' | 'groupes'>('apercu')
+  const [reports, setReports] = useState<Report[] | null>(null)
 
   const entetes = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
@@ -137,6 +150,37 @@ export function AdminPage({ token }: { token: string }) {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Les signalements ne sont demandés qu'en ouvrant leur onglet : inutile de
+  // les charger pour quelqu'un qui vient regarder les compteurs.
+  const loadReports = useCallback(async () => {
+    if (!pin) return
+    try {
+      const res = await fetch(`${WORKER_API}/admin/reports`, { headers: entetes() })
+      if (!res.ok) return
+      const j = (await res.json()) as { reports: Report[] }
+      setReports(j.reports)
+    } catch {
+      setReports([])
+    }
+  }, [pin, entetes])
+
+  useEffect(() => {
+    if (onglet === 'reports' && reports === null) void loadReports()
+  }, [onglet, reports, loadReports])
+
+  async function marquerTraite(id: string, handled: boolean) {
+    setReports((prev) => prev?.map((r) => (r.id === id ? { ...r, handled: handled ? 1 : 0 } : r)) ?? null)
+    try {
+      await fetch(`${WORKER_API}/admin/reports/${id}`, {
+        method: 'POST',
+        headers: { ...entetes(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handled }),
+      })
+    } catch {
+      void loadReports()
+    }
+  }
 
   async function action(label: string, path: string, method: string, confirmMsg?: string) {
     if (confirmMsg && !confirm(confirmMsg)) return
@@ -228,6 +272,64 @@ export function AdminPage({ token }: { token: string }) {
         <StatTile value={data.tiles.blocks} label={t('adminTileBlocks')} />
       </div>
 
+      <div className="kind-bar admin-tabs">
+        {(
+          [
+            ['apercu', t('adminTabOverview')],
+            ['reports', t('adminTabReports')],
+            ['comptes', t('adminTabAccounts')],
+            ['groupes', t('adminTabGroups')],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            className={`kind-btn ${onglet === id ? 'is-active' : ''}`}
+            onClick={() => setOnglet(id)}
+          >
+            {label}
+            {id === 'reports' && reports && reports.some((r) => !r.handled) && (
+              <span className="bell-badge">{reports.filter((r) => !r.handled).length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {onglet === 'reports' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabReports')}</h4>
+          </header>
+          {reports === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : reports.length === 0 ? (
+            <p className="muted">{t('adminNoReport')}</p>
+          ) : (
+            <ul className="admin-reports">
+              {reports.map((r) => (
+                <li key={r.id} className={r.handled ? 'is-handled' : ''}>
+                  <div className="admin-report-head">
+                    <b>{r.user_name ?? r.user_id}</b>
+                    <span className="muted">
+                      {r.tab ? `· ${r.tab} ` : ''}
+                      {r.char_id ? `· ${r.char_id} ` : ''}· {ago(r.created, lang)}
+                    </span>
+                    <button
+                      className="btn btn-ghost btn-mini"
+                      onClick={() => void marquerTraite(r.id, !r.handled)}
+                    >
+                      {r.handled ? t('adminReopen') : t('adminMarkDone')}
+                    </button>
+                  </div>
+                  <p className="admin-report-msg">{r.message}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {onglet === 'apercu' && (
+      <>
       {/* Activité récente */}
       <section className="relic-series group-card">
         <header className="relic-series-head">
@@ -255,6 +357,11 @@ export function AdminPage({ token }: { token: string }) {
         </ul>
       </section>
 
+      </>
+      )}
+
+      {(onglet === 'comptes' || onglet === 'apercu') && (
+      <>
       {/* Comptes */}
       <section className="relic-series group-card">
         <header className="relic-series-head">
@@ -401,6 +508,11 @@ export function AdminPage({ token }: { token: string }) {
         </section>
       )}
 
+      </>
+      )}
+
+      {(onglet === 'groupes' || onglet === 'apercu') && (
+      <>
       {/* Groupes */}
       <section className="relic-series group-card">
         <header className="relic-series-head">
@@ -448,6 +560,8 @@ export function AdminPage({ token }: { token: string }) {
           </table>
         </div>
       </section>
+      </>
+      )}
     </div>
   )
 }

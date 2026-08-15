@@ -131,6 +131,12 @@ const STR = {
   marketMaxPrice: { fr: 'Prix maximum par objet', en: 'Max price per item' },
   marketNoCap: { fr: 'sans limite', en: 'no limit' },
   marketAll: { fr: 'Tout sélectionner', en: 'Select all' },
+  marketScopeDc: { fr: 'Mon centre : {dc}', en: 'My data centre: {dc}' },
+  marketScopeRegion: { fr: 'Toute la région : {region}', en: 'Whole region: {region}' },
+  marketScopeRegionHint: {
+    fr: "Ouvre l'autre centre de données de ta région. Le voyage y est possible mais plus lourd qu'entre mondes voisins, et tes servants restent chez toi.",
+    en: 'Opens the other data centre in your region. Travel is possible but heavier than between neighbouring worlds, and your retainers stay home.',
+  },
   marketNone: { fr: 'Tout désélectionner', en: 'Clear all' },
   marketSummaryNoBudget: {
     fr: '{n} objets pour {total} gils, répartis sur {worlds} monde(s).',

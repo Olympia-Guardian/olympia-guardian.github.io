@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Character, Item, Kind } from '../api'
 import { kindLabel, useI18n } from '../i18n'
 import {
   fetchPrices,
+  fetchRegion,
   moinsDeVoyages,
   parMonde,
   plusDObjets,
@@ -54,6 +55,11 @@ export function Market({
   // une valeur imposée d'avance ne voudrait rien dire.
   const [budget, setBudget] = useState(0)
   const [prixMax, setPrixMax] = useState(0)
+  // Portée de la recherche. Par défaut le centre de données, où le voyage est
+  // immédiat ; la région entière ouvre l'autre centre (Chaos et Light en
+  // Europe), accessible mais avec un voyage plus lourd.
+  const [portee, setPortee] = useState<'dc' | 'region'>('dc')
+  const [region, setRegion] = useState<string | null>(null)
   const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
   const [prix, setPrix] = useState<PriceMap | null>(null)
@@ -69,6 +75,19 @@ export function Market({
   )
 
   const perso = chars.find((c) => c.id === charId) ?? chars[0] ?? null
+
+  // La région dépend du personnage choisi : elle décide si l'autre centre de
+  // données est atteignable.
+  useEffect(() => {
+    let annule = false
+    if (!perso) return
+    void fetchRegion(perso.data.dataCenter).then((r) => {
+      if (!annule) setRegion(r)
+    })
+    return () => {
+      annule = true
+    }
+  }, [perso])
 
   /** Ce qui manque au personnage ET qui a un prix possible. */
   const manquants = useMemo(() => {
@@ -95,7 +114,7 @@ export function Market({
     setAvancement({ fait: 0, total: manquants.length })
     try {
       const p = await fetchPrices(
-        perso.data.dataCenter,
+        portee === 'region' && region ? region : perso.data.dataCenter,
         manquants.map((m) => m.item.itemId!),
         (fait, total) => setAvancement({ fait, total }),
       )
@@ -136,6 +155,23 @@ export function Market({
           <TabIcon k="market" /> {t('market')}
         </h2>
         <p className="muted">{t('marketIntro', { dc: perso.data.dataCenter })}</p>
+        {region && (
+          <div className="mode-switch market-scope">
+            <button
+              className={`mode-btn ${portee === 'dc' ? 'is-active' : ''}`}
+              onClick={() => setPortee('dc')}
+            >
+              {t('marketScopeDc', { dc: perso.data.dataCenter })}
+            </button>
+            <button
+              className={`mode-btn ${portee === 'region' ? 'is-active' : ''}`}
+              title={t('marketScopeRegionHint')}
+              onClick={() => setPortee('region')}
+            >
+              {t('marketScopeRegion', { region })}
+            </button>
+          </div>
+        )}
       </header>
 
       <div className="market-form">

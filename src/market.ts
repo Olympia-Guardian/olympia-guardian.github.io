@@ -28,6 +28,28 @@ interface Cache {
 
 const memoire = new Map<string, Cache>()
 
+// Région du centre de données : le voyage entre centres n'est possible qu'à
+// l'intérieur d'une même région physique (Chaos et Light sont tous deux en
+// Europe). La liste vient d'Universalis plutôt que d'être écrite en dur, pour
+// suivre l'ajout de nouveaux centres.
+let regions: Map<string, string> | null = null
+
+export async function fetchRegion(dc: string): Promise<string | null> {
+  if (!regions) {
+    try {
+      const res = await fetch('https://universalis.app/api/v2/data-centers', {
+        signal: AbortSignal.timeout(10000),
+      })
+      if (!res.ok) return null
+      const j = (await res.json()) as { name: string; region: string }[]
+      regions = new Map(j.map((d) => [d.name, d.region]))
+    } catch {
+      return null
+    }
+  }
+  return regions.get(dc) ?? null
+}
+
 /** Offres les moins chères de chaque objet sur un centre de données.
  *  `onProgress` permet d'afficher l'avancement : une recherche large peut
  *  demander une dizaine de requêtes. */

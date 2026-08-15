@@ -1,3 +1,4 @@
+import { lsGet, lsRemove, lsSet } from './storage'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
 import { useAuth } from './auth'
@@ -129,7 +130,7 @@ export default function App() {
     let prev = prevSentRef.current
     if (prev === null) {
       try {
-        const stored = JSON.parse(localStorage.getItem('ogs.sentkeys.v1') ?? '[]')
+        const stored = JSON.parse(lsGet('ogs.sentkeys.v1') ?? '[]')
         prev = new Set(Array.isArray(stored) ? stored.filter((k) => typeof k === 'string') : [])
       } catch {
         prev = new Set()
@@ -137,7 +138,7 @@ export default function App() {
     }
     prevSentRef.current = sugg.sent
     try {
-      localStorage.setItem('ogs.sentkeys.v1', JSON.stringify([...sugg.sent]))
+      lsSet('ogs.sentkeys.v1', JSON.stringify([...sugg.sent]))
     } catch {
       // pas de persistance, pas grave
     }
@@ -228,7 +229,7 @@ export default function App() {
   // « Juste pour moi » : focalise toutes les vues sur un seul perso (choix local).
   const [focusId, setFocusId] = useState<number | null>(() => {
     try {
-      const n = Number(localStorage.getItem('ogs.focus.v1'))
+      const n = Number(lsGet('ogs.focus.v1'))
       return Number.isInteger(n) && n > 0 ? n : null
     } catch {
       return null
@@ -236,8 +237,8 @@ export default function App() {
   })
   useEffect(() => {
     try {
-      if (focusId) localStorage.setItem('ogs.focus.v1', String(focusId))
-      else localStorage.removeItem('ogs.focus.v1')
+      if (focusId) lsSet('ogs.focus.v1', String(focusId))
+      else lsRemove('ogs.focus.v1')
     } catch {
       // pas de persistance, pas grave
     }
@@ -251,7 +252,7 @@ export default function App() {
   // Présence « ce soir » : les absents sont ignorés par les vues (choix local).
   const [absent, setAbsent] = useState<number[]>(() => {
     try {
-      const parsed = JSON.parse(localStorage.getItem('ogs.absent.v1') ?? '[]')
+      const parsed = JSON.parse(lsGet('ogs.absent.v1') ?? '[]')
       return Array.isArray(parsed) ? parsed.filter((n) => Number.isInteger(n)) : []
     } catch {
       return []
@@ -259,7 +260,7 @@ export default function App() {
   })
   useEffect(() => {
     try {
-      localStorage.setItem('ogs.absent.v1', JSON.stringify(absent))
+      lsSet('ogs.absent.v1', JSON.stringify(absent))
     } catch {
       // pas de persistance, pas grave
     }

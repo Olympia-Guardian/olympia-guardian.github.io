@@ -87,6 +87,38 @@ function refineSpellSources(items) {
 const API = 'https://ffxivcollect.com/api'
 const OUT = new URL('../public/data/', import.meta.url)
 
+/** Écriture protégée d'un catalogue. Une réponse tronquée de FFXIV Collect
+ *  passe tous les contrôles habituels (elle est valide, seulement incomplète)
+ *  puis s'installe 24 h dans le cache de chaque visiteur : on refuse d'écrire
+ *  moins de 90 % de ce qui existait, et on vérifie les champs de base. */
+/** Nombre d'entrées par collection, publié à part dans totals.json : le worker
+ *  n'a besoin que de ce total pour 13 des 16 catalogues, et les télécharger en
+ *  entier pour lire un `.length` lui coûtait 6,3 Mo à chaque démarrage. */
+const TOTALS = {}
+
+async function writeCatalog(kind, items) {
+  const dest = new URL(`${kind}.json`, OUT)
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error(`${kind} : catalogue vide, écriture refusée`)
+  }
+  const absents = ['id', 'name', 'icon'].filter((k) => items[0][k] === undefined)
+  if (absents.length > 0) {
+    throw new Error(`${kind} : champs absents sur la première entrée (${absents.join(', ')})`)
+  }
+  let avant = 0
+  try {
+    avant = JSON.parse(await readFile(dest, 'utf8')).length
+  } catch {
+    // premier passage : rien à comparer
+  }
+  if (avant > 0 && items.length < avant * 0.9) {
+    throw new Error(`${kind} : ${items.length} entrées contre ${avant} avant, écriture refusée`)
+  }
+  await writeFile(dest, JSON.stringify(items))
+  TOTALS[kind] = items.length
+  console.log(`${kind}: ${items.length}${avant ? ` (avant ${avant})` : ''}`)
+}
+
 const KIND_PATHS = {
   mounts: 'mounts',
   minions: 'minions',
@@ -594,20 +626,24 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   // drapeau vient de nos règles (saisons JcJ passées) posées plus haut.
   if (kind !== 'frames') try {
     const ok = await getJson(`${API}/${path}?limit=${PAGE_LIMIT}&sources_limited_eq=false`)
-    const okIds = new Set(ok.results.map((r) => r.id))
-    let n = 0
-    for (const it of items) {
-      if (it.sources.length > 0 && !okIds.has(it.id)) {
-        it.unobtainable = true
-        n++
-      }
+    // Une réponse vide marquerait TOUT le catalogue « plus obtenable » : on la
+    // refuse, comme une proportion invraisemblable (le filtre a changé de nom
+    // ou de sens chez Collect).
+    if (!Array.isArray(ok.results) || ok.results.length === 0) {
+      throw new Error('réponse vide')
     }
-    if (n) console.log(`${kind}: ${n} inobtenable(s)`)
+    const avecSource = items.filter((it) => it.sources.length > 0)
+    const okIds = new Set(ok.results.map((r) => r.id))
+    const perdus = avecSource.filter((it) => !okIds.has(it.id))
+    if (perdus.length > avecSource.length * 0.5) {
+      throw new Error(`${perdus.length}/${avecSource.length} marqués inobtenables`)
+    }
+    for (const it of perdus) it.unobtainable = true
+    if (perdus.length) console.log(`${kind}: ${perdus.length} inobtenable(s)`)
   } catch (e) {
-    console.warn(`${kind}: filtre limited indisponible — ${e.message}`)
+    console.warn(`${kind}: filtre limited ignoré, ${e.message}`)
   }
-  await writeFile(new URL(`${kind}.json`, OUT), JSON.stringify(items))
-  console.log(`${kind}: ${items.length}`)
+  await writeCatalog(kind, items)
 }
 
 {
@@ -616,9 +652,14 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
     getJson(`${API}/relics?limit=3000&language=fr`),
   ])
   const db = mergeRelics(en, fr)
+  if (db.relics.length === 0) throw new Error('relics : catalogue vide, écriture refusée')
   await writeFile(new URL('relics.json', OUT), JSON.stringify(db))
+  TOTALS.relics = db.relics.length
   console.log(`relics: ${db.relics.length} (${db.series.length} séries)`)
 }
+
+await writeFile(new URL('totals.json', OUT), JSON.stringify(TOTALS))
+console.log(`totals: ${Object.keys(TOTALS).length} collections`)
 
 await writeFile(
   new URL('meta.json', OUT),

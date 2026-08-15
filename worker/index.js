@@ -48,41 +48,68 @@ const MAX_MEMBERS = 100
 // Cache par isolate : nameEn (normalisé) → id, + totaux par collection.
 let catalogCache = null
 let catalogAt = 0
+let catalogLoading = null
 
 function norm(s) {
   return s.normalize('NFKD').replace(/’/g, "'").trim().toLowerCase()
 }
 
+async function getJsonOrNull(url, ms = 8000) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(ms) })
+    if (!res.ok) return null
+    return await res.json()
+  } catch (e) {
+    console.warn(`catalogue injoignable : ${url} (${e.message})`)
+    return null
+  }
+}
+
+/** Charge ce dont le worker a réellement besoin. Sur les 16 catalogues, 13 ne
+ *  servaient qu'à lire un nombre d'entrées : ce total vient maintenant de
+ *  totals.json, et seuls montures, mascottes et tenues sont téléchargés en
+ *  entier (1,9 Mo au lieu de 8,2, et 4 sous-requêtes au lieu de 16). */
+async function loadCatalogs() {
+  const [totals, mounts, minions, outfits] = await Promise.all([
+    getJsonOrNull(`${CATALOG_BASE}totals.json`),
+    getJsonOrNull(`${CATALOG_BASE}mounts.json`),
+    getJsonOrNull(`${CATALOG_BASE}minions.json`),
+    getJsonOrNull(`${CATALOG_BASE}outfits.json`),
+  ])
+  if (!mounts || !minions) throw new Error('catalogues montures/mascottes indisponibles')
+  // totals.json est publié par le même déploiement que les catalogues : s'il
+  // manque, c'est que le worker est parti avant les données (déployer les
+  // données EN PREMIER), et les compteurs tomberaient tous à zéro.
+  if (!totals) console.warn('totals.json absent : compteurs de collections à 0')
+  const maps = {
+    mounts: new Map(mounts.map((it) => [norm(it.nameEn), it.id])),
+    minions: new Map(minions.map((it) => [norm(it.nameEn), it.id])),
+  }
+  if (outfits) {
+    // tenue -> ids de ses pièces (dérivation « ensemble complet »)
+    maps.outfitPieces = new Map(
+      outfits.map((it) => [it.id, (it.pieces ?? []).map((p) => p.id).filter(Boolean)]),
+    )
+  }
+  return { maps, totals: totals ?? {} }
+}
+
 async function catalogs() {
   if (catalogCache && Date.now() - catalogAt < 6 * 3_600_000) return catalogCache
-  const maps = {}
-  const totals = {}
-  for (const kind of ALL_KINDS) {
-    const res = await fetch(`${CATALOG_BASE}${kind}.json`)
-    // Un catalogue absent (déploiement en cours) ne doit pas priver tout le
-    // monde de sa fiche : on le compte à 0 et on continue.
-    if (!res.ok) {
-      totals[kind] = 0
-      continue
-    }
-    const items = await res.json()
-    totals[kind] = items.length
-    if (kind === 'mounts' || kind === 'minions') {
-      maps[kind] = new Map(items.map((it) => [norm(it.nameEn), it.id]))
-    }
-    if (kind === 'outfits') {
-      // tenue -> ids de ses pièces (dérivation « ensemble complet »)
-      maps.outfitPieces = new Map(
-        items.map((it) => [it.id, (it.pieces ?? []).map((p) => p.id).filter(Boolean)]),
-      )
-    }
+  // On mémorise la PROMESSE : sur un isolate froid, vingt requêtes simultanées
+  // lançaient vingt fois le chargement complet.
+  if (!catalogLoading) {
+    catalogLoading = loadCatalogs()
+      .then((c) => {
+        catalogCache = c
+        catalogAt = Date.now()
+        return c
+      })
+      .finally(() => {
+        catalogLoading = null
+      })
   }
-  if (!maps.mounts || !maps.minions) throw new Error('catalogues montures/mascottes indisponibles')
-  const relics = await fetch(`${CATALOG_BASE}relics.json`)
-  totals.relics = relics.ok ? (await relics.json()).relics.length : 0
-  catalogCache = { maps, totals }
-  catalogAt = Date.now()
-  return catalogCache
+  return catalogLoading
 }
 
 // ----------------------------------------------------------------- lodestone
@@ -471,7 +498,22 @@ const CALLBACK = 'https://ogs-room.olympia-guardian.workers.dev/auth/discord/cal
 
 async function authDiscordStart(env, url) {
   const ret = url.searchParams.get('return') ?? env.APP_URL
-  if (!ret.startsWith(env.APP_URL) && !ret.startsWith('http://localhost')) {
+  // L'origine du retour doit correspondre EXACTEMENT à celle de l'app : le
+  // callback pose le jeton de session dans le fragment de cette URL, et un
+  // simple startsWith laissait passer « https://<app>.exemple.fr », donc la
+  // session partait chez qui voulait. Le retour local n'est toléré qu'en
+  // développement, là où le secret Discord est absent.
+  let retUrl
+  try {
+    retUrl = new URL(ret)
+  } catch {
+    return response('{"error":"invalid return"}', 400)
+  }
+  const local = retUrl.hostname === 'localhost' || retUrl.hostname === '127.0.0.1'
+  if (
+    retUrl.origin !== new URL(env.APP_URL).origin &&
+    !(local && !env.DISCORD_CLIENT_SECRET)
+  ) {
     return response('{"error":"invalid return"}', 400)
   }
   // Connexion de dev (npm run dev:worker) : pas d'OAuth possible en local
@@ -2386,6 +2428,14 @@ export default {
       if (charMatch[2] === '/seed' && req.method === 'POST') {
         const raw = await req.text()
         if (raw.length > 262_144) return response('{"error":"too large"}', 413)
+        // L'amorçage reste ouvert (il part dès la première visite d'une fiche,
+        // avant toute connexion), mais seulement pour un personnage déjà lu
+        // sur le Lodestone : sinon n'importe qui remplissait la base avec des
+        // identifiants inventés, 13 lignes par appel et sans plafond.
+        const known = await env.DB.prepare('SELECT 1 AS ok FROM characters WHERE id = ?1')
+          .bind(id)
+          .first()
+        if (!known) return response('{"error":"unknown character"}', 404)
         const ok = await applySeed(env, id, raw)
         return ok ? response('{"ok":true}') : response('{"error":"invalid seed"}', 422)
       }

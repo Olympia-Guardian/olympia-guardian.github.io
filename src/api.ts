@@ -1,3 +1,4 @@
+import { lsGet, lsKeys, lsRemove, lsSet } from './storage'
 // Client de l'API publique FFXIV Collect (https://ffxivcollect.com)
 // CORS ouvert → tout tourne dans le navigateur, aucun serveur nécessaire.
 
@@ -210,7 +211,7 @@ interface Cached<T> {
 
 function readCache<T>(key: string, ttl: number): T | null {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = lsGet(key)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Cached<T>
     if (Date.now() - parsed.at > ttl) return null
@@ -237,14 +238,14 @@ const CHAR_V = 'v10' // fiches de personnage (v10 : pièces de tenues)
  *  encombrent un localStorage déjà juste. */
 function purgeStaleCaches(): void {
   try {
-    for (const key of Object.keys(localStorage)) {
+    for (const key of lsKeys()) {
       const db = key.match(/^ogs\.db\.(.+)\.(v\d+)$/)
       if (db) {
-        if (db[2] !== (db[1] === 'relics' ? RELIC_V : DB_V)) localStorage.removeItem(key)
+        if (db[2] !== (db[1] === 'relics' ? RELIC_V : DB_V)) lsRemove(key)
         continue
       }
       const char = key.match(/^ogs\.char\.\d+\.(v\d+)$/)
-      if (char && char[1] !== CHAR_V) localStorage.removeItem(key)
+      if (char && char[1] !== CHAR_V) lsRemove(key)
     }
   } catch {
     // localStorage indisponible : rien à purger
@@ -257,7 +258,7 @@ function writeCache<T>(key: string, data: T): void {
   try {
     const payload = JSON.stringify({ at: Date.now(), data } satisfies Cached<T>)
     if (payload.length > CACHE_MAX_CHARS) return
-    localStorage.setItem(key, payload)
+    lsSet(key, payload)
   } catch {
     // localStorage plein ou indisponible : on continue sans cache
   }
@@ -340,9 +341,21 @@ export async function fetchDb(kind: Kind, force = false): Promise<Item[]> {
 
 /** Worker OGS : personnages lus directement sur le Lodestone, stockés en D1. */
 // Surcharge locale possible (tests E2E sur un worker `wrangler dev`) :
-// localStorage.setItem('ogs.apibase.v1', 'http://127.0.0.1:8788')
+// lsSet('ogs.apibase.v1', 'http://127.0.0.1:8788')
+/** Lecture d'une préférence locale qui ne fait jamais tomber l'app : en
+ *  navigation privée ou avec les données de site bloquées, `localStorage`
+ *  existe mais lève à la première lecture. Comme cette valeur est calculée au
+ *  chargement du module, une exception ici donnait une page blanche. */
+function localPref(key: string): string | null {
+  try {
+    return typeof localStorage !== 'undefined' ? lsGet(key) : null
+  } catch {
+    return null
+  }
+}
+
 export const WORKER_API =
-  (typeof localStorage !== 'undefined' && localStorage.getItem('ogs.apibase.v1')) ||
+  localPref('ogs.apibase.v1') ||
   // `npm run dev:local` : front branché sur le worker local (.env.localworker)
   (import.meta.env.VITE_WORKER_API as string | undefined) ||
   'https://ogs-room.olympia-guardian.workers.dev'
@@ -572,7 +585,7 @@ export async function fetchRelicDb(force = false): Promise<RelicDb> {
 /** Invalide le cache local d'un perso (après édition dans « Mon Journal »). */
 export function invalidateCharacter(lodestoneId: number): void {
   try {
-    localStorage.removeItem(`ogs.char.${lodestoneId}.${CHAR_V}`)
+    lsRemove(`ogs.char.${lodestoneId}.${CHAR_V}`)
   } catch {
     // rien
   }

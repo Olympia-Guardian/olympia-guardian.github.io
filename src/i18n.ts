@@ -1,3 +1,4 @@
+import { lsGet, lsSet } from './storage'
 import { createContext, useContext } from 'react'
 import type { Kind } from './api'
 
@@ -13,7 +14,7 @@ const LANG_KEY = 'ogs.lang.v1'
 
 export function detectLang(): Lang {
   try {
-    const stored = localStorage.getItem(LANG_KEY)
+    const stored = lsGet(LANG_KEY)
     if (stored === 'fr' || stored === 'en') return stored
   } catch {
     // pas de préférence enregistrée
@@ -23,7 +24,7 @@ export function detectLang(): Lang {
 
 export function persistLang(lang: Lang): void {
   try {
-    localStorage.setItem(LANG_KEY, lang)
+    lsSet(LANG_KEY, lang)
   } catch {
     // tant pis
   }

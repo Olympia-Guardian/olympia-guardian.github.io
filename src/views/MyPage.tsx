@@ -1,3 +1,4 @@
+import { lsGet, lsRemove, lsSet } from '../storage'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   HIDDEN_KINDS,
@@ -1006,6 +1007,25 @@ function CollectionEditor({
     })
   }
 
+  /** Bascule vue depuis la fiche : le bouton suit ce qui est AFFICHÉ. Une tenue
+   *  possédée seulement parce que toutes ses pièces sont cochées n'est pas dans
+   *  `ids` ; sans ce détour, « Retirer » l'ajoutait en base sans rien changer à
+   *  l'écran, et le bouton paraissait mort. */
+  function toggleShown(it: Item) {
+    if (readOnly) return
+    if (kind === 'outfits' && !ids.has(it.id) && shownIds.has(it.id)) {
+      setPieceIds((prev) => {
+        const next = new Set(prev)
+        for (const pc of it.pieces ?? []) next.delete(pc.id)
+        if (pieceTimer.current) clearTimeout(pieceTimer.current)
+        pieceTimer.current = setTimeout(() => onSavePieces?.([...next]), 1200)
+        return next
+      })
+      return
+    }
+    toggle(it.id)
+  }
+
   /** Tenues : coche/décoche une pièce. Retirer une pièce d'un ensemble coché
    *  en bloc le convertit en pièces individuelles (toutes sauf celle retirée)
    *  au lieu de tout décocher. */
@@ -1086,7 +1106,7 @@ function CollectionEditor({
         groupEn: it.achTypeEn ?? 'Other',
       }))
     return base
-  }, [db, kind, search, onlyMissing, ids])
+  }, [db, kind, search, onlyMissing, shownIds])
 
   // Points de succès : possédés / total, calculés depuis le catalogue.
   const achPts = useMemo(() => {
@@ -1178,7 +1198,7 @@ function CollectionEditor({
             item={selected}
             owned={shownIds.has(selected.id)}
             readOnly={readOnly}
-            onToggle={() => toggle(selected.id)}
+            onToggle={() => toggleShown(selected)}
             onClose={() => setSelected(null)}
             pieceOwned={kind === 'outfits' ? pieceIds : undefined}
             onTogglePiece={
@@ -1246,7 +1266,7 @@ export function MyPage({
   // Plusieurs persos par compte : celui qu'on regarde est mémorisé localement.
   const verifiedList = auth.bindings.filter((b) => b.verified)
   const [activeId, setActiveId] = useState<number | null>(() => {
-    const n = Number(localStorage.getItem(ACTIVE_CHAR_KEY))
+    const n = Number(lsGet(ACTIVE_CHAR_KEY))
     return Number.isInteger(n) && n > 0 ? n : null
   })
   const verified = verifiedList.find((b) => b.charId === activeId) ?? verifiedList[0]
@@ -1256,7 +1276,7 @@ export function MyPage({
   const [chars, setChars] = useState<Record<number, Character>>({})
 
   useEffect(() => {
-    if (verified) localStorage.setItem(ACTIVE_CHAR_KEY, String(verified.charId))
+    if (verified) lsSet(ACTIVE_CHAR_KEY, String(verified.charId))
   }, [verified?.charId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -1394,7 +1414,7 @@ export function MyPage({
     try {
       await auth.unbind(charId)
       setActiveId(null)
-      localStorage.removeItem(ACTIVE_CHAR_KEY)
+      lsRemove(ACTIVE_CHAR_KEY)
     } catch {
       setNotice(t('saveError'))
     } finally {

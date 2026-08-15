@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { KINDS, type Character, type Kind } from './api'
 import type { Member } from './store'
+import { lsGet, lsSet } from './storage'
 
 type Ready = Member & { data: Character }
 
@@ -33,7 +34,7 @@ export function useDigest(ready: Ready[]) {
     if (!captured.current) {
       captured.current = true
       try {
-        const raw = localStorage.getItem(SNAP_KEY)
+        const raw = lsGet(SNAP_KEY)
         if (raw) {
           const snap = JSON.parse(raw) as Snapshot
           const out: DigestLine[] = []
@@ -60,7 +61,7 @@ export function useDigest(ready: Ready[]) {
     // 2) À chaque évolution : mettre l'instantané à jour (fusion, pour ne pas
     //    perdre les persos pas encore chargés).
     try {
-      const raw = localStorage.getItem(SNAP_KEY)
+      const raw = lsGet(SNAP_KEY)
       const snap: Snapshot = raw ? JSON.parse(raw) : { at: 0, byChar: {} }
       for (const m of ready) {
         snap.byChar[m.id] = {
@@ -69,7 +70,7 @@ export function useDigest(ready: Ready[]) {
         }
       }
       snap.at = Date.now()
-      localStorage.setItem(SNAP_KEY, JSON.stringify(snap))
+      lsSet(SNAP_KEY, JSON.stringify(snap))
     } catch {
       // pas de persistance, pas de digest la prochaine fois — sans gravité
     }

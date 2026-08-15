@@ -1,3 +1,4 @@
+import { lsGet, lsRemove, lsSet } from './storage'
 // Comptes : session OGS adossée au worker (OAuth Discord). Le jeton revient
 // dans le hash (#login=...) après le tour chez Discord ; on le range en
 // localStorage et on restaure le hash de groupe sauvegardé avant le départ.
@@ -29,16 +30,16 @@ export function captureLoginToken(): string | null {
   const match = location.hash.match(/login=([\w-]+)/)
   if (match) {
     try {
-      localStorage.setItem(TOKEN_KEY, match[1])
-      const prev = localStorage.getItem(PRELOGIN_KEY) ?? ''
-      localStorage.removeItem(PRELOGIN_KEY)
+      lsSet(TOKEN_KEY, match[1])
+      const prev = lsGet(PRELOGIN_KEY) ?? ''
+      lsRemove(PRELOGIN_KEY)
       history.replaceState(null, '', location.pathname + location.search + prev)
     } catch {
       setHashParam('login', null)
     }
   }
   try {
-    return localStorage.getItem(TOKEN_KEY)
+    return lsGet(TOKEN_KEY)
   } catch {
     return null
   }
@@ -59,7 +60,7 @@ export function useAuth() {
       const res = await fetch(`${WORKER_API}/me`, { headers: authHeaders(token) })
       if (res.status === 401) {
         try {
-          localStorage.removeItem(TOKEN_KEY)
+          lsRemove(TOKEN_KEY)
         } catch {
           // rien
         }
@@ -83,7 +84,7 @@ export function useAuth() {
 
   const login = useCallback(() => {
     try {
-      localStorage.setItem(PRELOGIN_KEY, location.hash)
+      lsSet(PRELOGIN_KEY, location.hash)
     } catch {
       // le hash de groupe sera perdu, pas la session
     }
@@ -93,7 +94,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     try {
-      localStorage.removeItem(TOKEN_KEY)
+      lsRemove(TOKEN_KEY)
     } catch {
       // rien
     }

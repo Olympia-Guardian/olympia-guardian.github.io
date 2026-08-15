@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------------------
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { lsGet, lsRemove, lsSet } from './storage'
 import {
   apiAddMember,
   apiCreateGroup,
@@ -73,7 +74,7 @@ const POLL_MS = 90_000
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = lsGet(key)
     return raw ? (JSON.parse(raw) as T) : fallback
   } catch {
     return fallback
@@ -82,7 +83,7 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson(key: string, value: unknown): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    lsSet(key, JSON.stringify(value))
   } catch {
     // pas de persistance, tant pis
   }
@@ -176,8 +177,8 @@ function migrateLegacySync(): { rooms: { name: string; roomId: string }[] } {
 
   writeJson(LOCAL_KEY, locals)
   try {
-    localStorage.removeItem(LEGACY_GROUPS_KEY)
-    localStorage.removeItem(LEGACY_ROSTER_KEY)
+    lsRemove(LEGACY_GROUPS_KEY)
+    lsRemove(LEGACY_ROSTER_KEY)
   } catch {
     // au pire ils seront re-migrés (idempotent grâce au test de doublon)
   }
@@ -223,7 +224,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
   // Demandes d'adhésion envoyées, en attente de validation par les créateurs.
   const [pending, setPending] = useState<PendingInvite[]>(readPending)
   const [activeId, setActiveId] = useState<string | null>(() =>
-    localStorage.getItem(ACTIVE_KEY),
+    lsGet(ACTIVE_KEY),
   )
   // Invitation ouverte (#j=…) : pilote le bandeau (demander / en attente / membre).
   const [invite, setInvite] = useState<OpenInvite | null>(null)
@@ -244,15 +245,15 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
   const setActive = useCallback((id: string | null) => {
     setActiveId(id)
     try {
-      if (id) localStorage.setItem(ACTIVE_KEY, id)
-      else localStorage.removeItem(ACTIVE_KEY)
+      if (id) lsSet(ACTIVE_KEY, id)
+      else lsRemove(ACTIVE_KEY)
     } catch {
       // tant pis
     }
     // Changer de groupe remet la vue « groupe entier » et la présence à zéro.
     try {
-      localStorage.removeItem('ogs.absent.v1')
-      localStorage.removeItem('ogs.focus.v1')
+      lsRemove('ogs.absent.v1')
+      lsRemove('ogs.focus.v1')
     } catch {
       // idem
     }
@@ -306,7 +307,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
         persistLocals(next)
         setHashParam('r', null)
         setHashParam('g', null)
-        if (!localStorage.getItem(ACTIVE_KEY)) setActive(converted[0].id)
+        if (!lsGet(ACTIVE_KEY)) setActive(converted[0].id)
       }
     })()
   }, [persistLocals, setActive])
@@ -343,7 +344,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
               const rest = readLocalGroups().filter((x) => x.id !== g.id)
               writeJson(LOCAL_KEY, rest)
               setLocals(rest)
-              if (localStorage.getItem(ACTIVE_KEY) === g.id) setActive(target.id)
+              if (lsGet(ACTIVE_KEY) === g.id) setActive(target.id)
             } catch {
               // on garde la copie locale, retentée à la prochaine connexion
               uploadStarted = null
@@ -448,7 +449,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
         else await apiQuitGroup(tokenRef.current, id)
         setServer((prev) => prev.filter((x) => x.id !== id))
       }
-      if (localStorage.getItem(ACTIVE_KEY) === id) setActive(null)
+      if (lsGet(ACTIVE_KEY) === id) setActive(null)
     },
     [persistLocals, server, setActive],
   )

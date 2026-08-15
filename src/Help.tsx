@@ -1,3 +1,4 @@
+import { lsGet, lsRemove, lsSet } from './storage'
 // Aide active façon FFXIV : une petite fenêtre apparaît à la PREMIÈRE visite
 // de chaque écran (« Ne plus afficher » implicite : fermer = vu), et la page
 // Guide regroupe tous les sujets, relisibles à volonté.
@@ -20,7 +21,7 @@ export const HELP_TOPICS: { key: string; icon: string; title: StrKey; body: StrK
 
 function readSeen(): string[] {
   try {
-    const v = JSON.parse(localStorage.getItem(SEEN_KEY) ?? '[]')
+    const v = JSON.parse(lsGet(SEEN_KEY) ?? '[]')
     return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
   } catch {
     return []
@@ -29,7 +30,7 @@ function readSeen(): string[] {
 
 function markSeen(key: string): void {
   try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...readSeen(), key])]))
+    lsSet(SEEN_KEY, JSON.stringify([...new Set([...readSeen(), key])]))
   } catch {
     // pas de persistance : l'aide reviendra, tant pis
   }
@@ -37,7 +38,7 @@ function markSeen(key: string): void {
 
 export function resetSeenHelp(): void {
   try {
-    localStorage.removeItem(SEEN_KEY)
+    lsRemove(SEEN_KEY)
   } catch {
     // rien à faire
   }

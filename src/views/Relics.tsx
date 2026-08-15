@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { KINDS, type Character, type Relic, type RelicDb, type RelicSeriesInfo } from '../api'
 import { kindLabel, useI18n } from '../i18n'
 import {
@@ -238,7 +238,10 @@ function RelicPanel({
   )
 }
 
-function SeriesCard({
+// Une série se re-rendait entièrement dès qu'un état de la page changeait,
+// alors qu'elle ne dépend que de ses propres props. Avec 23 séries à l'écran,
+// c'était l'essentiel de la latence au clic.
+const SeriesCard = memo(function SeriesCard({
   info,
   relics,
   ready,
@@ -375,7 +378,7 @@ function SeriesCard({
   // relics de chaque étape (l'ordre API est trié étape par étape).
   // GARO : une seule « étape » = toute la série, triée par ordre (les sets
   // de 5 pièces sont contigus).
-  const stepRelics = info.stepSizes
+  const stepRelics = useMemo(() => (info.stepSizes
     ? (() => {
         const sorted = [...relics].sort((a, b) => a.order - b.order)
         const out: Relic[][] = []
@@ -390,11 +393,15 @@ function SeriesCard({
       ? [[...relics].sort((a, b) => a.order - b.order)]
       : Array.from({ length: steps }, (_, i) =>
           sortArmor(relics.filter((r) => Math.ceil(r.order / info.jobs) === i + 1)),
-        )
-  const ownedInStep = (memberId: number, i: number) => {
-    const owned = ownedSets.get(memberId)!
-    return stepRelics[i].reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
-  }
+        )), [info, relics, garoSets, steps])
+  const ownedInStep = useCallback(
+    (memberId: number, i: number) => {
+      const owned = ownedSets.get(memberId)
+      if (!owned) return 0
+      return stepRelics[i].reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
+    },
+    [ownedSets, stepRelics],
+  )
 
   // Coche en cascade : un palier implique les précédents (et décosher un
   // palier retire les suivants). Uniquement quand les étapes sont de vraies
@@ -431,7 +438,7 @@ function SeriesCard({
   // Total pour UNE relique de bout en bout (toutes étapes + objets « première
   // arme »), affiché en icônes dans l'en-tête. Uniquement pour les séries dont
   // les matériaux ont leurs icônes officielles.
-  const totalMats = (() => {
+  const totalMats = useMemo(() => {
     if (!costSteps) return []
     const acc = new Map<string, Material>()
     costSteps.forEach((st, i) => {
@@ -443,14 +450,14 @@ function SeriesCard({
       if (!started) for (const mat of st.once ?? []) mergeMaterial(acc, mat)
     })
     return [...acc.values()]
-  })()
+  }, [costSteps, ready, stepRelics, ownedInStep])
   const showReq = totalMats.length > 0 && totalMats.some((mat) => mat.icon)
   const compactQty = (n: number) => (n >= 10000 ? `${Math.round(n / 1000)}k` : fmt(n, lang))
 
   // Switch « 1 arme / restant » : le restant agrège les matériaux de toutes
   // les pièces manquantes du joueur (visible seul, donc dans Mon Journal).
   const [reqLeft, setReqLeft] = useState(false)
-  const remainingMats = (() => {
+  const remainingMats = useMemo(() => {
     if (!costs || ready.length !== 1) return null
     // Manquant par étape = pièces réellement listées dans l'étape (85 pour
     // GARO en bloc unique), pas la colonne « jobs » de l'API.
@@ -461,7 +468,7 @@ function SeriesCard({
     const acc = new Map<string, Material>()
     for (const mat of [...rem.perWeapon, ...rem.once]) mergeMaterial(acc, mat)
     return [...acc.values()]
-  })()
+  }, [costs, ready, stepRelics, info.jobs, ownedInStep])
   const shownMats = reqLeft && remainingMats ? remainingMats : totalMats
 
   /** Chip d'objet : icône (si elle existe), nom court et quantité — le nom
@@ -744,7 +751,7 @@ function SeriesCard({
 
     </article>
   )
-}
+})
 
 function pct(count: number, total: number, lang: string): string {
   const v = total > 0 ? (count / total) * 100 : 0

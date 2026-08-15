@@ -1498,10 +1498,25 @@ export function MyPage({
     relicSaveTimer.current = setTimeout(() => save('relics', relicIdsRef.current), 1200)
   }
 
+  /** État actuellement connu du serveur pour une collection. */
+  function connus(k: Kind | 'relics' | 'outfitpieces'): number[] {
+    if (!char) return []
+    if (k === 'relics') return char.relicIds
+    if (k === 'outfitpieces') return char.outfitPieceIds
+    return char[k].ids
+  }
+
   async function save(k: Kind | 'relics' | 'outfitpieces', ids: number[]) {
     if (!verified) return
     try {
-      await auth.saveCollections(verified.charId, { [k]: ids })
+      // On envoie ce qui CHANGE, pas la liste entière : une coche coûtait
+      // jusqu'à 30 Ko et écrasait ce qu'un autre onglet venait d'enregistrer.
+      const avant = new Set(connus(k))
+      const apres = new Set(ids)
+      const add = ids.filter((i) => !avant.has(i))
+      const remove = [...avant].filter((i) => !apres.has(i))
+      if (add.length === 0 && remove.length === 0) return
+      await auth.saveCollections(verified.charId, { [k]: { add, remove } })
       invalidateCharacter(verified.charId)
       onCharacterUpdated(verified.charId)
       showToast(t('saved'))

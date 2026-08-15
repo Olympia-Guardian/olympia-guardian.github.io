@@ -691,8 +691,10 @@ export default function App() {
                     ? {
                         chars: verifiedIds,
                         add: async (charId, kind, itemId) => {
-                          const cur = ownedSets.get(charId)?.[kind] ?? new Set<number>()
-                          await auth.saveCollections(charId, { [kind]: [...new Set([...cur, itemId])] })
+                          // Un seul objet ajouté : on l'envoie tel quel plutôt
+                          // que de réaffirmer toute la collection, ce qui
+                          // écrasait ce qu'un autre onglet venait d'écrire.
+                          await auth.saveCollections(charId, { [kind]: { add: [itemId] } })
                           invalidateCharacter(charId)
                           reload(charId)
                         },
@@ -750,8 +752,10 @@ export default function App() {
                     ? {
                         chars: verifiedIds,
                         add: async (charId, kind, itemId) => {
-                          const cur = ownedSets.get(charId)?.[kind] ?? new Set<number>()
-                          await auth.saveCollections(charId, { [kind]: [...new Set([...cur, itemId])] })
+                          // Un seul objet ajouté : on l'envoie tel quel plutôt
+                          // que de réaffirmer toute la collection, ce qui
+                          // écrasait ce qu'un autre onglet venait d'écrire.
+                          await auth.saveCollections(charId, { [kind]: { add: [itemId] } })
                           invalidateCharacter(charId)
                           reload(charId)
                         },

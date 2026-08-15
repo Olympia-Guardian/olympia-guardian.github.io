@@ -154,7 +154,12 @@ export function useAuth() {
   )
 
   const saveCollections = useCallback(
-    async (charId: number, partial: Record<string, number[]>): Promise<void> => {
+    async (
+      charId: number,
+      // Tableau = remplacement complet ; { add, remove } = delta appliqué à
+      // l'état du serveur, la forme des coches à l'unité.
+      partial: Record<string, number[] | { add?: number[]; remove?: number[] }>,
+    ): Promise<void> => {
       if (!token) throw new Error('non connecté')
       const res = await fetch(`${WORKER_API}/character/${charId}/collections`, {
         method: 'PUT',

@@ -4138,3 +4138,11 @@ a.player-name:hover {
   padding: 5px 12px;
   font-size: 13px;
 }
+
+/* Reliques : 2251 icônes montées d'un coup, dont l'écrasante majorité hors
+   écran. Même virtualisation native que les listes, avec une hauteur estimée
+   par série (elles sont de tailles très inégales, d'où le « auto »). */
+.relic-cat-body > .relic-series {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}

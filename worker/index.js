@@ -811,16 +811,50 @@ async function putCollections(env, user, charId, raw) {
   }
   const rows = []
   const now = Date.now()
-  // Montures/mascottes acceptées aussi : validation temporaire — la prochaine
+  // Deux formes acceptées par collection :
+  //  - un tableau : remplacement complet (ancienne forme, toujours utilisée
+  //    par l'import Collect et la validation en masse) ;
+  //  - { add, remove } : delta appliqué à l'état COURANT du serveur. C'est la
+  //    forme des coches à l'unité. Elle évite de renvoyer jusqu'à 30 Ko par
+  //    clic, et surtout deux onglets ouverts ne s'écrasent plus l'un l'autre :
+  //    chacun décrit ce qu'il change au lieu de réaffirmer toute la liste.
+  //
+  // Montures/mascottes acceptées aussi : validation temporaire, la prochaine
   // synchro Lodestone réécrit ces deux collections (source lodestone).
   // outfitpieces : pièces de tenues possédées (stockage auxiliaire, comme
   // relics — un ensemble dont toutes les pièces sont là devient possédé).
+  const deltas = []
   for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces']) {
-    const ids = doc?.[kind]
-    if (ids === undefined) continue
-    if (!validIds(ids, 6000)) return response('{"error":"invalid ids"}', 422)
-    rows.push([charId, kind, JSON.stringify([...new Set(ids)]), now])
+    const v = doc?.[kind]
+    if (v === undefined) continue
+    if (Array.isArray(v)) {
+      if (!validIds(v, 6000)) return response('{"error":"invalid ids"}', 422)
+      rows.push([charId, kind, JSON.stringify([...new Set(v)]), now])
+      continue
+    }
+    if (!v || typeof v !== 'object') return response('{"error":"invalid ids"}', 422)
+    const add = v.add ?? []
+    const remove = v.remove ?? []
+    if (!validIds(add, 6000) || !validIds(remove, 6000)) {
+      return response('{"error":"invalid ids"}', 422)
+    }
+    if (add.length === 0 && remove.length === 0) continue
+    deltas.push([kind, add, remove])
   }
+
+  if (deltas.length > 0) {
+    const actuels = await env.DB.prepare('SELECT kind, ids FROM collections WHERE char_id = ?1')
+      .bind(charId)
+      .all()
+    const parKind = new Map(actuels.results.map((r) => [r.kind, JSON.parse(r.ids)]))
+    for (const [kind, add, remove] of deltas) {
+      const s = new Set(parKind.get(kind) ?? [])
+      for (const id of add) s.add(id)
+      for (const id of remove) s.delete(id)
+      rows.push([charId, kind, JSON.stringify([...s]), now])
+    }
+  }
+
   if (rows.length === 0) return response('{"error":"nothing to update"}', 422)
   const stmt = env.DB.prepare(
     'INSERT INTO collections (char_id, kind, ids, updated, source) VALUES (?1, ?2, ?3, ?4, ?5) ' +

@@ -23,22 +23,39 @@ mkdirSync(DOSSIER, { recursive: true })
 const horodatage = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
 const sortie = join(DOSSIER, `ogs-${horodatage}.sql`)
 
+// L'export échoue parfois pour rien : l'API de Cloudflare renvoie une erreur
+// d'authentification passagère, et la même commande relancée aussitôt réussit.
+// Sans reprise, un hoquet de dix secondes coûtait la sauvegarde de la journée.
+const ESSAIS = 3
+const ATTENTE_MS = 20_000
+
+const dodo = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+
 console.log('export de la base de production…')
-execFileSync(
-  'npx',
-  [
-    'wrangler@4.121.0',
-    'd1',
-    'export',
-    'ogs-rooms',
-    '--remote',
-    '--config',
-    'worker/wrangler.toml',
-    '--output',
-    sortie,
-  ],
-  { stdio: 'inherit', shell: true },
-)
+for (let essai = 1; ; essai++) {
+  try {
+    execFileSync(
+      'npx',
+      [
+        'wrangler@4.121.0',
+        'd1',
+        'export',
+        'ogs-rooms',
+        '--remote',
+        '--config',
+        'worker/wrangler.toml',
+        '--output',
+        sortie,
+      ],
+      { stdio: 'inherit', shell: true },
+    )
+    break
+  } catch (e) {
+    if (essai >= ESSAIS) throw e
+    console.warn(`tentative ${essai}/${ESSAIS} échouée, nouvelle tentative dans 20 s`)
+    dodo(ATTENTE_MS)
+  }
+}
 
 const taille = statSync(sortie).size
 if (taille < 1024) {

@@ -129,11 +129,14 @@ export function AdminPage({ token }: { token: string }) {
   const [pin, setPin] = useState(lirePin)
   const [saisie, setSaisie] = useState('')
   const [verrouille, setVerrouille] = useState(false)
-  const [onglet, setOnglet] = useState<'apercu' | 'sante' | 'adoption' | 'reports' | 'comptes' | 'groupes'>('apercu')
+  const [onglet, setOnglet] = useState<'apercu' | 'sante' | 'adoption' | 'couts' | 'reports' | 'comptes' | 'groupes'>(
+    'apercu',
+  )
   const [reports, setReports] = useState<Report[] | null>(null)
   const [metrics, setMetrics] = useState<Metric[] | null>(null)
   const [fraicheur, setFraicheur] = useState<number | null>(null)
   const [adoption, setAdoption] = useState<Adoption | null>(null)
+  const [couts, setCouts] = useState<{ lignes: Record<string, number>; total: number } | null>(null)
 
   const entetes = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
@@ -193,6 +196,18 @@ export function AdminPage({ token }: { token: string }) {
   // Santé : les compteurs du worker, plus l'âge des catalogues. Ce dernier ne
   // vient pas de la base mais du fichier publié par le cron : c'est justement
   // le signal qui dit si ce cron tourne encore.
+  useEffect(() => {
+    if (onglet !== 'couts' || couts !== null || !pin) return
+    void (async () => {
+      try {
+        const res = await fetch(`${WORKER_API}/admin/costs`, { headers: entetes() })
+        if (res.ok) setCouts(await res.json())
+      } catch {
+        // l'onglet reste en chargement
+      }
+    })()
+  }, [onglet, couts, pin, entetes])
+
   useEffect(() => {
     if (onglet !== 'adoption' || adoption !== null || !pin) return
     void (async () => {
@@ -334,6 +349,7 @@ export function AdminPage({ token }: { token: string }) {
             ['apercu', t('adminTabOverview')],
             ['sante', t('adminTabHealth')],
             ['adoption', t('adminTabAdoption')],
+            ['couts', t('adminTabCosts')],
             ['reports', t('adminTabReports')],
             ['comptes', t('adminTabAccounts')],
             ['groupes', t('adminTabGroups')],
@@ -443,6 +459,39 @@ export function AdminPage({ token }: { token: string }) {
                 <small>{t('adminAdoGroupsHint')}</small>
               </div>
             </div>
+          )}
+        </section>
+      )}
+
+      {onglet === 'couts' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabCosts')}</h4>
+          </header>
+          <p className="muted admin-costs-note">{t('adminCostsNote')}</p>
+          {couts === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : (
+            <>
+              <p className="market-summary">{t('adminCostsTotal', { n: couts.total })}</p>
+              <ul className="admin-costs">
+                {Object.entries(couts.lignes)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([table, n]) => (
+                    <li key={table}>
+                      <span className="admin-costs-name">{table}</span>
+                      <span className="admin-costs-bar">
+                        <i
+                          style={{
+                            width: `${couts.total > 0 ? (n / couts.total) * 100 : 0}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="admin-costs-n">{n}</span>
+                    </li>
+                  ))}
+              </ul>
+            </>
           )}
         </section>
       )}

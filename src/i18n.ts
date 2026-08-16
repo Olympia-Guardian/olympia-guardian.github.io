@@ -109,6 +109,12 @@ const STR = {
   adminTabReports: { fr: 'Signalements', en: 'Reports' },
   adminTabHealth: { fr: 'Santé', en: 'Health' },
   adminTabAdoption: { fr: 'Adoption', en: 'Adoption' },
+  adminTabCosts: { fr: 'Coûts', en: 'Costs' },
+  adminCostsNote: {
+    fr: "Où la base grossit, et donc ce qui consommera le quota en premier. La consommation exacte du jour n'est pas accessible depuis le worker : elle se lit sur le tableau de bord Cloudflare. La compter ici coûterait une écriture par requête, soit exactement le quota qu'on cherche à ménager.",
+    en: 'Where the database grows, and therefore what will eat the quota first. Exact daily usage is not reachable from the worker: read it on the Cloudflare dashboard. Counting it here would cost one write per request, the very quota we are trying to spare.',
+  },
+  adminCostsTotal: { fr: '{n} lignes en base', en: '{n} rows in the database' },
   adminAdoActive7: { fr: 'Actifs cette semaine', en: 'Active this week' },
   adminAdoActive7Hint: {
     fr: '{n} sur 30 jours. On compte les actifs, pas les inscrits : un total qui ne fait que monter ne fait jamais agir.',

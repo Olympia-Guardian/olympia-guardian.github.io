@@ -1015,6 +1015,50 @@ async function createReport(env, user, raw) {
   return response('{"ok":true}')
 }
 
+/** Couts : ce que le worker peut reellement mesurer, c'est-a-dire la taille de
+ *  la base et le nombre de lignes par table. La consommation exacte des quotas
+ *  (lectures et ecritures du jour) n'est pas exposee aux workers : elle se lit
+ *  sur le tableau de bord Cloudflare. Compter chaque requete ici couterait une
+ *  ecriture D1 par requete, soit exactement le quota qu'on cherche a menager.
+ *  On donne donc la volumetrie, qui dit ou la base grossit et pourquoi. */
+async function adminCosts(env) {
+  const tables = [
+    'users',
+    'tokens',
+    'characters',
+    'collections',
+    'bindings',
+    'groups',
+    'group_members',
+    'suggestions',
+    'contacts',
+    'reports',
+    'metrics',
+  ]
+  // D1 n'expose pas les pragmas de pagination : on s'en tient au nombre de
+  // lignes, qui dit de toute façon OÙ la base grossit, ce qu'un total en
+  // mégaoctets ne dirait pas.
+  //
+  // On ne compte que les tables qui existent vraiment : une table absente
+  // (schéma appliqué à moitié, environnement de développement en retard)
+  // faisait tomber toute la page au lieu de manquer une ligne.
+  const presentes = await env.DB.prepare(
+    "SELECT name FROM sqlite_master WHERE type = 'table'",
+  ).all()
+  const connues = new Set(presentes.results.map((r) => r.name))
+  const aCompter = tables.filter((t) => connues.has(t))
+  const comptes = aCompter.length
+    ? await env.DB.batch(aCompter.map((t) => env.DB.prepare(`SELECT COUNT(*) AS n FROM ${t}`)))
+    : []
+  const lignes = {}
+  aCompter.forEach((t, i) => {
+    lignes[t] = comptes[i]?.results?.[0]?.n ?? 0
+  })
+  return response(
+    JSON.stringify({ lignes, total: Object.values(lignes).reduce((n, v) => n + v, 0) }),
+  )
+}
+
 /** Adoption : tout se calcule sur la base existante, aucune instrumentation
  *  supplementaire n'est necessaire. On compte les ACTIFS et non les inscrits :
  *  un total d'inscriptions ne fait que monter et ne fait jamais agir, alors
@@ -2902,6 +2946,7 @@ const routes = {
       if (url.pathname === '/admin/reports' && req.method === 'GET') return listReports(env)
       if (url.pathname === '/admin/metrics' && req.method === 'GET') return listMetrics(env)
       if (url.pathname === '/admin/adoption' && req.method === 'GET') return adminAdoption(env)
+      if (url.pathname === '/admin/costs' && req.method === 'GET') return adminCosts(env)
       const repMatch = url.pathname.match(/^\/admin\/reports\/(rep-[\w-]{10,60})$/)
       if (repMatch && req.method === 'POST') {
         const raw = await req.text()

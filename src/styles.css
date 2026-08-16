@@ -4627,3 +4627,52 @@ a.player-name:hover {
   color: var(--muted);
   font-weight: 400;
 }
+
+/* onglet Coûts : la barre montre d'un coup d'œil quelle table domine */
+.admin-costs-note {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.admin-costs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-costs li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.admin-costs-name {
+  flex: 0 0 140px;
+  color: var(--ink-2);
+}
+
+.admin-costs-bar {
+  flex: 1 1 auto;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.admin-costs-bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+
+.admin-costs-n {
+  flex: 0 0 60px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}

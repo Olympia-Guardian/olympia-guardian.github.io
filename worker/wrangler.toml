@@ -10,6 +10,12 @@ workers_dev = true
 [observability]
 enabled = true
 
+# Ménage nocturne : sessions expirées et compteurs de plus de trois mois.
+# 3 h 27 UTC, à l'écart du cron de données de GitHub (4 h 17) pour ne pas
+# empiler deux réveils sur la même minute.
+[triggers]
+crons = ["27 3 * * *"]
+
 # Limite de débit par adresse IP. Le limiteur natif de Cloudflare est gratuit
 # et ne consomme ni écriture D1 ni Durable Object, contrairement à un compteur
 # maison. Deux budgets distincts : les routes qui sortent vers le Lodestone

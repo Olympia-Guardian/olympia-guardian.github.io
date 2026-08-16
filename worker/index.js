@@ -2617,6 +2617,35 @@ async function adminPurgeTokens(env) {
   return response(JSON.stringify({ ok: true, purged: r.meta.changes }))
 }
 
+/** Compteurs gardés trois mois : l'administration n'en lit que quatorze jours,
+ *  la marge laisse la place à une fenêtre plus longue sans repartir de zéro. */
+const RETENTION_METRIQUES = 90
+
+/** Ménage nocturne (déclencheur cron). Les sessions expirées et les vieux
+ *  compteurs s'accumulaient jusqu'à ce qu'un humain pense à cliquer « purger »
+ *  dans l'administration : personne n'y pense, et les lignes D1 sont comptées.
+ *  Deux suppressions bornées, rien d'autre — un ménage qui se tromperait de
+ *  cible coûterait bien plus cher que les lignes qu'il économise. */
+async function menageNocturne(env) {
+  try {
+    const sessions = await env.DB.prepare('DELETE FROM tokens WHERE expires < ?1')
+      .bind(Date.now())
+      .run()
+    const limite = new Date(Date.now() - RETENTION_METRIQUES * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+    const compteurs = await env.DB.prepare('DELETE FROM metrics WHERE jour < ?1').bind(limite).run()
+    console.log(
+      `ménage nocturne : ${sessions.meta.changes} session(s), ${compteurs.meta.changes} compteur(s)`,
+    )
+  } catch (e) {
+    // Un ménage raté n'est pas grave en soi, mais il doit laisser une trace :
+    // sans ça, la base regrossit sans que rien ne le signale.
+    console.error('ménage nocturne', e?.stack ?? String(e))
+    void compter(env, 'menage_echec')
+  }
+}
+
 // ------------------------------------------------------------ recherche perso
 // GET /search-character?name=…&server=… (auth) : recherche Lodestone par nom
 // — fini la chasse à l'ID, on clique sur son perso dans les résultats.
@@ -3157,5 +3186,10 @@ export default {
       void compter(env, 'erreur_worker')
       return response('{"error":"internal"}', 500)
     }
+  },
+
+  // Déclencheur planifié (voir [triggers] dans wrangler.toml).
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(menageNocturne(env))
   },
 }

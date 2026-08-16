@@ -24,6 +24,7 @@ import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
+import { useWishlist } from './wishlist'
 import { NewsPage } from './views/News'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
@@ -151,6 +152,8 @@ export default function App() {
       ),
     [db, ready, verifiedIds, lang, crossIgnored],
   )
+  // Liste de souhaits : ce que tu vises, par opposition à ce que tu as.
+  const wish = useWishlist()
   // Persos à moi et vérifiés : la seule base honnête pour dire « il te manque ».
   const myChars = useMemo(
     () => ready.filter((m) => verifiedIds.includes(m.id)),
@@ -881,6 +884,7 @@ export default function App() {
                 items={fashionItems}
                 ready={activeReady}
                 ownedSets={ownedSets}
+                wishes={wish.wishes}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -947,6 +951,7 @@ export default function App() {
                 items={db[tab]}
                 ready={activeReady}
                 ownedSets={ownedSets}
+                wishes={wish.wishes}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1015,6 +1020,7 @@ export default function App() {
               <Market
                 db={db}
                 chars={ready.filter((m) => verifiedIds.includes(m.id))}
+                wishes={wish.wishes}
                 onBuy={async (charId, kind, id) => {
                   await auth.saveCollections(charId, { [kind]: { add: [id] } })
                   invalidateCharacter(charId)
@@ -1056,6 +1062,8 @@ export default function App() {
             shown={shownItem}
             ready={ready}
             ownedSets={ownedSets}
+            wished={wish.has(shownItem.kind, shownItem.item.id)}
+            onToggleWish={() => wish.toggle(shownItem.kind, shownItem.item.id)}
             onClose={() => setShownItem(null)}
           />
         )}

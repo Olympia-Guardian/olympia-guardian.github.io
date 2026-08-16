@@ -669,6 +669,40 @@ const STR = {
   newsAllOwned: { fr: 'tout est coché', en: 'all ticked' },
   newsSeeIn: { fr: 'Voir dans la collection', en: 'Open in the collection' },
   newsMore: { fr: '+ {n} autres dans la collection', en: '+{n} more in the collection' },
+  // Liste de souhaits
+  wishAdd: { fr: 'Je le veux', en: 'I want it' },
+  wishRemove: { fr: 'Dans mes souhaits', en: 'On my wishlist' },
+  wishAddTitle: {
+    fr: 'Ajouter à ma liste de souhaits (gardée sur cet appareil)',
+    en: 'Add to my wishlist (kept on this device)',
+  },
+  wishRemoveTitle: { fr: 'Retirer de ma liste de souhaits', en: 'Remove from my wishlist' },
+  wishMark: { fr: 'Sur ma liste de souhaits', en: 'On my wishlist' },
+  wishOnly: { fr: 'Mes souhaits', en: 'My wishlist' },
+  wishOnlyTitle: {
+    fr: 'Ne chercher que les objets de ma liste de souhaits',
+    en: 'Search only the items on my wishlist',
+  },
+  // Courbes de l'administration
+  chartNotEnough: {
+    fr: 'Pas encore assez de mesures pour une courbe.',
+    en: 'Not enough measurements for a curve yet.',
+  },
+  chartNumbers: { fr: 'Voir les chiffres', en: 'Show the numbers' },
+  chartMax: { fr: 'max {n}', en: 'max {n}' },
+  chartAria: {
+    fr: '{titre} : {n} au total sur {jours} jours',
+    en: '{titre}: {n} in total over {jours} days',
+  },
+  chartScrapes: { fr: 'Lectures du Lodestone', en: 'Lodestone reads' },
+  chartScrapesHint: {
+    fr: 'Volume quotidien des fiches lues. Une chute brutale trahit une panne, une montée un emballement.',
+    en: 'Daily volume of profiles read. A sudden drop means an outage, a spike means a runaway.',
+  },
+  chartFailHint: {
+    fr: 'Lectures échouées par jour. Une marche qui monte annonce un blocage ou un changement de leur HTML.',
+    en: 'Failed reads per day. A rising step signals a block or a change in their HTML.',
+  },
   newsTodo: { fr: 'À trouver', en: 'To find' },
   newsOwned: { fr: 'Tu l’as déjà', en: 'You already have it' },
   newsShop: { fr: 'Boutique', en: 'Store' },
@@ -790,8 +824,8 @@ const STR = {
   },
   helpCollectionsTitle: { fr: 'Collections', en: 'Collections' },
   helpCollectionsBody: {
-    fr: 'La matrice croise les objets et les membres du groupe actif. Une croix rouge se clique : sur TON perso elle coche l’objet direct au journal, sur celui d’un autre elle lui propose l’objet (il accepte ou refuse depuis sa cloche, en attendant, c’est coché de ton côté). Montures et mascottes suivent le Lodestone.',
-    en: 'The matrix crosses items with the active group’s members. A red cross is clickable: on YOUR character it checks the item straight into your journal, on someone else’s it suggests the item to them (they accept or refuse from their bell, meanwhile it shows as checked on your side). Mounts and minions follow the Lodestone.',
+    fr: 'La matrice croise les objets et les membres du groupe actif. Une croix rouge se clique : sur TON perso elle coche l’objet direct au journal, sur celui d’un autre elle lui propose l’objet (il accepte ou refuse depuis sa cloche, en attendant, c’est coché de ton côté). Montures et mascottes suivent le Lodestone. Clique le nom d’un objet pour ouvrir sa fiche : c’est là qu’on l’ajoute à sa liste de souhaits, qui sert ensuite de filtre ici et de liste de courses dans Mon Marché.',
+    en: 'The matrix crosses items with the active group’s members. A red cross is clickable: on YOUR character it checks the item straight into your journal, on someone else’s it suggests the item to them (they accept or refuse from their bell, meanwhile it shows as checked on your side). Mounts and minions follow the Lodestone. Click an item name to open its sheet: that is where you add it to your wishlist, which then works as a filter here and as a shopping list in My Market.',
   },
   helpRelicsTitle: { fr: 'Avancement', en: 'Progress' },
   helpRelicsBody: {

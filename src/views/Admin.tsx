@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { WORKER_API } from '../api'
 import { useI18n } from '../i18n'
 import { StatTile, TabIcon } from '../ui'
+import { DayChart, serieParJour } from './Chart'
 
 interface Overview {
   tiles: {
@@ -419,6 +420,32 @@ export function AdminPage({ token }: { token: string }) {
                 </div>
               )
             })()
+          )}
+          {/* Les cartes disent où on en est, les courbes disent où ça va :
+              une panne s'installe rarement d'un coup, elle monte. */}
+          {metrics !== null && metrics.length > 0 && (
+            <div className="chart-grid">
+              <DayChart
+                titre={t('adminHealthLodestone')}
+                aide={t('chartFailHint')}
+                points={serieParJour(metrics, 'lodestone_echec', 14)}
+              />
+              <DayChart
+                titre={t('chartScrapes')}
+                aide={t('chartScrapesHint')}
+                points={serieParJour(metrics, 'lodestone_ok', 14)}
+              />
+              <DayChart
+                titre={t('adminHealthErrors')}
+                aide={t('adminHealthErrorsHint')}
+                points={serieParJour(metrics, 'erreur_worker', 14)}
+              />
+              <DayChart
+                titre={t('adminHealthThrottle')}
+                aide={t('adminHealthThrottleHint')}
+                points={serieParJour(metrics, 'debit_refuse', 14)}
+              />
+            </div>
           )}
         </section>
       )}

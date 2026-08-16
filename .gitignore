@@ -8,3 +8,7 @@ dist/
 # état local de wrangler dev (worker)
 worker/.wrangler/
 worker/.dev-dump.sql
+
+# Sauvegardes de la base : contiennent comptes, sessions et identifiants
+# Discord. Ne doivent JAMAIS partir dans un depot, public ou non.
+backups/

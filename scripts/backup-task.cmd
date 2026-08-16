@@ -5,7 +5,9 @@ REM depuis la tache : le planificateur ne resout pas les scripts PowerShell de n
 REM et n'a pas le PATH d'une session interactive.
 REM
 REM Installation (une fois, dans une console) :
-REM   schtasks /create /tn "Codex Olympia - sauvegarde" /tr "c:\Dev\OGS\scripts\backup-task.cmd" /sc daily /st 13:00
+REM   schtasks /create /tn "Codex Olympia - sauvegarde" /tr "c:\Dev\OGS\scripts\backup-task.cmd" /sc daily /st 21:00
+REM Changer l'heure : refaire le /create ci-dessus avec /f. Passer par
+REM /change demande un mot de passe et desactive la tache si on ne le donne pas.
 REM Desinstallation :
 REM   schtasks /delete /tn "Codex Olympia - sauvegarde" /f
 

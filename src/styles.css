@@ -2243,24 +2243,47 @@ a.player-name:hover {
 
 /* ------------------------------------------------------------ page de compte */
 
+/* Une colonne de cartes, comme les groupes et l'administration : sans matière
+   ni largeur tenue, les quatre sections se lisaient comme un mur de texte
+   flottant à gauche d'un écran vide. */
+.account-view {
+  max-width: 880px;
+  gap: 14px;
+}
+
 .account-view h2 {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
 }
 
 .account-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 0 22px 22px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
+/* Bandeau de titre, repris des séries de reliques et des blocs de l'admin. */
 .account-block h3 {
-  margin: 0;
-  font-size: 15px;
+  align-self: stretch;
+  /* Le bandeau déborde du rembourrage du bloc pour aller d'un bord à l'autre. */
+  margin: 0 -22px 6px;
+  padding: 13px 22px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--hairline);
 }
+
 
 .account-h4 {
   margin: 6px 0 0;
@@ -2281,6 +2304,28 @@ a.player-name:hover {
   width: 100%;
 }
 
+/* Le contrôle de fichier natif jure avec tout le reste : on le cache et on
+   déclenche le même bouton que partout ailleurs. */
+.account-file input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.account-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.account-file-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .account-row img {
   border-radius: 50%;
 }
@@ -2297,16 +2342,35 @@ a.player-name:hover {
 
 .account-preview {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--gold);
   border-radius: var(--radius-s);
 }
 
+/* Une pastille par collection plutôt qu'une liste à puces sur deux colonnes,
+   qui envoyait la moitié des lignes à l'autre bout de l'écran. */
 .account-preview ul {
-  margin: 6px 0;
-  padding-left: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-preview li {
   font-size: 12px;
-  columns: 2;
+  padding: 3px 9px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+
+.account-preview li b {
+  color: var(--ink);
 }
 
 .account-confirm {

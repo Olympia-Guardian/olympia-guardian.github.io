@@ -690,6 +690,7 @@ const STR = {
     fr: 'FFXIV Collect permet d’exporter tes collections dans un fichier. Dépose-le ici : les identifiants sont les mêmes que les nôtres, tout se retrouve d’un coup, y compris ce que le Lodestone ne publie pas.',
     en: 'FFXIV Collect can export your collections to a file. Drop it here: the ids match ours, so everything comes across at once, including what the Lodestone does not publish.',
   },
+  accountImportPick: { fr: 'Choisir le fichier', en: 'Choose the file' },
   accountImportFound: { fr: '{n} objets reconnus', en: '{n} items recognised' },
   accountImportUnknown: { fr: '{n} ignorés (inconnus de nos catalogues)', en: '{n} skipped (unknown to our catalogues)' },
   accountImportAddOnly: {

@@ -73,6 +73,7 @@ export function AccountPage({
   } | null>(null)
   const [etat, setEtat] = useState<'' | 'lecture' | 'envoi' | 'fait' | 'erreur'>('')
   const [suppression, setSuppression] = useState(false)
+  const [nomFichier, setNomFichier] = useState('')
 
   async function choisirFichier(f: File | undefined) {
     if (!f || !db) return
@@ -96,6 +97,7 @@ export function AccountPage({
       await onImport(cible, apercu.par)
       setEtat('fait')
       setApercu(null)
+      setNomFichier('')
       if (fichier.current) fichier.current.value = ''
     } catch {
       setEtat('erreur')
@@ -191,13 +193,22 @@ export function AccountPage({
             ))}
           </select>
         )}
-        <input
-          ref={fichier}
-          type="file"
-          accept="application/json,.json"
-          disabled={!db || chars.length === 0}
-          onChange={(e) => void choisirFichier(e.target.files?.[0])}
-        />
+        <label className="account-file">
+          <input
+            ref={fichier}
+            type="file"
+            accept="application/json,.json"
+            disabled={!db || chars.length === 0}
+            onChange={(e) => {
+              setNomFichier(e.target.files?.[0]?.name ?? '')
+              void choisirFichier(e.target.files?.[0])
+            }}
+          />
+          <span className="btn btn-ghost btn-mini">
+            <TabIcon k="collect" /> {t('accountImportPick')}
+          </span>
+          {nomFichier && <span className="account-file-name">{nomFichier}</span>}
+        </label>
         {/* Récapitulatif avant écriture : on ne verse rien dans un journal sans
             avoir dit ce qu'on y verse. */}
         {apercu && (

@@ -23,6 +23,7 @@ import {
 import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
+import { patchNews } from './news'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
@@ -139,6 +140,17 @@ export default function App() {
       ),
     [db, ready, verifiedIds, lang, crossIgnored],
   )
+  // Nouveautés du dernier patch, lues dans les catalogues déjà chargés. Écarter
+  // vaut pour ce patch-là : le suivant se réannoncera tout seul.
+  const news = useMemo(
+    () => patchNews(db, ready.filter((m) => verifiedIds.includes(m.id))),
+    [db, ready, verifiedIds],
+  )
+  const [newsSeen, setNewsSeen] = useState<string | null>(() => lsGet('ogs.newsseen.v1'))
+  const newsShown = news && news.patch !== newsSeen ? news : null
+  // Collection ouverte depuis la cloche : la vue ne montre que ces nouveautés.
+  const [newsKind, setNewsKind] = useState<Kind | null>(null)
+
   async function respondCross(item: CrossSuggestion, accept: boolean) {
     if (!accept) {
       ignoreCross(item.key)
@@ -254,6 +266,29 @@ export default function App() {
     if ((FASHION_KINDS as string[]).includes(t ?? '') || t === 'fashion') return 'fashion'
     return (KINDS as string[]).includes(t ?? '') ? (t as Kind) : 'mounts'
   })
+  // Le filtre « nouveautés » ne vaut que sur l'onglet d'où il vient : quitter
+  // la collection le lève de lui-même, sans effet à écrire ni à oublier.
+  const newsOnly = useMemo(() => {
+    if (!news || !newsKind) return undefined
+    const surCetOnglet =
+      tab === newsKind || (tab === 'fashion' && (FASHION_KINDS as string[]).includes(newsKind))
+    const line = surCetOnglet ? news.lines.find((l) => l.kind === newsKind) : undefined
+    if (!line) return undefined
+    return {
+      keys: new Set(line.ids.map((id) => `${newsKind}:${id}`)),
+      label: t('newsFilter', { patch: news.patch }),
+      onClear: () => setNewsKind(null),
+    }
+  }, [news, newsKind, tab, t])
+  /** Ouvre une collection sur les seules nouveautés du patch (depuis la cloche). */
+  function openNews(k: Kind) {
+    const dest = (FASHION_KINDS as string[]).includes(k) ? 'fashion' : k
+    setNewsKind(k)
+    setTab(dest as Tab)
+    setCollectionTab(dest as Kind | 'fashion')
+    setBellOpen(false)
+  }
+
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
   const [reporting, setReporting] = useState(false)
@@ -442,8 +477,10 @@ export default function App() {
                     onClick={() => setBellOpen((v) => !v)}
                   >
                     <TabIcon k="bell" />
-                    {sugg.count + crossItems.length > 0 && (
-                      <span className="bell-badge">{sugg.count + crossItems.length}</span>
+                    {sugg.count + crossItems.length + (newsShown ? 1 : 0) > 0 && (
+                      <span className="bell-badge">
+                        {sugg.count + crossItems.length + (newsShown ? 1 : 0)}
+                      </span>
                     )}
                   </button>
                   {bellOpen && (
@@ -452,6 +489,7 @@ export default function App() {
                       friendRequests={sugg.friendRequests}
                       groupInvites={sugg.groupInvites}
                       crossItems={crossItems}
+                      news={newsShown}
                       verifiedIds={verifiedIds}
                       db={db}
                       relicDb={relicDb}
@@ -471,6 +509,12 @@ export default function App() {
                       onRespondInvite={(groupId, accept, charId) =>
                         void sugg.respondInvite(groupId, accept, charId).then(() => grp.refreshServer())
                       }
+                      onOpenNews={openNews}
+                      onDismissNews={() => {
+                        if (!news) return
+                        setNewsSeen(news.patch)
+                        lsSet('ogs.newsseen.v1', news.patch)
+                      }}
                       onClose={() => setBellOpen(false)}
                     />
                   )}
@@ -791,6 +835,7 @@ export default function App() {
                 items={fashionItems}
                 ready={activeReady}
                 ownedSets={ownedSets}
+                only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
                   auth.token && grp.active?.shared
@@ -854,6 +899,7 @@ export default function App() {
                 items={db[tab]}
                 ready={activeReady}
                 ownedSets={ownedSets}
+                only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
                   auth.token && grp.active?.shared

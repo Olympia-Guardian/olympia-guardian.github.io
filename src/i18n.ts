@@ -653,6 +653,19 @@ const STR = {
   friendRequestsTitle: { fr: 'Demandes de contact', en: 'Contact requests' },
   friendRequestWants: { fr: 'souhaite t’ajouter en contact', en: 'wants to add you as a contact' },
   suggestionsSection: { fr: 'Suggestions d’objets', en: 'Item suggestions' },
+  // Nouveautés du dernier patch, en bas de la cloche
+  newsTitle: { fr: 'Nouveautés du patch {patch}', en: 'New in patch {patch}' },
+  newsDismiss: { fr: 'Vu', en: 'Got it' },
+  newsOpen: { fr: 'Voir ces nouveautés dans la collection', en: 'Show these in the collection' },
+  newsCount1: { fr: '1 nouveauté', en: '1 new item' },
+  newsCountN: { fr: '{n} nouveautés', en: '{n} new items' },
+  newsMissing: { fr: '{n} à trouver', en: '{n} to find' },
+  newsAllOwned: { fr: 'tout est coché', en: 'all ticked' },
+  newsFilter: {
+    fr: 'Nouveautés du patch {patch} seulement.',
+    en: 'Patch {patch} additions only.',
+  },
+  newsFilterClear: { fr: 'Tout revoir', en: 'Show everything' },
   contactsTitle: { fr: 'Contacts', en: 'Contacts' },
   contactLinkTitle: { fr: 'Mon lien de contact', en: 'My contact link' },
   contactCopy: { fr: 'Copier', en: 'Copy' },
@@ -780,8 +793,8 @@ const STR = {
   },
   helpBellTitle: { fr: 'Notifications', en: 'Notifications' },
   helpBellBody: {
-    fr: 'La cloche sonne en direct : suggestions d’objets (accepter = l’objet est coché ; pour une monture ou mascotte c’est temporaire, la prochaine synchro Lodestone confirme), demandes de contact et invitations de groupe. Tout se traite en un clic, unitairement ou en masse.',
-    en: 'The bell rings live: item suggestions (accepting checks the item; for a mount or minion it’s temporary, the next Lodestone sync confirms), contact requests and group invitations. Everything resolves in one click, one by one or in bulk.',
+    fr: 'La cloche sonne en direct : suggestions d’objets (accepter = l’objet est coché ; pour une monture ou mascotte c’est temporaire, la prochaine synchro Lodestone confirme), demandes de contact et invitations de groupe. Tout se traite en un clic, unitairement ou en masse. Tout en bas, les nouveautés du dernier patch : une ligne par collection, avec ce qu’il te reste à trouver, et un clic ouvre la collection sur ces seuls objets.',
+    en: 'The bell rings live: item suggestions (accepting checks the item; for a mount or minion it’s temporary, the next Lodestone sync confirms), contact requests and group invitations. Everything resolves in one click, one by one or in bulk. At the bottom, the latest patch additions: one line per collection with what you still have to find, and a click opens the collection on those items only.',
   },
   // Tableau de bord super-admin
   adminTitle: { fr: 'Administration', en: 'Administration' },

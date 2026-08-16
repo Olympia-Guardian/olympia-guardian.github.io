@@ -54,6 +54,7 @@ export function Matrix({
   ownedSets,
   onShowItem,
   titleLabel,
+  only,
   suggest,
   ownAdd,
 }: {
@@ -64,6 +65,11 @@ export function Matrix({
   onShowItem: (item: Item, kind: Kind) => void
   /** Vue fusionnée (« Mode ») : libellé de recherche personnalisé. */
   titleLabel?: string
+  /** Restriction venue d'ailleurs (la cloche, pour les nouveautés d'un patch) :
+   *  la vue ne montre que ces objets, en le disant et en offrant d'en sortir.
+   *  Les clés valent « collection:id » — dans la vue « Mode » deux collections
+   *  peuvent porter le même identifiant. */
+  only?: { keys: Set<string>; label: string; onClear: () => void }
   /** Groupe online : cliquer la croix d'un AUTRE joueur lui propose l'objet.
    *  Tant que la suggestion est en attente (sentKeys), l'objet apparaît coché
    *  de MON côté — un refus du destinataire ramène la croix. */
@@ -131,6 +137,7 @@ export function Matrix({
         return { item, missing }
       })
       .filter(({ item, missing }) => {
+        if (only && !only.keys.has(`${kindFor(item)}:${item.id}`)) return false
         if (q && !item.name.toLowerCase().includes(q) &&
             !item.nameEn.toLowerCase().includes(q) &&
             !item.description.toLowerCase().includes(q) &&
@@ -156,7 +163,7 @@ export function Matrix({
         break
     }
     return list
-  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, suggest?.sentKeys])
+  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, suggest?.sentKeys])
 
   return (
     <div className="view">
@@ -209,6 +216,15 @@ export function Matrix({
           {t('includeUnavailable')}
         </label>
       </div>
+
+      {only && (
+        <p className="notice notice-filter">
+          <span>{only.label}</span>
+          <button className="btn btn-ghost btn-mini" onClick={only.onClear}>
+            {t('newsFilterClear')}
+          </button>
+        </p>
+      )}
 
       {HIDDEN_KINDS.includes(kind) && <p className="notice">{t('matrixNotice')}</p>}
 

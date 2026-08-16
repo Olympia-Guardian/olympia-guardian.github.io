@@ -1811,6 +1811,31 @@ a.player-name:hover {
   border-radius: 50%;
 }
 
+/* Nouveautés du patch : une lecture, pas une file d'actions — d'où le titre
+   avec son « Vu » et des lignes qui s'ouvrent d'un clic sur la collection. */
+.notif-section-news {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notif-news {
+  cursor: pointer;
+  border-radius: var(--radius-s);
+  padding: 4px 6px;
+  margin: 0 -6px;
+}
+
+.notif-news:hover,
+.notif-news:focus-visible {
+  background: var(--surface-2, var(--surface));
+}
+
+.notif-news .kind-icon {
+  flex-shrink: 0;
+}
+
 /* ------------------------------------------------------------------- admin */
 
 .admin-head-actions {
@@ -2229,6 +2254,15 @@ a.player-name:hover {
   border-left: 3px solid var(--gold);
   border-radius: var(--radius-s);
   padding: 8px 12px;
+}
+
+/* La vue est restreinte (nouveautés d'un patch) : le dire là où on le lit,
+   avec la sortie juste à côté — sinon la liste courte passe pour un bug. */
+.notice-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .more {

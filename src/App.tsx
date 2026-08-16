@@ -24,6 +24,7 @@ import { apiSuggest } from './groupsApi'
 import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
+import { NewsPage } from './views/News'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
@@ -36,7 +37,17 @@ import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
 
-type Tab = 'planning' | Kind | 'fashion' | 'relics' | 'mypage' | 'market' | 'groups' | 'admin' | 'guide'
+type Tab =
+  | 'planning'
+  | Kind
+  | 'fashion'
+  | 'relics'
+  | 'mypage'
+  | 'market'
+  | 'groups'
+  | 'admin'
+  | 'guide'
+  | 'news'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -140,16 +151,19 @@ export default function App() {
       ),
     [db, ready, verifiedIds, lang, crossIgnored],
   )
-  // Nouveautés du dernier patch, lues dans les catalogues déjà chargés. Écarter
-  // vaut pour ce patch-là : le suivant se réannoncera tout seul.
-  const news = useMemo(
-    () => patchNews(db, ready.filter((m) => verifiedIds.includes(m.id))),
-    [db, ready, verifiedIds],
+  // Persos à moi et vérifiés : la seule base honnête pour dire « il te manque ».
+  const myChars = useMemo(
+    () => ready.filter((m) => verifiedIds.includes(m.id)),
+    [ready, verifiedIds],
   )
+  // Nouveautés du dernier patch, lues dans les catalogues déjà chargés. Sert au
+  // rappel de l'accueil ; la page « Notes de patch » refait le calcul pour le
+  // patch qu'on y choisit.
+  const news = useMemo(() => patchNews(db, myChars), [db, myChars])
   const [newsSeen, setNewsSeen] = useState<string | null>(() => lsGet('ogs.newsseen.v1'))
-  const newsShown = news && news.patch !== newsSeen ? news : null
-  // Collection ouverte depuis la cloche : la vue ne montre que ces nouveautés.
-  const [newsKind, setNewsKind] = useState<Kind | null>(null)
+  const newsCard = news && news.patch !== newsSeen ? news : null
+  // Collection ouverte depuis les notes de patch : elle ne montre que ces objets.
+  const [newsFilter, setNewsFilter] = useState<{ kind: Kind; patch: string } | null>(null)
 
   async function respondCross(item: CrossSuggestion, accept: boolean) {
     if (!accept) {
@@ -252,6 +266,7 @@ export default function App() {
       t === 'fashion' ||
       t === 'admin' ||
       t === 'guide' ||
+      t === 'news' ||
       (KINDS as string[]).includes(t ?? '')
     )
       return t as Tab
@@ -269,24 +284,27 @@ export default function App() {
   // Le filtre « nouveautés » ne vaut que sur l'onglet d'où il vient : quitter
   // la collection le lève de lui-même, sans effet à écrire ni à oublier.
   const newsOnly = useMemo(() => {
-    if (!news || !newsKind) return undefined
+    if (!db || !newsFilter) return undefined
+    const { kind, patch } = newsFilter
     const surCetOnglet =
-      tab === newsKind || (tab === 'fashion' && (FASHION_KINDS as string[]).includes(newsKind))
-    const line = surCetOnglet ? news.lines.find((l) => l.kind === newsKind) : undefined
-    if (!line) return undefined
+      tab === kind || (tab === 'fashion' && (FASHION_KINDS as string[]).includes(kind))
+    if (!surCetOnglet) return undefined
+    const keys = new Set(
+      db[kind].filter((it) => it.patch === patch).map((it) => `${kind}:${it.id}`),
+    )
+    if (keys.size === 0) return undefined
     return {
-      keys: new Set(line.ids.map((id) => `${newsKind}:${id}`)),
-      label: t('newsFilter', { patch: news.patch }),
-      onClear: () => setNewsKind(null),
+      keys,
+      label: t('newsFilter', { patch }),
+      onClear: () => setNewsFilter(null),
     }
-  }, [news, newsKind, tab, t])
-  /** Ouvre une collection sur les seules nouveautés du patch (depuis la cloche). */
-  function openNews(k: Kind) {
+  }, [db, newsFilter, tab, t])
+  /** Ouvre une collection sur les seules nouveautés d'un patch. */
+  function openCollectionForPatch(k: Kind, patch: string) {
     const dest = (FASHION_KINDS as string[]).includes(k) ? 'fashion' : k
-    setNewsKind(k)
+    setNewsFilter({ kind: k, patch })
     setTab(dest as Tab)
     setCollectionTab(dest as Kind | 'fashion')
-    setBellOpen(false)
   }
 
   const [creatingGroup, setCreatingGroup] = useState(false)
@@ -477,10 +495,8 @@ export default function App() {
                     onClick={() => setBellOpen((v) => !v)}
                   >
                     <TabIcon k="bell" />
-                    {sugg.count + crossItems.length + (newsShown ? 1 : 0) > 0 && (
-                      <span className="bell-badge">
-                        {sugg.count + crossItems.length + (newsShown ? 1 : 0)}
-                      </span>
+                    {sugg.count + crossItems.length > 0 && (
+                      <span className="bell-badge">{sugg.count + crossItems.length}</span>
                     )}
                   </button>
                   {bellOpen && (
@@ -489,7 +505,6 @@ export default function App() {
                       friendRequests={sugg.friendRequests}
                       groupInvites={sugg.groupInvites}
                       crossItems={crossItems}
-                      news={newsShown}
                       verifiedIds={verifiedIds}
                       db={db}
                       relicDb={relicDb}
@@ -509,12 +524,6 @@ export default function App() {
                       onRespondInvite={(groupId, accept, charId) =>
                         void sugg.respondInvite(groupId, accept, charId).then(() => grp.refreshServer())
                       }
-                      onOpenNews={openNews}
-                      onDismissNews={() => {
-                        if (!news) return
-                        setNewsSeen(news.patch)
-                        lsSet('ogs.newsseen.v1', news.patch)
-                      }}
                       onClose={() => setBellOpen(false)}
                     />
                   )}
@@ -556,6 +565,15 @@ export default function App() {
                           }}
                         >
                           <TabIcon k="guide" /> {t('guideTitle')}
+                        </button>
+                        <button
+                          className="account-menu-item"
+                          onClick={() => {
+                            setTab('news')
+                            setAccountOpen(false)
+                          }}
+                        >
+                          <TabIcon k="news" /> {t('newsTab')}
                         </button>
                         <button
                           className="account-menu-item"
@@ -661,7 +679,8 @@ export default function App() {
             tab !== 'market' &&
             tab !== 'groups' &&
             tab !== 'admin' &&
-            tab !== 'guide' && (
+            tab !== 'guide' &&
+            tab !== 'news' && (
           <RosterBar
             members={members}
             activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}
@@ -820,6 +839,33 @@ export default function App() {
               <p className="empty">{t('allAbsent')}</p>
             )}
 
+            {/* Rappel d'accueil : sans lui, personne n'irait jamais chercher
+                les notes de patch. Il s'efface pour ce patch d'un clic, et
+                revient tout seul au suivant. */}
+            {tab === 'planning' && newsCard && (
+              <div className="notice news-recall">
+                <span>
+                  {t('newsCard', { patch: newsCard.patch, n: newsCard.total })}
+                  {newsCard.missing !== null && newsCard.missing > 0 && (
+                    <b> {t('newsMissing', { n: newsCard.missing })}</b>
+                  )}
+                </span>
+                <span className="news-recall-actions">
+                  <button className="btn btn-primary btn-mini" onClick={() => setTab('news')}>
+                    {t('newsCardSee')}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-mini"
+                    onClick={() => {
+                      setNewsSeen(newsCard.patch)
+                      lsSet('ogs.newsseen.v1', newsCard.patch)
+                    }}
+                  >
+                    {t('newsCardHide')}
+                  </button>
+                </span>
+              </div>
+            )}
             {db && activeReady.length > 0 && tab === 'planning' && (
               <Planning
                 db={db}
@@ -880,6 +926,7 @@ export default function App() {
               tab !== 'groups' &&
               tab !== 'admin' &&
               tab !== 'guide' &&
+              tab !== 'news' &&
               tab !== 'fashion' &&
               dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
             {db &&
@@ -891,6 +938,7 @@ export default function App() {
               tab !== 'groups' &&
               tab !== 'admin' &&
               tab !== 'guide' &&
+              tab !== 'news' &&
               tab !== 'fashion' &&
               !dbPending.has(tab) && (
               <Matrix
@@ -955,6 +1003,14 @@ export default function App() {
               <AdminPage token={auth.token} />
             )}
             {tab === 'guide' && <GuidePage />}
+            {tab === 'news' && (
+              <NewsPage
+                db={db}
+                chars={myChars}
+                onShowItem={(item, kind) => setShownItem({ item, kind })}
+                onOpenCollection={openCollectionForPatch}
+              />
+            )}
             {db && tab === 'market' && (
               <Market
                 db={db}
@@ -1027,6 +1083,10 @@ export default function App() {
           <p className="footer-meta">
             <button className="footer-link" onClick={() => setTab('guide')}>
               {t('guideTitle')}
+            </button>
+            {' · '}
+            <button className="footer-link" onClick={() => setTab('news')}>
+              {t('newsTab')}
             </button>
             {auth.token && (
               <>

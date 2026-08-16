@@ -1,16 +1,15 @@
 // Panneau de la cloche : invitations de groupe, demandes d'ami et suggestions
-// reçues — chacune à accepter ou refuser (les suggestions aussi en masse) —
-// puis, en bas, les nouveautés du dernier patch, qui ne se traitent pas mais
-// se lisent.
+// reçues — chacune à accepter ou refuser (les suggestions aussi en masse).
+// Rien d'autre : tout ce qui se lit sans se traiter vit ailleurs, sinon la
+// pastille cesse de vouloir dire « il y a quelque chose à faire ».
 
 import { useEffect, useState } from 'react'
 import { fetchCharacter, type Kind, type RelicDb } from './api'
 import type { CrossSuggestion } from './crossOutfits'
 import type { ApiFriendRequest, ApiGroupInvite, ApiSuggestion } from './groupsApi'
 import { kindLabel, useI18n } from './i18n'
-import type { News } from './news'
 import type { Db } from './store'
-import { onItemImgError, TabIcon } from './ui'
+import { onItemImgError } from './ui'
 
 function useCharName(charId: number): string | null {
   const [name, setName] = useState<string | null>(null)
@@ -123,7 +122,6 @@ export function NotificationsPanel({
   friendRequests,
   groupInvites,
   crossItems,
-  news,
   verifiedIds,
   db,
   relicDb,
@@ -131,8 +129,6 @@ export function NotificationsPanel({
   onRespondFriend,
   onRespondInvite,
   onRespondCross,
-  onOpenNews,
-  onDismissNews,
   onClose,
 }: {
   suggestions: ApiSuggestion[]
@@ -140,8 +136,6 @@ export function NotificationsPanel({
   groupInvites: ApiGroupInvite[]
   /** Reports possibles entre tenues et armoire (calculés côté navigateur). */
   crossItems: CrossSuggestion[]
-  /** Nouveautés du dernier patch, tant qu'elles n'ont pas été écartées. */
-  news: News | null
   verifiedIds: number[]
   db: Db | null
   relicDb: RelicDb | null
@@ -149,16 +143,12 @@ export function NotificationsPanel({
   onRespondFriend: (userId: string, accept: boolean) => void
   onRespondInvite: (groupId: string, accept: boolean, charId?: number) => void
   onRespondCross: (item: CrossSuggestion, accept: boolean) => void
-  onOpenNews: (kind: Kind) => void
-  onDismissNews: () => void
   onClose: () => void
 }) {
-  const { lang, t } = useI18n()
+  const { t } = useI18n()
   const showChar = new Set(suggestions.map((s) => s.charId)).size > 1
-  // Les nouveautés comptent pour une : c'est une lecture, pas une pile d'actions.
-  const actions =
+  const total =
     suggestions.length + friendRequests.length + groupInvites.length + crossItems.length
-  const total = actions + (news ? 1 : 0)
   const plusieursPersos = new Set(crossItems.map((c) => c.charId)).size > 1
   return (
     <div className="notif-panel">
@@ -241,7 +231,7 @@ export function NotificationsPanel({
           </div>
         </>
       )}
-      {actions === 0 && !news ? (
+      {total === 0 ? (
         <p className="notif-empty">{t('suggestionsEmpty')}</p>
       ) : suggestions.length === 0 ? null : (
         <>
@@ -272,39 +262,6 @@ export function NotificationsPanel({
                 showChar={showChar}
                 onResolve={(accept) => onResolve([s.id], accept)}
               />
-            ))}
-          </div>
-        </>
-      )}
-      {news && (
-        <>
-          <p className="notif-section notif-section-news">
-            <span>{t('newsTitle', { patch: news.patch })}</span>
-            <button className="btn btn-ghost btn-mini" onClick={onDismissNews}>
-              {t('newsDismiss')}
-            </button>
-          </p>
-          <div className="notif-list">
-            {news.lines.map((l) => (
-              <div
-                className="notif-row notif-news"
-                key={l.kind}
-                role="button"
-                tabIndex={0}
-                title={t('newsOpen')}
-                onClick={() => onOpenNews(l.kind)}
-                onKeyDown={(e) => e.key === 'Enter' && onOpenNews(l.kind)}
-              >
-                <TabIcon k={l.kind} />
-                <span className="notif-text">
-                  <b>{kindLabel(lang, l.kind)}</b>
-                  <small>
-                    {t(l.ids.length > 1 ? 'newsCountN' : 'newsCount1', { n: l.ids.length })}
-                    {l.missing !== null && l.missing > 0 && ` · ${t('newsMissing', { n: l.missing })}`}
-                    {l.missing === 0 && ` · ${t('newsAllOwned')}`}
-                  </small>
-                </span>
-              </div>
             ))}
           </div>
         </>

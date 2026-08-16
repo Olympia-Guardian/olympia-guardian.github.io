@@ -176,6 +176,7 @@ const TAB_ICONS: Record<string, string> = {
   addfriend: '000018',
   newgroup: '000017',
   quick: '000025',
+  news: '000080',
   inspect: '000046',
   purge: '000029',
 }

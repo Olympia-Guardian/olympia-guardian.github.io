@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { KIND_INFO, type Character, type Item, type Kind } from './api'
 import { localName, localSource, useI18n } from './i18n'
 import type { Member } from './store'
-import { AvatarStack, KindChip, TypeChip, onItemImgError } from './ui'
+import { AvatarStack, KindChip, TabIcon, TypeChip, onItemImgError } from './ui'
 
 type Ready = Member & { data: Character }
 
@@ -15,11 +15,17 @@ export function ItemModal({
   shown,
   ready,
   ownedSets,
+  wished,
+  onToggleWish,
   onClose,
 }: {
   shown: ShownItem
   ready: Ready[]
   ownedSets: Map<number, Record<Kind, Set<number>>>
+  /** Sur la liste de souhaits ? La fiche est le seul endroit qui voit toujours
+   *  l'objet en entier, c'est donc là que le souhait se pose et se retire. */
+  wished: boolean
+  onToggleWish: () => void
   onClose: () => void
 }) {
   const { lang, t } = useI18n()
@@ -69,6 +75,13 @@ export function ItemModal({
                 </span>
               )}
             </p>
+            <button
+              className={`btn btn-mini modal-wish ${wished ? 'is-active' : 'btn-ghost'}`}
+              onClick={onToggleWish}
+              title={t(wished ? 'wishRemoveTitle' : 'wishAddTitle')}
+            >
+              <TabIcon k="wish" /> {t(wished ? 'wishRemove' : 'wishAdd')}
+            </button>
           </div>
         </div>
 

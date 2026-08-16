@@ -3,7 +3,8 @@ import { HIDDEN_KINDS, type Character, type Item, type Kind, type Source } from 
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
 import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
-import { TypeChip, onAvatarImgError, onItemImgError } from '../ui'
+import { TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
+import type { Wishes } from '../wishlist'
 
 type Ready = Member & { data: Character }
 
@@ -54,6 +55,7 @@ export function Matrix({
   ownedSets,
   onShowItem,
   titleLabel,
+  wishes,
   only,
   suggest,
   ownAdd,
@@ -65,6 +67,8 @@ export function Matrix({
   onShowItem: (item: Item, kind: Kind) => void
   /** Vue fusionnée (« Mode ») : libellé de recherche personnalisé. */
   titleLabel?: string
+  /** Liste de souhaits : marque les objets voulus et permet de s'y limiter. */
+  wishes?: Wishes
   /** Restriction venue d'ailleurs (la cloche, pour les nouveautés d'un patch) :
    *  la vue ne montre que ces objets, en le disant et en offrant d'en sortir.
    *  Les clés valent « collection:id » — dans la vue « Mode » deux collections
@@ -94,6 +98,7 @@ export function Matrix({
   const [typeFilter, setTypeFilter] = useState('all')
   const [groupFilter, setGroupFilter] = useState('all')
   const [onlyMissing, setOnlyMissing] = useState(true)
+  const [onlyWished, setOnlyWished] = useState(false)
   const [includeUnavailable, setIncludeUnavailable] = useState(false)
   const [sort, setSort] = useState<SortMode>('missing')
   const [visible, setVisible] = useState(80)
@@ -148,6 +153,7 @@ export function Matrix({
         if (typeFilter !== 'all' && !item.sources.some((s) => s.type === typeFilter)) return false
         if (groupFilter !== 'all' && (item.groupEn ?? item.group) !== groupFilter) return false
         if (!includeUnavailable && !itemStillObtainable(item)) return false
+        if (onlyWished && !(wishes?.[kindFor(item)] ?? []).includes(item.id)) return false
         if (onlyMissing && missing.length === 0) return false
         return true
       })
@@ -163,7 +169,7 @@ export function Matrix({
         break
     }
     return list
-  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, suggest?.sentKeys])
+  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, onlyWished, wishes, suggest?.sentKeys])
 
   return (
     <div className="view">
@@ -215,6 +221,18 @@ export function Matrix({
           />
           {t('includeUnavailable')}
         </label>
+        {/* La case n'apparaît que s'il y a des souhaits ici : proposer un
+            filtre qui ne peut rien donner n'aide personne. */}
+        {items.some((it) => (wishes?.[kindFor(it)] ?? []).includes(it.id)) && (
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={onlyWished}
+              onChange={(e) => setOnlyWished(e.target.checked)}
+            />
+            {t('wishOnly')}
+          </label>
+        )}
       </div>
 
       {only && (
@@ -263,6 +281,11 @@ export function Matrix({
                       <div className="item-text">
                         <span className="item-name">
                           {name}
+                          {(wishes?.[kindFor(item)] ?? []).includes(item.id) && (
+                            <span className="wish-mark" title={t('wishMark')}>
+                              <TabIcon k="wish" />
+                            </span>
+                          )}
                           {item.kindOf && (
                             <span className="chip chip-type">{kindLabel(lang, item.kindOf, 'short')}</span>
                           )}

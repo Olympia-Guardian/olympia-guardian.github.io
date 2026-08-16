@@ -669,6 +669,11 @@ const STR = {
   newsAllOwned: { fr: 'tout est coché', en: 'all ticked' },
   newsSeeIn: { fr: 'Voir dans la collection', en: 'Open in the collection' },
   newsMore: { fr: '+ {n} autres dans la collection', en: '+{n} more in the collection' },
+  charPartial: {
+    fr: 'Notre serveur n’a pas répondu : les collections cochées à la main ne sont pas affichées. Rien n’est perdu, elles sont en sécurité côté serveur.',
+    en: 'Our server did not answer: hand-ticked collections are not shown. Nothing is lost, they are safe on the server.',
+  },
+  charPartialRetry: { fr: 'Réessayer', en: 'Retry' },
   // Liste de souhaits
   wishAdd: { fr: 'Je le veux', en: 'I want it' },
   wishRemove: { fr: 'Dans mes souhaits', en: 'On my wishlist' },

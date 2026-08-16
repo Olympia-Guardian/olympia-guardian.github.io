@@ -211,6 +211,10 @@ export type Character = { [K in Kind]: CharCollection } & {
   profile: CharProfile | null
   /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
   nextForceAt: number
+  /** Fiche de secours FFXIV Collect, servie quand notre serveur n'a pas répondu :
+   *  elle ignore tout des collections cochées à la main. Jamais mise en cache,
+   *  et signalée à l'écran — sans ça, elle se lit comme une collection perdue. */
+  partial?: boolean
 }
 
 const DB_TTL = 24 * 3600 * 1000 // la base d'objets bouge à chaque patch, pas plus
@@ -246,7 +250,10 @@ const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du m
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
-const CHAR_V = 'v11' // fiches de personnage (v11 : compteurs avec et sans boutique)
+// v12 : purge obligatoire — les fiches de secours FFXIV Collect ont pu être
+// mises en cache par la version précédente, avec zéro barde, zéro tenue, zéro
+// pièce d'armoire et zéro portrait. Changer la version les jette toutes.
+const CHAR_V = 'v12'
 
 /** Purge les caches des versions précédentes : ils ne servent plus et
  *  encombrent un localStorage déjà juste. */
@@ -482,7 +489,11 @@ export async function fetchCharacter(lodestoneId: number, force = false): Promis
 
   try {
     const url = `${WORKER_API}/character/${lodestoneId}${force ? '?force=1' : ''}`
-    let res = await fetch(url, { headers: sessionHeaders(), signal: AbortSignal.timeout(15000) })
+    // 15 s tombait pile dans le pire cas légitime du serveur : jusqu'à 3 s
+    // d'attente du jeton Lodestone, 8 s de lecture, plus D1 et un démarrage à
+    // froid. Le navigateur abandonnait donc une requête qui allait aboutir —
+    // les compteurs du worker ne montrent d'ailleurs ni erreur ni refus.
+    let res = await fetch(url, { headers: sessionHeaders(), signal: AbortSignal.timeout(25000) })
     if (res.status === 404) {
       throw Object.assign(new Error("Personnage introuvable — vérifie l'ID Lodestone."), {
         notFound: true,
@@ -506,15 +517,26 @@ export async function fetchCharacter(lodestoneId: number, force = false): Promis
     return char
   } catch (e) {
     if ((e as any)?.notFound) throw e
-    // Secours : FFXIV Collect en direct si le worker est injoignable.
+
+    // Le worker n'a pas répondu (délai dépassé, coupure, erreur). Il est LA
+    // source des onze collections cochées à la main : FFXIV Collect n'en sait
+    // rien et renverrait zéro barde, zéro tenue, zéro pièce d'armoire, zéro
+    // portrait et une partie seulement des rouleaux. Servir ça pour une panne
+    // de trois secondes se lit comme une collection effacée.
+    //
+    // Donc, dans l'ordre : une fiche en cache même périmée d'abord — une vérité
+    // un peu vieille vaut mieux qu'un faux zéro ; le secours seulement si on
+    // n'a rien du tout, jamais mis en cache, et marqué comme incomplet pour que
+    // l'écran le dise au lieu de laisser croire à une perte.
+    const perime = readCache<Character>(cacheKey, Infinity)
+    if (perime) return perime
+
     const res = await fetch(`${API}/characters/${lodestoneId}?ids=true`)
     if (res.status === 404) {
       throw new Error("Personnage introuvable — vérifie l'ID Lodestone.")
     }
     if (!res.ok) throw new Error(`FFXIV Collect a répondu ${res.status}`)
-    const char = mapCharacter(await res.json())
-    writeCache(cacheKey, char)
-    return char
+    return { ...mapCharacter(await res.json()), partial: true }
   }
 }
 

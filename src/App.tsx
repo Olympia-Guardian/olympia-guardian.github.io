@@ -824,6 +824,22 @@ export default function App() {
                 </button>
               </div>
             )}
+            {/* Fiche de secours : elle ignore les collections cochées à la
+                main et se lirait comme une perte. On le dit, et on propose de
+                réessayer plutôt que de laisser quelqu'un croire au pire. */}
+            {ready.some((m) => m.data.partial) && (
+              <p className="notice notice-stale">
+                {t('charPartial')}{' '}
+                <button
+                  className="btn btn-mini btn-ghost"
+                  onClick={() => {
+                    for (const m of ready.filter((x) => x.data.partial)) refresh(m.id)
+                  }}
+                >
+                  {t('charPartialRetry')}
+                </button>
+              </p>
+            )}
             {dataAge !== null && dataAge >= 3 && (
               <p className="notice notice-stale">{t('dataStale', { n: dataAge })}</p>
             )}

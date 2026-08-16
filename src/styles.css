@@ -4621,3 +4621,9 @@ a.player-name:hover {
 .admin-health-card.lvl-low {
   border-left-color: var(--critical);
 }
+
+.admin-health-card b small {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 400;
+}

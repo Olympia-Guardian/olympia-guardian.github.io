@@ -1015,6 +1015,53 @@ async function createReport(env, user, raw) {
   return response('{"ok":true}')
 }
 
+/** Adoption : tout se calcule sur la base existante, aucune instrumentation
+ *  supplementaire n'est necessaire. On compte les ACTIFS et non les inscrits :
+ *  un total d'inscriptions ne fait que monter et ne fait jamais agir, alors
+ *  que la retention dit si l'application sert vraiment. */
+async function adminAdoption(env) {
+  const j7 = Date.now() - 7 * 86_400_000
+  const j30 = Date.now() - 30 * 86_400_000
+  const [total, actifs7, actifs30, persos, verifies, groupes, vivants, anciens, revenus, coches] =
+    await env.DB.batch([
+      env.DB.prepare('SELECT COUNT(*) AS n FROM users'),
+      env.DB.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM tokens WHERE created > ?1').bind(j7),
+      env.DB.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM tokens WHERE created > ?1').bind(j30),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM bindings'),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM bindings WHERE verified = 1'),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM groups'),
+      env.DB.prepare('SELECT COUNT(*) AS n FROM groups WHERE updated > ?1').bind(j30),
+      // Retention : parmi ceux inscrits il y a plus d'une semaine, combien
+      // sont revenus dans les 30 derniers jours.
+      env.DB.prepare('SELECT COUNT(*) AS n FROM users WHERE created < ?1').bind(j7),
+      env.DB
+        .prepare(
+          'SELECT COUNT(DISTINCT u.id) AS n FROM users u JOIN tokens t ON t.user_id = u.id ' +
+            'WHERE u.created < ?1 AND t.created > ?2',
+        )
+        .bind(j7, j30),
+      // Activite reelle : des collections cochees a la main recemment.
+      env.DB
+        .prepare("SELECT COUNT(DISTINCT char_id) AS n FROM collections WHERE source = 'user' AND updated > ?1")
+        .bind(j30),
+    ])
+  const nb = (r) => r.results?.[0]?.n ?? 0
+  const base = nb(anciens)
+  return response(
+    JSON.stringify({
+      comptes: nb(total),
+      actifs7: nb(actifs7),
+      actifs30: nb(actifs30),
+      persos: nb(persos),
+      verifies: nb(verifies),
+      groupes: nb(groupes),
+      groupesVivants: nb(vivants),
+      retention: base > 0 ? Math.round((nb(revenus) / base) * 100) : null,
+      persosActifs: nb(coches),
+    }),
+  )
+}
+
 /** Compteurs des 14 derniers jours, pour les courbes de l'administration. */
 async function listMetrics(env) {
   const depuis = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10)
@@ -2854,6 +2901,7 @@ const routes = {
       if (url.pathname === '/admin/overview' && req.method === 'GET') return adminOverview(env)
       if (url.pathname === '/admin/reports' && req.method === 'GET') return listReports(env)
       if (url.pathname === '/admin/metrics' && req.method === 'GET') return listMetrics(env)
+      if (url.pathname === '/admin/adoption' && req.method === 'GET') return adminAdoption(env)
       const repMatch = url.pathname.match(/^\/admin\/reports\/(rep-[\w-]{10,60})$/)
       if (repMatch && req.method === 'POST') {
         const raw = await req.text()

@@ -108,6 +108,27 @@ const STR = {
   adminTabOverview: { fr: "Vue d'ensemble", en: 'Overview' },
   adminTabReports: { fr: 'Signalements', en: 'Reports' },
   adminTabHealth: { fr: 'Santé', en: 'Health' },
+  adminTabAdoption: { fr: 'Adoption', en: 'Adoption' },
+  adminAdoActive7: { fr: 'Actifs cette semaine', en: 'Active this week' },
+  adminAdoActive7Hint: {
+    fr: '{n} sur 30 jours. On compte les actifs, pas les inscrits : un total qui ne fait que monter ne fait jamais agir.',
+    en: '{n} over 30 days. Active users, not signups: a number that only goes up never prompts a decision.',
+  },
+  adminAdoRetention: { fr: 'Reviennent', en: 'Come back' },
+  adminAdoRetentionHint: {
+    fr: "Part des comptes de plus d'une semaine revenus dans les 30 derniers jours. Le seul chiffre qui dit si l'appli sert vraiment.",
+    en: 'Share of accounts older than a week that returned in the last 30 days. The only figure that tells you the app is actually useful.',
+  },
+  adminAdoChars: { fr: 'Personnages vérifiés', en: 'Verified characters' },
+  adminAdoCharsHint: {
+    fr: '{n} ont coché quelque chose à la main ces 30 derniers jours.',
+    en: '{n} ticked something by hand in the last 30 days.',
+  },
+  adminAdoGroups: { fr: 'Groupes vivants', en: 'Live groups' },
+  adminAdoGroupsHint: {
+    fr: 'Ayant bougé ces 30 derniers jours, sur le total créé.',
+    en: 'Changed in the last 30 days, out of all created.',
+  },
   adminHealthFresh: { fr: 'Âge des catalogues', en: 'Catalogue age' },
   adminHealthFreshHint: {
     fr: 'Au-delà de 72 h, le rafraîchissement nocturne est en panne.',

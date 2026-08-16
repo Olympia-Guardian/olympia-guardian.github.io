@@ -103,6 +103,18 @@ interface Report {
   handled: number
 }
 
+interface Adoption {
+  comptes: number
+  actifs7: number
+  actifs30: number
+  persos: number
+  verifies: number
+  groupes: number
+  groupesVivants: number
+  retention: number | null
+  persosActifs: number
+}
+
 interface Metric {
   jour: string
   cle: string
@@ -117,10 +129,11 @@ export function AdminPage({ token }: { token: string }) {
   const [pin, setPin] = useState(lirePin)
   const [saisie, setSaisie] = useState('')
   const [verrouille, setVerrouille] = useState(false)
-  const [onglet, setOnglet] = useState<'apercu' | 'sante' | 'reports' | 'comptes' | 'groupes'>('apercu')
+  const [onglet, setOnglet] = useState<'apercu' | 'sante' | 'adoption' | 'reports' | 'comptes' | 'groupes'>('apercu')
   const [reports, setReports] = useState<Report[] | null>(null)
   const [metrics, setMetrics] = useState<Metric[] | null>(null)
   const [fraicheur, setFraicheur] = useState<number | null>(null)
+  const [adoption, setAdoption] = useState<Adoption | null>(null)
 
   const entetes = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
@@ -180,6 +193,18 @@ export function AdminPage({ token }: { token: string }) {
   // Santé : les compteurs du worker, plus l'âge des catalogues. Ce dernier ne
   // vient pas de la base mais du fichier publié par le cron : c'est justement
   // le signal qui dit si ce cron tourne encore.
+  useEffect(() => {
+    if (onglet !== 'adoption' || adoption !== null || !pin) return
+    void (async () => {
+      try {
+        const res = await fetch(`${WORKER_API}/admin/adoption`, { headers: entetes() })
+        if (res.ok) setAdoption(await res.json())
+      } catch {
+        // l'onglet affichera l'etat de chargement
+      }
+    })()
+  }, [onglet, adoption, pin, entetes])
+
   useEffect(() => {
     if (onglet !== 'sante' || metrics !== null || !pin) return
     void (async () => {
@@ -308,6 +333,7 @@ export function AdminPage({ token }: { token: string }) {
           [
             ['apercu', t('adminTabOverview')],
             ['sante', t('adminTabHealth')],
+            ['adoption', t('adminTabAdoption')],
             ['reports', t('adminTabReports')],
             ['comptes', t('adminTabAccounts')],
             ['groupes', t('adminTabGroups')],
@@ -377,6 +403,46 @@ export function AdminPage({ token }: { token: string }) {
                 </div>
               )
             })()
+          )}
+        </section>
+      )}
+
+      {onglet === 'adoption' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabAdoption')}</h4>
+          </header>
+          {adoption === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : (
+            <div className="admin-health">
+              <div className="admin-health-card">
+                <b>
+                  {adoption.actifs7} <small>/ {adoption.comptes}</small>
+                </b>
+                <span>{t('adminAdoActive7')}</span>
+                <small>{t('adminAdoActive7Hint', { n: adoption.actifs30 })}</small>
+              </div>
+              <div className="admin-health-card">
+                <b>{adoption.retention === null ? '—' : `${adoption.retention} %`}</b>
+                <span>{t('adminAdoRetention')}</span>
+                <small>{t('adminAdoRetentionHint')}</small>
+              </div>
+              <div className="admin-health-card">
+                <b>
+                  {adoption.verifies} <small>/ {adoption.persos}</small>
+                </b>
+                <span>{t('adminAdoChars')}</span>
+                <small>{t('adminAdoCharsHint', { n: adoption.persosActifs })}</small>
+              </div>
+              <div className="admin-health-card">
+                <b>
+                  {adoption.groupesVivants} <small>/ {adoption.groupes}</small>
+                </b>
+                <span>{t('adminAdoGroups')}</span>
+                <small>{t('adminAdoGroupsHint')}</small>
+              </div>
+            </div>
           )}
         </section>
       )}

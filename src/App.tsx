@@ -25,6 +25,7 @@ import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
 import { useWishlist } from './wishlist'
+import { AccountPage } from './views/Account'
 import { NewsPage } from './views/News'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
@@ -49,6 +50,7 @@ type Tab =
   | 'admin'
   | 'guide'
   | 'news'
+  | 'account'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -270,6 +272,7 @@ export default function App() {
       t === 'admin' ||
       t === 'guide' ||
       t === 'news' ||
+      t === 'account' ||
       (KINDS as string[]).includes(t ?? '')
     )
       return t as Tab
@@ -572,6 +575,15 @@ export default function App() {
                         <button
                           className="account-menu-item"
                           onClick={() => {
+                            setTab('account')
+                            setAccountOpen(false)
+                          }}
+                        >
+                          <TabIcon k="account" /> {t('accountTitle')}
+                        </button>
+                        <button
+                          className="account-menu-item"
+                          onClick={() => {
                             setTab('news')
                             setAccountOpen(false)
                           }}
@@ -683,7 +695,8 @@ export default function App() {
             tab !== 'groups' &&
             tab !== 'admin' &&
             tab !== 'guide' &&
-            tab !== 'news' && (
+            tab !== 'news' &&
+              tab !== 'account' && (
           <RosterBar
             members={members}
             activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}
@@ -947,6 +960,7 @@ export default function App() {
               tab !== 'admin' &&
               tab !== 'guide' &&
               tab !== 'news' &&
+              tab !== 'account' &&
               tab !== 'fashion' &&
               dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
             {db &&
@@ -959,6 +973,7 @@ export default function App() {
               tab !== 'admin' &&
               tab !== 'guide' &&
               tab !== 'news' &&
+              tab !== 'account' &&
               tab !== 'fashion' &&
               !dbPending.has(tab) && (
               <Matrix
@@ -1024,6 +1039,28 @@ export default function App() {
               <AdminPage token={auth.token} />
             )}
             {tab === 'guide' && <GuidePage />}
+            {tab === 'account' && auth.user && auth.token && (
+              <AccountPage
+                user={auth.user}
+                token={auth.token}
+                db={db}
+                lang={lang}
+                setLang={setLang}
+                chars={myChars.map((m) => ({ id: m.id, name: m.data.name }))}
+                onImport={async (charId, par) => {
+                  // Uniquement des ajouts : un fichier partiel ne peut rien
+                  // effacer, et le frein du worker n'a même pas à intervenir.
+                  const delta = Object.fromEntries(
+                    Object.entries(par).map(([k, ids]) => [k, { add: ids }]),
+                  )
+                  await auth.saveCollections(charId, delta)
+                  invalidateCharacter(charId)
+                  reload(charId)
+                }}
+                onLogout={auth.logout}
+                onManageChars={() => setTab('mypage')}
+              />
+            )}
             {tab === 'news' && (
               <NewsPage
                 db={db}

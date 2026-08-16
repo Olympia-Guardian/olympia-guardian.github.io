@@ -2609,6 +2609,26 @@ async function adminDeleteUser(env, admin, targetId) {
   if (targetId === admin.id) return response('{"error":"cannot delete yourself"}', 422)
   const target = await env.DB.prepare('SELECT id FROM users WHERE id = ?1').bind(targetId).first()
   if (!target) return response('{"error":"no such user"}', 404)
+  await env.DB.batch(await effacerCompte(env, targetId, false))
+  return response('{"ok":true}')
+}
+
+/** DELETE /me : le titulaire efface son propre compte. Le RGPD en fait un
+ *  droit, et jusqu'ici seul l'administrateur pouvait le faire — c'est-à-dire
+ *  qu'il fallait écrire à quelqu'un pour disparaître.
+ *
+ *  Ses collections cochées à la main partent avec lui : ce sont ses données,
+ *  pas celles du personnage. Les fiches de perso restent, elles ne contiennent
+ *  que du public relu sur le Lodestone. L'écran propose l'export juste au-dessus
+ *  du bouton, pour que personne n'efface sans avoir pu emporter une copie. */
+async function deleteMe(env, user) {
+  await env.DB.batch(await effacerCompte(env, user.id, true))
+  return response('{"ok":true}')
+}
+
+/** Toutes les suppressions d'un compte, en une liste d'ordres à exécuter d'un
+ *  bloc : un compte à moitié effacé serait pire que pas effacé du tout. */
+async function effacerCompte(env, targetId, avecCollections) {
   const owned = await env.DB.prepare('SELECT id FROM groups WHERE owner_user_id = ?1')
     .bind(targetId)
     .all()
@@ -2655,8 +2675,59 @@ async function adminDeleteUser(env, admin, targetId) {
     env.DB.prepare('DELETE FROM tokens WHERE user_id = ?1').bind(targetId),
     env.DB.prepare('DELETE FROM users WHERE id = ?1').bind(targetId),
   )
-  await env.DB.batch(stmts)
-  return response('{"ok":true}')
+  if (avecCollections) {
+    for (const c of verifiedChars.results) {
+      stmts.push(
+        env.DB.prepare("DELETE FROM collections WHERE char_id = ?1 AND source = 'user'").bind(
+          c.char_id,
+        ),
+      )
+    }
+  }
+  return stmts
+}
+
+/** GET /me/export : tout ce que nous détenons sur ce compte, en un fichier.
+ *  Le pendant de la suppression : pouvoir partir suppose de pouvoir emporter.
+ *  Les collections sortent au format de FFXIV Collect — mêmes noms, mêmes
+ *  identifiants — pour que le fichier serve ailleurs et pas seulement ici. */
+async function exportMe(env, user) {
+  const [bindings, groupes, contacts] = await Promise.all([
+    env.DB.prepare('SELECT char_id, verified, created FROM bindings WHERE user_id = ?1')
+      .bind(user.id)
+      .all(),
+    env.DB.prepare('SELECT id, name, shared, created FROM groups WHERE owner_user_id = ?1')
+      .bind(user.id)
+      .all(),
+    env.DB.prepare('SELECT friend_id, status, created FROM contacts WHERE user_id = ?1')
+      .bind(user.id)
+      .all(),
+  ])
+  const collections = {}
+  for (const b of bindings.results.filter((b) => b.verified)) {
+    const rows = await env.DB.prepare(
+      "SELECT kind, ids FROM collections WHERE char_id = ?1 AND source = 'user'",
+    )
+      .bind(b.char_id)
+      .all()
+    collections[b.char_id] = Object.fromEntries(
+      rows.results.map((r) => [r.kind, JSON.parse(r.ids)]),
+    )
+  }
+  return response(
+    JSON.stringify(
+      {
+        exporte_le: new Date().toISOString(),
+        compte: { id: user.id, nom: user.name, avatar: user.avatar },
+        personnages: bindings.results,
+        collections,
+        groupes: groupes.results,
+        contacts: contacts.results,
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 /** POST /admin/purge-tokens : supprime les sessions expirées. */
@@ -2888,6 +2959,16 @@ const routes = {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
       return response(JSON.stringify(await getMe(env, user)))
+    }
+    if (url.pathname === '/me' && req.method === 'DELETE') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return deleteMe(env, user)
+    }
+    if (url.pathname === '/me/export' && req.method === 'GET') {
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      return exportMe(env, user)
     }
     if (url.pathname === '/bind' && req.method === 'POST') {
       const user = await authenticate(env, req)

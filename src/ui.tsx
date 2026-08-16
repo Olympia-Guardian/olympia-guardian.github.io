@@ -178,6 +178,7 @@ const TAB_ICONS: Record<string, string> = {
   quick: '000025',
   news: '000080',
   wish: '000004',
+  account: '000015',
   inspect: '000046',
   purge: '000029',
 }

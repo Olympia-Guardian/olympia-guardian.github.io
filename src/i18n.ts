@@ -669,6 +669,46 @@ const STR = {
   newsAllOwned: { fr: 'tout est coché', en: 'all ticked' },
   newsSeeIn: { fr: 'Voir dans la collection', en: 'Open in the collection' },
   newsMore: { fr: '+ {n} autres dans la collection', en: '+{n} more in the collection' },
+  // Page de compte
+  accountTitle: { fr: 'Mon compte', en: 'My account' },
+  accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },
+  accountLang: { fr: 'Langue de l’application', en: 'Application language' },
+  accountChars: { fr: 'Mes personnages', en: 'My characters' },
+  accountCharsHint: {
+    fr: '{n} personnage(s) vérifié(s). La liaison, la vérification et le déliement se font dans Mon Journal.',
+    en: '{n} verified character(s). Linking, verifying and unlinking happen in My Journal.',
+  },
+  accountCharsManage: { fr: 'Gérer mes personnages', en: 'Manage my characters' },
+  accountData: { fr: 'Mes données', en: 'My data' },
+  accountDataWhat: {
+    fr: 'Nous gardons ton compte Discord (identifiant, nom, avatar), tes personnages liés, tes collections cochées à la main, tes groupes et tes contacts. Rien d’autre.',
+    en: 'We keep your Discord account (id, name, avatar), your linked characters, your hand-ticked collections, your groups and your contacts. Nothing else.',
+  },
+  accountExport: { fr: 'Tout télécharger', en: 'Download everything' },
+  accountImport: { fr: 'Importer depuis FFXIV Collect', en: 'Import from FFXIV Collect' },
+  accountImportHint: {
+    fr: 'FFXIV Collect permet d’exporter tes collections dans un fichier. Dépose-le ici : les identifiants sont les mêmes que les nôtres, tout se retrouve d’un coup, y compris ce que le Lodestone ne publie pas.',
+    en: 'FFXIV Collect can export your collections to a file. Drop it here: the ids match ours, so everything comes across at once, including what the Lodestone does not publish.',
+  },
+  accountImportFound: { fr: '{n} objets reconnus', en: '{n} items recognised' },
+  accountImportUnknown: { fr: '{n} ignorés (inconnus de nos catalogues)', en: '{n} skipped (unknown to our catalogues)' },
+  accountImportAddOnly: {
+    fr: 'L’import ajoute seulement : rien de ce qui est déjà coché ne sera retiré.',
+    en: 'The import only adds: nothing already ticked will be removed.',
+  },
+  accountImportDo: { fr: 'Verser dans mon journal', en: 'Add to my journal' },
+  accountImportDone: { fr: 'Import terminé.', en: 'Import complete.' },
+  accountError: { fr: 'Échec : fichier illisible ou serveur injoignable.', en: 'Failed: unreadable file or unreachable server.' },
+  accountDelete: { fr: 'Supprimer mon compte', en: 'Delete my account' },
+  accountDeleteWhat: {
+    fr: 'Efface ton compte, tes liaisons de personnages, tes groupes, tes contacts et tes collections cochées à la main. Les fiches de personnage restent : elles ne contiennent que du public relu sur le Lodestone. Pense à télécharger tes données avant.',
+    en: 'Erases your account, your character links, your groups, your contacts and your hand-ticked collections. Character sheets remain: they only hold public data read from the Lodestone. Download your data first.',
+  },
+  accountDeleteConfirm: {
+    fr: 'C’est définitif et rien ne pourra être restauré. On y va ?',
+    en: 'This is permanent and nothing can be restored. Go ahead?',
+  },
+  accountDeleteYes: { fr: 'Oui, tout supprimer', en: 'Yes, delete everything' },
   charPartial: {
     fr: 'Notre serveur n’a pas répondu : les collections cochées à la main ne sont pas affichées. Rien n’est perdu, elles sont en sécurité côté serveur.',
     en: 'Our server did not answer: hand-ticked collections are not shown. Nothing is lost, they are safe on the server.',

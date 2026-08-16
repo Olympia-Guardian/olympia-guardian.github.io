@@ -2241,6 +2241,91 @@ a.player-name:hover {
   gap: 12px;
 }
 
+/* ------------------------------------------------------------ page de compte */
+
+.account-view h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.account-block h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.account-h4 {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.account-block p {
+  margin: 0;
+  font-size: 12px;
+  max-width: 70ch;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.account-row img {
+  border-radius: 50%;
+}
+
+.account-id {
+  display: flex;
+  flex-direction: column;
+  margin-right: auto;
+}
+
+.account-id small {
+  font-size: 11px;
+}
+
+.account-preview {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-s);
+}
+
+.account-preview ul {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  columns: 2;
+}
+
+.account-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* La zone dangereuse se distingue : on n'y arrive pas par inadvertance. */
+.account-danger {
+  border-color: var(--critical);
+}
+
+.btn.is-danger {
+  color: var(--critical);
+  border-color: var(--critical);
+}
+
 /* ------------------------------------------------------ liste de souhaits */
 
 /* L'étoile suit le nom de l'objet, dans les grilles comme dans les résultats

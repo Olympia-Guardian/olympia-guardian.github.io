@@ -896,6 +896,14 @@ async function unbindCharacter(env, user, charId) {
   return response(JSON.stringify({ charId, unbound: true }))
 }
 
+/** Un retrait est « massif » s'il emporte au moins vingt entrées ET plus du
+ *  quart de la collection. Les deux conditions ensemble : décocher quatre
+ *  bardes sur dix reste un geste banal, perdre 150 pièces d'armoire sur 150
+ *  n'en est jamais un. */
+const PERTE_MIN = 20
+const PERTE_PART = 0.25
+const perteMassive = (perdus, avant) => perdus >= PERTE_MIN && perdus > avant * PERTE_PART
+
 async function putCollections(env, user, charId, raw) {
   const binding = await env.DB.prepare(
     'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
@@ -943,25 +951,65 @@ async function putCollections(env, user, charId, raw) {
     deltas.push([kind, add, remove])
   }
 
-  if (deltas.length > 0) {
-    const actuels = await env.DB.prepare('SELECT kind, ids FROM collections WHERE char_id = ?1')
-      .bind(charId)
-      .all()
-    const parKind = new Map(actuels.results.map((r) => [r.kind, JSON.parse(r.ids)]))
-    for (const [kind, add, remove] of deltas) {
-      const s = new Set(parKind.get(kind) ?? [])
-      for (const id of add) s.add(id)
-      for (const id of remove) s.delete(id)
-      rows.push([charId, kind, JSON.stringify([...s]), now])
-    }
+  if (rows.length === 0 && deltas.length === 0) {
+    return response('{"error":"nothing to update"}', 422)
   }
 
-  if (rows.length === 0) return response('{"error":"nothing to update"}', 422)
+  // État courant : les deux formes en ont besoin, car le frein et le journal
+  // comparent toujours à ce qui existe déjà.
+  const actuels = await env.DB.prepare('SELECT kind, ids FROM collections WHERE char_id = ?1')
+    .bind(charId)
+    .all()
+  const parKind = new Map(actuels.results.map((r) => [r.kind, JSON.parse(r.ids)]))
+
+  for (const [kind, add, remove] of deltas) {
+    const s = new Set(parKind.get(kind) ?? [])
+    for (const id of add) s.add(id)
+    for (const id of remove) s.delete(id)
+    rows.push([charId, kind, JSON.stringify([...s]), now])
+  }
+
+  // Frein et journal, sur le résultat final quelle que soit la forme envoyée.
+  const retraits = []
+  for (const r of rows) {
+    const avant = new Set(parKind.get(r[1]) ?? [])
+    if (avant.size === 0) continue
+    const apres = new Set(JSON.parse(r[2]))
+    const perdus = [...avant].filter((id) => !apres.has(id))
+    if (perdus.length === 0) continue
+    if (perteMassive(perdus.length, avant.size) && doc?.force !== true) {
+      // Refus plutôt qu'exécution : une perte massive en une requête n'est
+      // jamais un geste ordinaire. Si elle est voulue, elle se redemande avec
+      // `force`. Cloudflare n'offrant aucun retour arrière sur cette base, ce
+      // refus est la seule barrière entre un bogue et une collection effacée.
+      return response(
+        JSON.stringify({
+          error: 'mass removal refused',
+          kind: r[1],
+          removing: perdus.length,
+          of: avant.size,
+        }),
+        409,
+      )
+    }
+    retraits.push([charId, r[1], JSON.stringify(perdus), apres.size, now])
+  }
+
   const stmt = env.DB.prepare(
     'INSERT INTO collections (char_id, kind, ids, updated, source) VALUES (?1, ?2, ?3, ?4, ?5) ' +
       'ON CONFLICT(char_id, kind) DO UPDATE SET ids=?3, updated=?4, source=?5',
   )
-  await env.DB.batch(rows.map((r) => stmt.bind(...r, 'user')))
+  const ecritures = rows.map((r) => stmt.bind(...r, 'user'))
+  if (retraits.length > 0) {
+    // Le journal part dans le MÊME lot que la collection : ou les deux
+    // s'écrivent, ou aucun. Un retrait sans sa trace serait exactement le
+    // trou qu'on cherche à fermer.
+    const jstmt = env.DB.prepare(
+      'INSERT INTO removals (char_id, kind, ids, restants, at) VALUES (?1, ?2, ?3, ?4, ?5)',
+    )
+    for (const t of retraits) ecritures.push(jstmt.bind(...t))
+  }
+  await env.DB.batch(ecritures)
   await notify(env, await usersSharingChar(env, charId), { t: 'char', id: charId })
   return response('{"ok":true}')
 }

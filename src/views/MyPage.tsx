@@ -18,7 +18,6 @@ import type { useAuth } from '../auth'
 import { apiSearchCharacter, type CharSearchResult } from '../groupsApi'
 import { kindLabel, localName, useI18n } from '../i18n'
 import { sourceIcon, typeLabel } from '../sources'
-import { GiCheckMark, GiPadlock, GiRoundStar } from 'react-icons/gi'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
 import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError, xivIconUrl } from '../ui'
 import { useFlushOnHide } from '../useFlushOnHide'
@@ -331,7 +330,7 @@ function SpellBook({
               <span className="spell-top">
                 <span className="spell-name">
                   {localName(it, lang)}
-                  {has && <GiCheckMark className="spell-check" />}
+                  {has && <span className="spell-check">✓</span>}
                 </span>
                 <span className="spell-no">{t('spellNo', { n: it.order })}</span>
               </span>
@@ -342,7 +341,9 @@ function SpellBook({
                 </span>
                 <span className="spell-stars" title={`${it.rank ?? 0}/5`}>
                   {Array.from({ length: 5 }, (_, i) => (
-                    <GiRoundStar key={i} className={i < (it.rank ?? 0) ? 'is-filled' : ''} />
+                    <span key={i} className={i < (it.rank ?? 0) ? 'is-filled' : ''}>
+                      ★
+                    </span>
                   ))}
                 </span>
               </span>
@@ -1733,9 +1734,7 @@ export function MyPage({
                           « {(lang === 'fr' && char.profile.titleFr) || char.profile.title} »
                         </span>
                       )}
-                      <span className="chip chip-owned">
-                        <GiCheckMark /> {t('bindVerifiedChip')}
-                      </span>
+                      <span className="chip chip-owned">✓ {t('bindVerifiedChip')}</span>
                       {char.profile?.grandCompany && (
                         <span className="char-org" title={t('factGC')}>
                           {char.profile.gcIcon && (
@@ -1842,8 +1841,10 @@ export function MyPage({
                     />
                   )}
                 </div>
+                {/* L'icône du Lodestone plutôt qu'un cadenas : elle dit d'où
+                    vient la lecture seule, pas seulement qu'elle existe. */}
                 <p className="mypage-note">
-                  <GiPadlock /> {t('myPageAutoNote')}
+                  <TabIcon k="lodestone" /> {t('myPageAutoNote')}
                 </p>
               </div>
             </div>
@@ -1872,7 +1873,12 @@ export function MyPage({
                         onClick={() => setKind(k)}
                       >
                         <TabIcon k={k} />
-                        {locked && <GiPadlock className="tab-lock" />} {kindLabel(lang, k, 'short')}
+                        {locked && (
+                          <span className="tab-lock" title={t('myPageAutoNote')}>
+                            <TabIcon k="lodestone" />
+                          </span>
+                        )}{' '}
+                        {kindLabel(lang, k, 'short')}
                       </button>
                     )
                   })}

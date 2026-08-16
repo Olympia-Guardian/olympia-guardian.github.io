@@ -3147,19 +3147,18 @@ a.player-name:hover {
   font-weight: 600;
 }
 
-.mode-btn svg {
-  font-size: 15px;
-}
 
 .tab-lock {
-  vertical-align: -2px;
+  display: inline-flex;
+  vertical-align: -3px;
   opacity: 0.7;
 }
 
-.account-btn svg {
-  font-size: 16px;
-  vertical-align: -3px;
+.tab-lock .kind-icon {
+  width: 14px;
+  height: 14px;
 }
+
 
 /* Quatorze jauges : on remplit la largeur disponible plutôt que trois colonnes
    figées, sinon l'en-tête du perso occupe la moitié de l'écran. */
@@ -3196,9 +3195,6 @@ a.player-name:hover {
   gap: 4px;
 }
 
-.mypage-char-name .chip-owned svg {
-  font-size: 10px;
-}
 
 .mypage-user {
   margin-left: auto;
@@ -3222,8 +3218,10 @@ a.player-name:hover {
   gap: 7px;
 }
 
-.mypage-note svg {
+.mypage-note .kind-icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   opacity: 0.7;
 }
 

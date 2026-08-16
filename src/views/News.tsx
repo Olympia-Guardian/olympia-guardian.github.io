@@ -97,11 +97,12 @@ export function NewsPage({
           <div className="news-grid">
             {l.items.slice(0, MAX_CARTES).map((it) => {
               const manque = l.missingIds.has(it.id)
+              const possede = l.ownedIds.has(it.id)
               const boutique = it.sources.some((s) => s.type === 'Premium')
               const source = it.sources[0]
               return (
                 <div
-                  className={`news-card ${manque ? 'is-todo' : ''}`}
+                  className={`news-card ${manque ? 'is-todo' : ''} ${possede ? 'is-owned' : ''}`}
                   key={it.id}
                   role="button"
                   tabIndex={0}
@@ -109,13 +110,22 @@ export function NewsPage({
                   onClick={() => onShowItem(it, l.kind)}
                   onKeyDown={(e) => e.key === 'Enter' && onShowItem(it, l.kind)}
                 >
-                  <img
-                    className="item-icon"
-                    src={it.icon}
-                    alt=""
-                    loading="lazy"
-                    onError={onItemImgError}
-                  />
+                  {/* La coche se pose sur l'icône : elle se voit d'un coup d'œil
+                      sans manger la ligne de texte, déjà chargée. */}
+                  <span className="news-thumb">
+                    <img
+                      className="item-icon"
+                      src={it.icon}
+                      alt=""
+                      loading="lazy"
+                      onError={onItemImgError}
+                    />
+                    {possede && (
+                      <span className="news-check" title={t('newsOwned')} aria-label={t('newsOwned')}>
+                        ✓
+                      </span>
+                    )}
+                  </span>
                   {/* Nom sur deux lignes au plus, puis une ligne d'état : les
                       cartes gardent la même hauteur, la grille reste lisible. */}
                   <div className="item-text">

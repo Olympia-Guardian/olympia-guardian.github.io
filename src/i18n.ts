@@ -670,6 +670,7 @@ const STR = {
   newsSeeIn: { fr: 'Voir dans la collection', en: 'Open in the collection' },
   newsMore: { fr: '+ {n} autres dans la collection', en: '+{n} more in the collection' },
   newsTodo: { fr: 'À trouver', en: 'To find' },
+  newsOwned: { fr: 'Tu l’as déjà', en: 'You already have it' },
   newsShop: { fr: 'Boutique', en: 'Store' },
   newsCard: {
     fr: 'Le patch {patch} a apporté {n} nouveautés aux collections.',

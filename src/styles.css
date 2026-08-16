@@ -2320,9 +2320,37 @@ a.player-name:hover {
 }
 
 /* Ce qui manque encore se voit sans lire : c'est la seule information de la
-   page qui appelle un geste. */
+   page qui appelle un geste. Ce qui est déjà acquis se voit aussi, mais en
+   vert et sans bordure : c'est une bonne nouvelle, pas une tâche. */
 .news-card.is-todo {
   border-left: 3px solid var(--gold);
+}
+
+.news-thumb {
+  position: relative;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.news-check {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  background: var(--good);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+}
+
+.news-card.is-owned .item-name {
+  color: var(--ink-2);
 }
 
 .news-card .item-icon {

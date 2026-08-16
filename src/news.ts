@@ -28,6 +28,9 @@ export interface NewsLine {
   missing: number | null
   /** Les identifiants concernés, pour marquer les objets un par un. */
   missingIds: Set<number>
+  /** Déjà obtenu par TOUS les persos suivis : le seul cas où on peut dire
+   *  « tu l'as » sans se tromper quand on en suit plusieurs. */
+  ownedIds: Set<number>
 }
 
 export interface News {
@@ -79,17 +82,20 @@ export function patchNews(
     // perso non synchronisé afficherait tout comme manquant, ce qui serait faux.
     const suivis = chars.filter((c) => c.data[k]?.isPublic)
     const missingIds = new Set<number>()
+    const ownedIds = new Set<number>()
     let miss: number | null = null
     if (suivis.length > 0) {
       const possede = suivis.map((c) => new Set(c.data[k].ids))
       for (const it of items) {
-        if (boutique(it.sources)) continue
-        if (possede.some((set) => !set.has(it.id))) missingIds.add(it.id)
+        // Un objet de boutique déjà obtenu se dit ; simplement, ne pas
+        // l'avoir ne se compte jamais comme un manque.
+        if (possede.every((set) => set.has(it.id))) ownedIds.add(it.id)
+        else if (!boutique(it.sources)) missingIds.add(it.id)
       }
       miss = missingIds.size
       manquants = (manquants ?? 0) + miss
     }
-    lines.push({ kind: k, items, missing: miss, missingIds })
+    lines.push({ kind: k, items, missing: miss, missingIds, ownedIds })
   }
   if (lines.length === 0) return null
 

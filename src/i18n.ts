@@ -669,6 +669,14 @@ const STR = {
   newsAllOwned: { fr: 'tout est coché', en: 'all ticked' },
   newsSeeIn: { fr: 'Voir dans la collection', en: 'Open in the collection' },
   newsMore: { fr: '+ {n} autres dans la collection', en: '+{n} more in the collection' },
+  loginGoogle: {
+    fr: 'Se connecter avec Google (compte distinct de Discord)',
+    en: 'Sign in with Google (separate account from Discord)',
+  },
+  loginXivauth: {
+    fr: 'Se connecter avec XIVAuth : tes personnages déjà attestés chez eux sont liés et vérifiés d’office, sans code à recopier sur le Lodestone',
+    en: 'Sign in with XIVAuth: characters already attested there are linked and verified straight away, no code to copy onto the Lodestone',
+  },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },

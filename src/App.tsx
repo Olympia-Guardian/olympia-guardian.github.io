@@ -476,8 +476,25 @@ export default function App() {
                 >
                   <TabIcon k="guide" />
                 </button>
-                <button className="btn btn-ghost account-btn" onClick={auth.login} title={t('loginIntro')}>
+                <button className="btn btn-ghost account-btn" onClick={() => auth.login()} title={t('loginIntro')}>
                   <TabIcon k="login" /> {t('loginShort')}
+                </button>
+                {/* Deux autres portes. XIVAuth mérite la sienne : il atteste
+                    les personnages, donc il évite de recopier un code sur le
+                    Lodestone — c'est un raccourci, pas une simple alternative. */}
+                <button
+                  className="btn btn-ghost btn-icon-only"
+                  onClick={() => auth.login('google')}
+                  title={t('loginGoogle')}
+                >
+                  G
+                </button>
+                <button
+                  className="btn btn-ghost btn-icon-only"
+                  onClick={() => auth.login('xivauth')}
+                  title={t('loginXivauth')}
+                >
+                  <TabIcon k="lodestone" />
                 </button>
               </>
             ) : (
@@ -757,7 +774,7 @@ export default function App() {
                 ) : !auth.token ? (
                   <>
                     <span>{t('inviteGuest', { name: grp.invite.name })}</span>
-                    <button className="btn btn-primary btn-mini" onClick={auth.login}>
+                    <button className="btn btn-primary btn-mini" onClick={() => auth.login()}>
                       {t('joinLogin')}
                     </button>
                   </>
@@ -809,7 +826,7 @@ export default function App() {
                 ) : !auth.token ? (
                   <>
                     <span>{t('contactGuest', { name: cinv.invite.name })}</span>
-                    <button className="btn btn-primary btn-mini" onClick={auth.login}>
+                    <button className="btn btn-primary btn-mini" onClick={() => auth.login()}>
                       {t('joinLogin')}
                     </button>
                   </>

@@ -644,7 +644,88 @@ function randomToken() {
 
 const CALLBACK = 'https://ogs-room.olympia-guardian.workers.dev/auth/discord/callback'
 
-async function authDiscordStart(env, url) {
+// Fournisseurs de connexion. Discord garde son adresse de retour historique :
+// elle est déclarée telle quelle chez eux et la changer casserait les comptes
+// existants. Les autres suivent le même moule.
+//
+// Un compte par fournisseur : se connecter avec Google puis avec Discord donne
+// deux comptes distincts. Les rapprocher demanderait de faire confiance à une
+// adresse e-mail comme identité commune, ce qui est précisément la faille par
+// laquelle on s'approprie le compte d'autrui. Le rapprochement se fera un jour
+// depuis la page de compte, en étant déjà connecté aux deux.
+const FOURNISSEURS = {
+  discord: {
+    auth: DISCORD_AUTH,
+    token: DISCORD_TOKEN,
+    scope: 'identify',
+    retour: CALLBACK,
+    id: (env) => env.DISCORD_CLIENT_ID,
+    secret: (env) => env.DISCORD_CLIENT_SECRET,
+    async profil(jeton) {
+      const r = await fetch(DISCORD_ME, { headers: { Authorization: `Bearer ${jeton}` } })
+      if (!r.ok) return null
+      const me = await r.json()
+      return {
+        id: me.id,
+        nom: me.global_name || me.username || 'Aventurier',
+        avatar: me.avatar
+          ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64`
+          : '',
+      }
+    },
+  },
+  google: {
+    auth: 'https://accounts.google.com/o/oauth2/v2/auth',
+    token: 'https://oauth2.googleapis.com/token',
+    scope: 'openid profile',
+    retour: 'https://ogs-room.olympia-guardian.workers.dev/auth/google/callback',
+    id: (env) => env.GOOGLE_CLIENT_ID,
+    secret: (env) => env.GOOGLE_CLIENT_SECRET,
+    async profil(jeton) {
+      const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${jeton}` },
+      })
+      if (!r.ok) return null
+      const me = await r.json()
+      return { id: me.sub, nom: me.name || 'Aventurier', avatar: me.picture ?? '' }
+    },
+  },
+  // XIVAuth authentifie ET atteste des personnages : son point `characters`
+  // ne renvoie que des fiches déjà vérifiées chez eux. Se connecter par là
+  // dispense donc de recopier un code sur son profil Lodestone.
+  xivauth: {
+    auth: 'https://xivauth.net/api/v1/oauth/authorize',
+    token: 'https://xivauth.net/api/v1/oauth/token',
+    scope: 'user character:all',
+    retour: 'https://ogs-room.olympia-guardian.workers.dev/auth/xivauth/callback',
+    id: (env) => env.XIVAUTH_CLIENT_ID,
+    secret: (env) => env.XIVAUTH_CLIENT_SECRET,
+    async profil(jeton) {
+      const r = await fetch('https://xivauth.net/api/v1/user', {
+        headers: { Authorization: `Bearer ${jeton}` },
+      })
+      if (!r.ok) return null
+      const me = await r.json()
+      return { id: String(me.id), nom: me.display_name || 'Aventurier', avatar: me.avatar_url ?? '' }
+    },
+    async personnages(jeton) {
+      const r = await fetch('https://xivauth.net/api/v1/characters', {
+        headers: { Authorization: `Bearer ${jeton}` },
+      })
+      if (!r.ok) return []
+      const liste = await r.json()
+      return (Array.isArray(liste) ? liste : (liste.characters ?? []))
+        .map((c) => Number(c.lodestone_id))
+        .filter((n) => Number.isInteger(n) && n > 0)
+    },
+  },
+}
+
+async function authStart(env, url, fournisseur) {
+  // Avant tout le reste, y compris le raccourci de développement : un
+  // fournisseur inconnu doit se voir refuser, sinon une faute de frappe ouvre
+  // une session au lieu de signaler l'erreur.
+  if (!FOURNISSEURS[fournisseur]) return response('{"error":"unknown provider"}', 404)
   const ret = url.searchParams.get('return') ?? env.APP_URL
   // L'origine du retour doit correspondre EXACTEMENT à celle de l'app : le
   // callback pose le jeton de session dans le fragment de cette URL, et un
@@ -693,12 +774,14 @@ async function authDiscordStart(env, url) {
   // faire visiter le lien de retour à sa victime, qui se retrouvait connectée
   // sur le compte de l'attaquant et y liait son personnage sans rien voir.
   const nonce = randomToken()
-  const state = await signState(env, { r: ret, x: Date.now() + 600_000, n: nonce })
-  const auth = new URL(DISCORD_AUTH)
-  auth.searchParams.set('client_id', env.DISCORD_CLIENT_ID)
+  const state = await signState(env, { r: ret, x: Date.now() + 600_000, n: nonce, p: fournisseur })
+  const f = FOURNISSEURS[fournisseur]
+  if (!f || !f.id(env)) return response('{"error":"unknown provider"}', 404)
+  const auth = new URL(f.auth)
+  auth.searchParams.set('client_id', f.id(env))
   auth.searchParams.set('response_type', 'code')
-  auth.searchParams.set('redirect_uri', CALLBACK)
-  auth.searchParams.set('scope', 'identify')
+  auth.searchParams.set('redirect_uri', f.retour)
+  auth.searchParams.set('scope', f.scope)
   auth.searchParams.set('state', state)
   return new Response(null, {
     status: 302,
@@ -718,7 +801,7 @@ function lireCookie(req, nom) {
   return null
 }
 
-async function authDiscordCallback(env, url, req) {
+async function authCallback(env, url, req, fournisseur) {
   const payload = await verifyState(env, url.searchParams.get('state'))
   const code = url.searchParams.get('code')
   if (!payload || !code) return response('{"error":"invalid state"}', 400)
@@ -728,35 +811,63 @@ async function authDiscordCallback(env, url, req) {
     return response('{"error":"invalid state"}', 400)
   }
 
-  const tokenRes = await fetch(DISCORD_TOKEN, {
+  // Le fournisseur est celui inscrit dans l'état signé, pas celui de l'URL :
+  // l'état est la seule partie que l'appelant ne peut pas fabriquer.
+  const f = FOURNISSEURS[payload.p ?? fournisseur]
+  if (!f || !f.secret(env)) return response('{"error":"unknown provider"}', 404)
+
+  const tokenRes = await fetch(f.token, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: env.DISCORD_CLIENT_ID,
-      client_secret: env.DISCORD_CLIENT_SECRET,
+      client_id: f.id(env),
+      client_secret: f.secret(env),
       grant_type: 'authorization_code',
       code,
-      redirect_uri: CALLBACK,
+      redirect_uri: f.retour,
     }),
   })
   if (!tokenRes.ok) return response('{"error":"token exchange failed"}', 502)
   const { access_token } = await tokenRes.json()
 
-  const meRes = await fetch(DISCORD_ME, { headers: { Authorization: `Bearer ${access_token}` } })
-  if (!meRes.ok) return response('{"error":"profile fetch failed"}', 502)
-  const me = await meRes.json()
-  const avatar = me.avatar
-    ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64`
-    : ''
-  const displayName = me.global_name || me.username || 'Aventurier'
+  const profil = await f.profil(access_token)
+  if (!profil) return response('{"error":"profile fetch failed"}', 502)
 
-  const userId = `discord:${me.id}`
+  const nom = payload.p ?? fournisseur
+  const userId = `${nom}:${profil.id}`
   await env.DB.prepare(
     'INSERT INTO users (id, provider, provider_id, name, avatar, created) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ' +
       'ON CONFLICT(id) DO UPDATE SET name = ?4, avatar = ?5',
   )
-    .bind(userId, 'discord', me.id, displayName, avatar, Date.now())
+    .bind(userId, nom, profil.id, profil.nom, profil.avatar, Date.now())
     .run()
+
+  // XIVAuth atteste déjà des personnages : on les lie et on les marque
+  // vérifiés sans faire recopier un code sur le Lodestone. Un perso déjà
+  // revendiqué par quelqu'un d'autre n'est jamais repris — c'est la seule
+  // règle qui empêche une attestation d'ailleurs de voler une liaison ici.
+  if (f.personnages) {
+    try {
+      const ids = await f.personnages(access_token)
+      for (const charId of ids.slice(0, 20)) {
+        const pris = await env.DB.prepare(
+          'SELECT user_id FROM bindings WHERE char_id = ?1 AND verified = 1',
+        )
+          .bind(charId)
+          .first()
+        if (pris && pris.user_id !== userId) continue
+        await env.DB.prepare(
+          'INSERT INTO bindings (user_id, char_id, verified, created) VALUES (?1, ?2, 1, ?3) ' +
+            'ON CONFLICT(user_id, char_id) DO UPDATE SET verified = 1',
+        )
+          .bind(userId, charId, Date.now())
+          .run()
+      }
+    } catch (e) {
+      // Une attestation ratée ne doit pas empêcher la connexion elle-même.
+      console.error('xivauth characters', e?.stack ?? String(e))
+    }
+  }
 
   const token = randomToken()
   await env.DB.batch([
@@ -2942,11 +3053,11 @@ const routes = {
     const url = new URL(req.url)
 
     // --- comptes : OAuth Discord + session + liaison de perso
-    if (url.pathname === '/auth/discord' && req.method === 'GET') {
-      return authDiscordStart(env, url)
-    }
-    if (url.pathname === '/auth/discord/callback' && req.method === 'GET') {
-      return authDiscordCallback(env, url, req)
+    const authMatch = url.pathname.match(/^\/auth\/(\w+)(\/callback)?$/)
+    if (authMatch && req.method === 'GET') {
+      return authMatch[2]
+        ? authCallback(env, url, req, authMatch[1])
+        : authStart(env, url, authMatch[1])
     }
     if (url.pathname === '/report' && req.method === 'POST') {
       const user = await authenticate(env, req)

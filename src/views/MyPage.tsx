@@ -1362,7 +1362,7 @@ export function MyPage({
         <div className="hero">
           <h1>{t('myPage')}</h1>
           <p>{t('loginIntro')}</p>
-          <button className="btn btn-primary" onClick={auth.login}>
+          <button className="btn btn-primary" onClick={() => auth.login()}>
             {t('loginDiscord')}
           </button>
         </div>

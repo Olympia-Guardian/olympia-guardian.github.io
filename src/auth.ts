@@ -24,6 +24,8 @@ export interface SessionUser {
 const TOKEN_KEY = 'ogs.session.v1'
 const PRELOGIN_KEY = 'ogs.prelogin.v1'
 
+export type Fournisseur = 'discord' | 'google' | 'xivauth'
+
 /** À appeler avant toute lecture du hash : capture #login=… et restaure le
  *  hash de groupe pré-connexion. Retourne le jeton s'il y en a un. */
 export function captureLoginToken(): string | null {
@@ -82,14 +84,16 @@ export function useAuth() {
     void refresh()
   }, [refresh])
 
-  const login = useCallback(() => {
+  /** Discord par défaut : c'est le fournisseur historique, et les comptes
+   *  existants en dépendent. Google et XIVAuth ouvrent des comptes distincts. */
+  const login = useCallback((fournisseur: Fournisseur = 'discord') => {
     try {
       lsSet(PRELOGIN_KEY, location.hash)
     } catch {
       // le hash de groupe sera perdu, pas la session
     }
     const ret = encodeURIComponent(location.origin + location.pathname)
-    location.href = `${WORKER_API}/auth/discord?return=${ret}`
+    location.href = `${WORKER_API}/auth/${fournisseur}?return=${ret}`
   }, [])
 
   const logout = useCallback(() => {

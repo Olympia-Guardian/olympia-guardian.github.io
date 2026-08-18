@@ -872,7 +872,10 @@ export default function App() {
             {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
             {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}
 
-            {db && members.length === 0 && tab !== 'mypage' && tab !== 'groups' && (
+            {/* Le discours d'accueil se tait sur la page de connexion : il y
+                repete l'invitation a se connecter et repousse le formulaire
+                sous la ligne de flottaison. */}
+            {db && members.length === 0 && tab !== 'mypage' && tab !== 'groups' && tab !== 'login' && (
               <div className="hero">
                 <h1>{t('heroTitle')}</h1>
                 <p>{t('heroBody')}</p>

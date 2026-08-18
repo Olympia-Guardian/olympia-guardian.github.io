@@ -5169,15 +5169,29 @@ a.player-name:hover {
 
 /* ------------------------------------------------------ page de connexion */
 
+/* Panneau encadré et centré : la connexion est un moment à part, elle ne se
+   fond pas dans la colonne des autres écrans. Le liseré doré est l'accent de
+   marque du site, employé ici comme cadre et non comme encodage. */
 .login-view {
-  max-width: 720px;
+  max-width: 620px;
+  margin: 0 auto;
   gap: 16px;
+  padding: 26px 30px 30px;
+  background: var(--surface);
+  border: 1px solid rgba(214, 178, 107, 0.45);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+
+.login-view h2 {
+  margin: 0;
+  text-align: center;
 }
 
 .login-lead {
   margin: 0;
   color: var(--ink-2);
-  max-width: 62ch;
+  text-align: center;
 }
 
 .login-doors {
@@ -5197,7 +5211,7 @@ a.player-name:hover {
   text-align: left;
   cursor: pointer;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
   font: inherit;
@@ -5206,7 +5220,7 @@ a.player-name:hover {
 .login-door:hover,
 .login-door:focus-visible {
   border-color: var(--gold);
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 /* Celle qui fait gagner une manipulation entière se voit en premier. */
@@ -5230,6 +5244,7 @@ a.player-name:hover {
 .login-note {
   padding: 14px 18px;
   gap: 8px;
+  background: var(--surface-2);
 }
 
 .login-note h3 {
@@ -5248,4 +5263,5 @@ a.player-name:hover {
 
 .login-guest {
   font-size: 12px;
+  text-align: center;
 }

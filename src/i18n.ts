@@ -669,6 +669,45 @@ const STR = {
   newsAllOwned: { fr: 'tout est coché', en: 'all ticked' },
   newsSeeIn: { fr: 'Voir dans la collection', en: 'Open in the collection' },
   newsMore: { fr: '+ {n} autres dans la collection', en: '+{n} more in the collection' },
+  // Page de connexion
+  loginPageTitle: { fr: 'Se connecter', en: 'Sign in' },
+  loginPageLead: {
+    fr: 'Un compte sert à lier tes personnages, cocher tes collections et rejoindre des groupes. Choisis la porte qui te convient : elles mènent toutes au même endroit.',
+    en: 'An account lets you link your characters, tick your collections and join groups. Pick whichever door suits you: they all lead to the same place.',
+  },
+  loginPageLeadXiv: {
+    fr: 'Une exception : XIVAuth t’épargne la vérification de personnage.',
+    en: 'One exception: XIVAuth saves you the character verification step.',
+  },
+  loginBest: { fr: 'Le plus rapide', en: 'Fastest' },
+  loginWith_xivauth: { fr: 'XIVAuth', en: 'XIVAuth' },
+  loginWhy_xivauth: {
+    fr: 'Le service d’authentification du monde FFXIV. Tes personnages déjà attestés chez eux arrivent liés et vérifiés, sans avoir à recopier un code sur ton profil Lodestone.',
+    en: 'The FFXIV world’s own authentication service. Characters already attested there arrive linked and verified, with no code to copy onto your Lodestone profile.',
+  },
+  loginWith_discord: { fr: 'Discord', en: 'Discord' },
+  loginWhy_discord: {
+    fr: 'La porte historique, celle que la plupart des joueurs ont déjà. La vérification de personnage se fait ensuite en collant un code sur ton profil Lodestone.',
+    en: 'The original door, the one most players already have. Character verification then happens by pasting a code onto your Lodestone profile.',
+  },
+  loginWith_google: { fr: 'Google', en: 'Google' },
+  loginWhy_google: {
+    fr: 'Pour qui n’a pas Discord. Même parcours ensuite : vérification par code sur le Lodestone.',
+    en: 'For those without Discord. Same path afterwards: verification by code on the Lodestone.',
+  },
+  loginPrivacyTitle: { fr: 'Ce qu’on garde de toi', en: 'What we keep about you' },
+  loginPrivacyBody: {
+    fr: 'Ton identifiant chez le fournisseur choisi, ton nom affiché et ton avatar. Ensuite, seulement ce que tu construis ici : tes personnages liés, tes collections cochées, tes groupes et tes contacts. Ni mot de passe, ni adresse postale, ni suivi publicitaire.',
+    en: 'Your id at the provider you pick, your display name and your avatar. Then only what you build here: your linked characters, your ticked collections, your groups and your contacts. No password, no address, no advertising tracking.',
+  },
+  loginPrivacyDelete: {
+    fr: 'Tout est téléchargeable et effaçable à tout moment depuis Mon compte, sans avoir à le demander à qui que ce soit.',
+    en: 'Everything is downloadable and erasable at any time from My account, without asking anyone.',
+  },
+  loginGuest: {
+    fr: 'Sans compte, tu peux déjà explorer : suis des personnages par leur identifiant Lodestone dans un groupe hors ligne.',
+    en: 'You can already explore without an account: track characters by Lodestone id in an offline group.',
+  },
   loginGoogle: {
     fr: 'Se connecter avec Google (compte distinct de Discord)',
     en: 'Sign in with Google (separate account from Discord)',

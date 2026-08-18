@@ -26,6 +26,7 @@ import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
 import { useWishlist } from './wishlist'
 import { AccountPage } from './views/Account'
+import { LoginPage } from './views/Login'
 import { NewsPage } from './views/News'
 import { ActiveHelp, GuidePage } from './Help'
 import { useLive } from './live'
@@ -51,6 +52,7 @@ type Tab =
   | 'guide'
   | 'news'
   | 'account'
+  | 'login'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -273,6 +275,7 @@ export default function App() {
       t === 'admin' ||
       t === 'guide' ||
       t === 'news' ||
+      t === 'login' ||
       t === 'account' ||
       (KINDS as string[]).includes(t ?? '')
     )
@@ -477,31 +480,17 @@ export default function App() {
                 >
                   <TabIcon k="guide" />
                 </button>
-                <button className="btn btn-ghost account-btn" onClick={() => auth.login()} title={t('loginIntro')}>
+                {/* Une seule porte dans la barre : la page de connexion
+                    explique ce que chaque fournisseur apporte, ce qu'un bouton
+                    d'icone ne dira jamais — a commencer par le fait que
+                    XIVAuth dispense de recopier un code sur le Lodestone. */}
+                <button
+                  className={`btn btn-ghost account-btn ${tab === 'login' ? 'is-active' : ''}`}
+                  onClick={() => setTab('login')}
+                  title={t('loginIntro')}
+                >
                   <TabIcon k="login" /> {t('loginShort')}
                 </button>
-                {/* Deux autres portes, affichées seulement si le serveur les a
-                    réellement configurées. XIVAuth mérite la sienne : il atteste
-                    les personnages, donc il évite de recopier un code sur le
-                    Lodestone — c'est un raccourci, pas une simple alternative. */}
-                {fournisseurs.includes('google') && (
-                  <button
-                    className="btn btn-ghost btn-icon-only"
-                    onClick={() => auth.login('google')}
-                    title={t('loginGoogle')}
-                  >
-                    G
-                  </button>
-                )}
-                {fournisseurs.includes('xivauth') && (
-                  <button
-                    className="btn btn-ghost btn-icon-only"
-                    onClick={() => auth.login('xivauth')}
-                    title={t('loginXivauth')}
-                  >
-                    <TabIcon k="lodestone" />
-                  </button>
-                )}
               </>
             ) : (
               <>
@@ -719,7 +708,8 @@ export default function App() {
             tab !== 'admin' &&
             tab !== 'guide' &&
             tab !== 'news' &&
-              tab !== 'account' && (
+              tab !== 'account' &&
+              tab !== 'login' && (
           <RosterBar
             members={members}
             activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}
@@ -780,7 +770,7 @@ export default function App() {
                 ) : !auth.token ? (
                   <>
                     <span>{t('inviteGuest', { name: grp.invite.name })}</span>
-                    <button className="btn btn-primary btn-mini" onClick={() => auth.login()}>
+                    <button className="btn btn-primary btn-mini" onClick={() => setTab('login')}>
                       {t('joinLogin')}
                     </button>
                   </>
@@ -832,7 +822,7 @@ export default function App() {
                 ) : !auth.token ? (
                   <>
                     <span>{t('contactGuest', { name: cinv.invite.name })}</span>
-                    <button className="btn btn-primary btn-mini" onClick={() => auth.login()}>
+                    <button className="btn btn-primary btn-mini" onClick={() => setTab('login')}>
                       {t('joinLogin')}
                     </button>
                   </>
@@ -984,6 +974,7 @@ export default function App() {
               tab !== 'guide' &&
               tab !== 'news' &&
               tab !== 'account' &&
+              tab !== 'login' &&
               tab !== 'fashion' &&
               dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
             {db &&
@@ -997,6 +988,7 @@ export default function App() {
               tab !== 'guide' &&
               tab !== 'news' &&
               tab !== 'account' &&
+              tab !== 'login' &&
               tab !== 'fashion' &&
               !dbPending.has(tab) && (
               <Matrix
@@ -1082,6 +1074,13 @@ export default function App() {
                 }}
                 onLogout={auth.logout}
                 onManageChars={() => setTab('mypage')}
+              />
+            )}
+            {tab === 'login' && !auth.user && (
+              <LoginPage
+                fournisseurs={fournisseurs}
+                onLogin={(f) => auth.login(f)}
+                onGuide={() => setTab('guide')}
               />
             )}
             {tab === 'news' && (

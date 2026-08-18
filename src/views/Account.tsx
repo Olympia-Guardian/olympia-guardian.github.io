@@ -48,6 +48,7 @@ export function AccountPage({
   onImport,
   onLogout,
   onManageChars,
+  spoil,
 }: {
   user: Utilisateur
   token: string
@@ -59,6 +60,8 @@ export function AccountPage({
   onImport: (charId: number, par: Partial<Record<Kind, number[]>>) => Promise<void>
   onLogout: () => void
   onManageChars: () => void
+  /** Anti-révélation : l'état courant et de quoi le changer. */
+  spoil: { tout: boolean; basculer: (v: boolean) => void; msq: number | null }
 }) {
   const { t } = useI18n()
   const fichier = useRef<HTMLInputElement>(null)
@@ -190,6 +193,22 @@ export function AccountPage({
         <button className="btn btn-ghost btn-mini" onClick={onManageChars}>
           <TabIcon k="journal" /> {t('accountCharsManage')}
         </button>
+      </section>
+
+      <section className="group-card account-block">
+        <h3>{t('spoilerSection')}</h3>
+        <p className="muted">{t('spoilerToggleHint')}</p>
+        <p className="muted">
+          {spoil.msq === null ? t('spoilerUnknown') : t('spoilerState', { patch: spoil.msq })}
+        </p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={spoil.tout}
+            onChange={(e) => spoil.basculer(e.target.checked)}
+          />
+          {t('spoilerToggle')}
+        </label>
       </section>
 
       <section className="group-card account-block">

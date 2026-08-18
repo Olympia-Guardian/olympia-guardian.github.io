@@ -5,6 +5,7 @@ import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
 import { TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import type { Wishes } from '../wishlist'
+import { estRevelation } from '../spoilers'
 
 type Ready = Member & { data: Character }
 
@@ -56,6 +57,7 @@ export function Matrix({
   onShowItem,
   titleLabel,
   wishes,
+  msq,
   only,
   suggest,
   ownAdd,
@@ -69,6 +71,9 @@ export function Matrix({
   titleLabel?: string
   /** Liste de souhaits : marque les objets voulus et permet de s'y limiter. */
   wishes?: Wishes
+  /** Avancement dans l'histoire, pour masquer ce qui la revelerait. null =
+   *  inconnu, et on ne masque alors rien. */
+  msq?: number | null
   /** Restriction venue d'ailleurs (la cloche, pour les nouveautés d'un patch) :
    *  la vue ne montre que ces objets, en le disant et en offrant d'en sortir.
    *  Les clés valent « collection:id » — dans la vue « Mode » deux collections
@@ -266,6 +271,10 @@ export function Matrix({
             {rows.slice(0, visible).map(({ item, missing }) => {
               const primary = item.sources[0]
               const name = localName(item, lang)
+              // Recompense d'histoire que ce joueur n'a pas encore atteinte :
+              // nom, image et source revelent chacun quelque chose. Un clic
+              // ouvre la fiche, qui laisse le choix de regarder quand meme.
+              const cache = estRevelation(item, msq ?? null)
               return (
                 <tr key={`${kindFor(item)}-${item.id}`}>
                   <td className="col-item">
@@ -277,10 +286,16 @@ export function Matrix({
                       onClick={() => onShowItem(item, kindFor(item))}
                       onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(item, kindFor(item))}
                     >
-                      <img className="item-icon" src={item.icon} alt="" loading="lazy" onError={onItemImgError} />
+                      <img
+                        className={`item-icon ${cache ? 'is-hidden-spoiler' : ''}`}
+                        src={item.icon}
+                        alt=""
+                        loading="lazy"
+                        onError={onItemImgError}
+                      />
                       <div className="item-text">
                         <span className="item-name">
-                          {name}
+                          {cache ? t('spoilerHidden', { patch: item.patch }) : name}
                           {(wishes?.[kindFor(item)] ?? []).includes(item.id) && (
                             <span className="wish-mark" title={t('wishMark')}>
                               <TabIcon k="wish" />
@@ -311,7 +326,9 @@ export function Matrix({
                             </span>
                           )}
                         </span>
-                        {primary ? (
+                        {cache ? (
+                          <span className="item-source">{t('spoilerWhy')}</span>
+                        ) : primary ? (
                           <span className="item-source">
                             <TypeChip type={primary.type} /> {localSource(primary, lang)}
                             {item.sources.length > 1 && <SourcesTip sources={item.sources} />}

@@ -5323,3 +5323,12 @@ a.player-name:hover {
     opacity: 0.55;
   }
 }
+
+/* --------------------------------------------- masquage des révélations */
+
+/* L'image est floutée plutôt que retirée : la case garde sa place, la grille
+   ne se déforme pas, et on devine qu'il y a quelque chose sans le voir. */
+.item-icon.is-hidden-spoiler {
+  filter: blur(7px) saturate(0.35);
+  opacity: 0.5;
+}

@@ -102,6 +102,9 @@ const TOTALS = {}
 // les retirer du nombre d'objets possédés, sinon on afficherait 148/143.
 const BOUTIQUE = {}
 
+// Jalons de l'histoire principale, releves au passage des succes.
+const MSQ = []
+
 const vientDeLaBoutique = (it) => it.sources.some((s) => s.type === 'Premium')
 
 async function writeCatalog(kind, items) {
@@ -661,6 +664,11 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   } catch (e) {
     console.warn(`${kind}: filtre limited ignoré, ${e.message}`)
   }
+  if (kind === 'achievements') {
+    for (const it of items) {
+      if (it.groupEn === 'Main Scenario' && it.patch) MSQ.push({ id: it.id, patch: it.patch })
+    }
+  }
   await writeCatalog(kind, items)
 
   // Une même pièce existe parfois dans les deux collections : cochée dans
@@ -710,6 +718,17 @@ for (const [kind, path] of Object.entries(KIND_PATHS)) {
   await writeFile(new URL('relics.json', OUT), JSON.stringify(db))
   TOTALS.relics = db.relics.length
   console.log(`relics: ${db.relics.length} (${db.series.length} séries)`)
+}
+
+// Jalons de l'histoire principale : les succes qui marquent l'achevement de la
+// trame a chaque patch. Publies a part parce qu'ils servent AVANT que le gros
+// catalogue des succes (3946 entrees, seconde vague) soit arrive — sans quoi
+// les objets d'histoire s'afficheraient en clair pendant plusieurs secondes,
+// ce qui est exactement ce qu'on cherche a eviter.
+if (MSQ.length > 0) {
+  MSQ.sort((a, b) => parseFloat(a.patch) - parseFloat(b.patch))
+  await writeFile(new URL('story.json', OUT), JSON.stringify(MSQ))
+  console.log(`story: ${MSQ.length} jalons d'histoire, de ${MSQ[0].patch} a ${MSQ[MSQ.length - 1].patch}`)
 }
 
 await writeFile(new URL('premium.json', OUT), JSON.stringify(BOUTIQUE))

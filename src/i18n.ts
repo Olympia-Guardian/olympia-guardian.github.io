@@ -722,6 +722,25 @@ const STR = {
     fr: 'La lecture sur le Lodestone a echoue ou pris trop de temps. Relancer.',
     en: 'Reading from the Lodestone failed or took too long. Try again.',
   },
+  spoilerSection: { fr: 'Révélations de l’histoire', en: 'Story spoilers' },
+  spoilerHidden: { fr: 'Récompense d’histoire · patch {patch}', en: 'Story reward · patch {patch}' },
+  spoilerWhy: {
+    fr: 'Masqué : tu n’en es pas encore là dans l’histoire. Clique pour voir quand même.',
+    en: 'Hidden: you have not reached this point in the story. Click to look anyway.',
+  },
+  spoilerToggle: { fr: 'Je me moque d’être spoilé', en: 'I do not mind spoilers' },
+  spoilerToggleHint: {
+    fr: 'Par défaut, les récompenses de quête postérieures à ton avancement dans l’histoire sont masquées : nom, image et source. Ton avancement est lu dans tes succès d’histoire, et il ne bouge qu’à la synchronisation d’un personnage.',
+    en: 'By default, quest rewards beyond your point in the story are hidden: name, image and source. Your progress is read from your story achievements, and only changes when a character is synced.',
+  },
+  spoilerState: {
+    fr: 'Histoire suivie jusqu’au patch {patch}.',
+    en: 'Story followed up to patch {patch}.',
+  },
+  spoilerUnknown: {
+    fr: 'Avancement inconnu : rien n’est masqué. Il se déduit de tes succès d’histoire, encore faut-il qu’ils soient renseignés.',
+    en: 'Progress unknown: nothing is hidden. It comes from your story achievements, which must be filled in first.',
+  },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },

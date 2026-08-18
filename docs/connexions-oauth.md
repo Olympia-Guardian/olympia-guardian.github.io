@@ -16,11 +16,21 @@ les écrire sur le disque.
 ### 1.1 Créer le projet
 
 1. [console.cloud.google.com](https://console.cloud.google.com)
-2. Créer un projet, nom libre (« Codex Olympia »).
+2. **Ne pas cliquer sur « Essayer gratuitement » ni sur l'offre à 300 $.** Cet
+   essai ouvre un compte de facturation avec carte bancaire, et rien ici n'en a
+   besoin : créer un écran de consentement et un identifiant OAuth est gratuit
+   et ne demande aucune facturation. La page d'accueil est commerciale, elle
+   pousse des produits (Gemini, VM, BigQuery) qui ne nous concernent pas.
+3. Sélecteur de projet, en haut à côté du logo → **Nouveau projet** →
+   nom `Codex Olympia` → Créer, puis le sélectionner.
 
 ### 1.2 Écran de consentement
 
-**APIs et services → Écran de consentement OAuth**
+Adresse directe : <https://console.cloud.google.com/auth/overview>
+
+Cette section s'appelle désormais **Google Auth Platform** ; l'ancien chemin
+(menu ☰ → **APIs et services** → **Écran de consentement OAuth**) mène au même
+endroit. Selon l'ancienneté du compte, on voit l'un ou l'autre nom.
 
 | Champ | Valeur |
 |---|---|

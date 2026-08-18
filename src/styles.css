@@ -5265,3 +5265,61 @@ a.player-name:hover {
   font-size: 12px;
   text-align: center;
 }
+
+/* ------------------------------------------------- barre de chargement globale */
+
+.app-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 200;
+  overflow: hidden;
+  background: rgba(214, 178, 107, 0.12);
+  animation: loader-in 180ms ease-out;
+}
+
+.app-loader.is-leaving {
+  animation: loader-out 380ms ease-in forwards;
+}
+
+/* Course d'un segment doré : indéterminée, parce qu'on ne connaît pas la durée
+   des lectures (Lodestone, catalogues). Une fausse progression mentirait. */
+.app-loader-bar {
+  display: block;
+  height: 100%;
+  width: 38%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, transparent, var(--gold), #f0dca9, var(--gold), transparent);
+  animation: loader-run 1.15s cubic-bezier(0.45, 0, 0.35, 1) infinite;
+}
+
+@keyframes loader-run {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@keyframes loader-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes loader-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Sans animation : une barre dorée pleine, discrète et immobile. */
+@media (prefers-reduced-motion: reduce) {
+  .app-loader,
+  .app-loader.is-leaving {
+    animation: none;
+  }
+  .app-loader-bar {
+    width: 100%;
+    animation: none;
+    background: var(--gold);
+    opacity: 0.55;
+  }
+}

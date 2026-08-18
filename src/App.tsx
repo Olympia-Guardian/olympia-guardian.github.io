@@ -29,6 +29,7 @@ import { AccountPage } from './views/Account'
 import { LoginPage } from './views/Login'
 import { NewsPage } from './views/News'
 import { ActiveHelp, GuidePage } from './Help'
+import { GlobalLoader } from './Loader'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
 import { ReportDialog } from './Report'
@@ -441,6 +442,12 @@ export default function App() {
 
   return (
     <LangContext.Provider value={langValue}>
+      {/* Ce qui fait vraiment attendre : les catalogues au demarrage, les gros
+          en seconde vague, et la lecture des fiches sur le Lodestone. Le reste
+          repond trop vite pour meriter une barre. */}
+      <GlobalLoader
+        active={!db || dbPending.size > 0 || members.some((m) => m.status === 'loading')}
+      />
       <div className="app">
         <header className="topbar">
           <div className="brand">

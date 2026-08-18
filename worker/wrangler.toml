@@ -37,7 +37,10 @@ DISCORD_CLIENT_ID = "1537099783573995522"
 APP_URL = "https://olympia-guardian.github.io"
 # Compte super-admin : seul lui voit /admin/* et le tableau de bord.
 ADMIN_USER_ID = "discord:161937296185229312"
-# DISCORD_CLIENT_SECRET : secret wrangler (npx wrangler secret put DISCORD_CLIENT_SECRET)
+GOOGLE_CLIENT_ID = "162870803068-es4ednvn0m4228kok51ffv9jbmb7bm6v.apps.googleusercontent.com"
+# Les secrets ne sont jamais ici : ce depot est public. Ils se posent avec
+# npx wrangler secret put <NOM> --config worker/wrangler.toml
+# DISCORD_CLIENT_SECRET, GOOGLE_CLIENT_SECRET, XIVAUTH_CLIENT_SECRET, ADMIN_PIN
 
 [[d1_databases]]
 binding = "DB"

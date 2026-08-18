@@ -694,8 +694,13 @@ const FOURNISSEURS = {
   // ne renvoie que des fiches déjà vérifiées chez eux. Se connecter par là
   // dispense donc de recopier un code sur son profil Lodestone.
   xivauth: {
-    auth: 'https://xivauth.net/api/v1/oauth/authorize',
-    token: 'https://xivauth.net/api/v1/oauth/token',
+    // Les deux adresses OAuth vivent a la racine, PAS sous /api/v1 : seules les
+    // lectures de donnees (user, characters) sont sous ce prefixe. Leur
+    // bibliotheque Ruby declare site='.../api/v1' et authorize_url='/oauth/...',
+    // et la barre oblique initiale REMPLACE le chemin de base au lieu de s'y
+    // ajouter. Concatener les deux, comme je l'avais fait, menait a un 404.
+    auth: 'https://xivauth.net/oauth/authorize',
+    token: 'https://xivauth.net/oauth/token',
     scope: 'user character:all',
     retour: 'https://ogs-room.olympia-guardian.workers.dev/auth/xivauth/callback',
     id: (env) => env.XIVAUTH_CLIENT_ID,

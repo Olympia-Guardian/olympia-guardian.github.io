@@ -744,8 +744,12 @@ const STR = {
     en: 'I do not mind spoilers, show me everything.',
   },
   spoilSimBanner: {
-    fr: 'Aperçu : tu vois l’application comme un joueur arrivé au patch {patch}.',
-    en: 'Preview: you are seeing the app as a player who reached patch {patch}.',
+    fr: 'Aperçu : joueur arrivé au patch {patch}, masquage « {mode} ».',
+    en: 'Preview: player at patch {patch}, hiding set to “{mode}”.',
+  },
+  spoilSimNothing: {
+    fr: 'Ce niveau ne masque rien ici : les succès n’ont pas de source de quête, il faut « Découverte ».',
+    en: 'This level hides nothing here: achievements have no quest source, you need “Discovery”.',
   },
   spoilSimStop: { fr: 'Revenir au réel', en: 'Back to reality' },
   spoilSimTitle: { fr: 'Essayer un avancement', en: 'Try a progress point' },

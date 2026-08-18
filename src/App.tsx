@@ -888,7 +888,16 @@ export default function App() {
                 réessayer plutôt que de laisser quelqu'un croire au pire. */}
             {spoil.simule !== null && (
               <p className="notice notice-filter">
-                <span>{t('spoilSimBanner', { patch: spoil.simule })}</span>
+                <span>
+                  {t('spoilSimBanner', {
+                    patch: spoil.simule,
+                    mode: t(`spoilMode_${spoil.mode}` as 'spoilMode_aucun'),
+                  })}
+                  {/* Le piege : simuler un avancement sans changer le niveau de
+                      masquage ne montre rien sur les succes, et on en conclut
+                      que la fonction est cassee. */}
+                  {spoil.mode !== 'decouverte' && ` ${t('spoilSimNothing')}`}
+                </span>
                 <button className="btn btn-mini btn-ghost" onClick={() => spoil.simuler(null)}>
                   {t('spoilSimStop')}
                 </button>

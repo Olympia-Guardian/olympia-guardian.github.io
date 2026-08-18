@@ -57,6 +57,11 @@ immédiate.
 | Type | **Application Web** |
 | Nom | `ogs-room` |
 | URI de redirection autorisé | `https://ogs-room.olympia-guardian.workers.dev/auth/google/callback` |
+| Origines JavaScript autorisées | **laisser vide** |
+
+Les origines JavaScript ne servent qu'aux connexions faites depuis le navigateur.
+Ici l'échange se fait de serveur à serveur, entre le worker et Google : seule
+l'URI de redirection compte.
 
 L'URI doit être **exactement** celle-ci, à la lettre près : Google refuse toute
 redirection non déclarée, et c'est justement ce qui protège la session.
@@ -93,11 +98,39 @@ d'office, sans avoir à recopier un code sur le profil Lodestone.
 | Champ | Valeur |
 |---|---|
 | Nom | `Codex Olympia` |
+| Homepage | `https://olympia-guardian.github.io/` |
+| Privacy Policy URL | `https://olympia-guardian.github.io/confidentialite.html` |
+| Terms of Service URL | `https://olympia-guardian.github.io/conditions.html` |
 | Redirection | `https://ogs-room.olympia-guardian.workers.dev/auth/xivauth/callback` |
-| Portées | `user` **et** `character:all` |
+| Private App | **désactivé** |
 
-`character:all` est la portée qui donne la liste des personnages attestés. Sans
-elle, la connexion fonctionne mais le raccourci de vérification ne sert à rien.
+La redirection pointe vers le **worker**, pas vers le site : c'est lui qui reçoit
+le code et l'échange contre un jeton.
+
+#### Autorisations : deux, et pas une de plus
+
+- ✅ **Read User Information (`user`)** — l'identifiant du compte.
+- ✅ **Read Authorized Characters (`character:all`)** — la liste des personnages
+  attestés. C'est elle qui dispense de la vérification par code sur le Lodestone ;
+  sans elle, la connexion marche mais n'apporte rien de plus que Discord.
+
+Tout le reste décoché, et trois refus valent d'être expliqués :
+
+- **`refresh` (Allow Persistent Access)** : non. L'application échange le code,
+  lit le profil et les personnages dans la foulée, puis **jette le jeton** — elle
+  ouvre ensuite sa propre session. Un jeton de rafraîchissement serait un
+  identifiant permanent conservé chez nous pour rien.
+- **`user:email`** : non. La politique de confidentialité affirme qu'aucune
+  adresse n'est conservée ; autant que ce soit vrai par construction.
+- **Tous les `manage` et `certificate`** : non. L'application ne fait que lire.
+
+#### Grant Flows
+
+- ✅ **Confidential Client** — à activer. Le secret vit dans le worker, jamais
+  dans un navigateur. Surtout, le désactiver **force PKCE**, que notre
+  implémentation ne fait pas : la connexion échouerait.
+- ✅ **Authorization Code Flow** — le seul utilisé.
+- ❌ Client Credentials, Device Code.
 
 ### 2.2 Poser les clés
 
@@ -109,6 +142,18 @@ npx wrangler@4.121.0 secret put XIVAUTH_CLIENT_SECRET --config worker/wrangler.t
 L'ID client va dans `[vars]` sous le nom `XIVAUTH_CLIENT_ID`.
 
 ---
+
+## 2 bis. Pages légales
+
+Les deux consoles demandent une politique de confidentialité et des conditions
+d'utilisation. Elles sont servies avec le site :
+
+- <https://olympia-guardian.github.io/confidentialite.html>
+- <https://olympia-guardian.github.io/conditions.html>
+
+Sources : `public/confidentialite.html` et `public/conditions.html`. Ce sont des
+pages statiques autonomes, sans dépendance à l'application : elles restent
+lisibles même si le reste tombe.
 
 ## 3. Déployer et vérifier
 

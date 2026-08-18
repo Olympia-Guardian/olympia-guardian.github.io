@@ -1167,14 +1167,15 @@ function CollectionEditor({
   // Contenu non atteint : retire de la liste plutot qu'affiche en cases
   // muettes. Compte a part pour le dire — rien ne doit sembler perdu.
   const caches = useMemo(
-    () => db[kind].filter((it) => masquer(it, kind) === 'tout').length,
-    [db, kind, masquer],
+    () => db[kind].filter((it) => !shownIds.has(it.id) && masquer(it, kind) === 'tout').length,
+    [db, kind, masquer, shownIds],
   )
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
     const base = db[kind].filter(
       (it) =>
-        masquer(it, kind) !== 'tout' &&
+        // Deja coche : il l'a vu, et le cacher l'empecherait de le decocher.
+        (shownIds.has(it.id) || masquer(it, kind) !== 'tout') &&
         (!q ||
           it.name.toLowerCase().includes(q) ||
           it.nameEn.toLowerCase().includes(q) ||

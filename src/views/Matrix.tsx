@@ -173,7 +173,12 @@ export function Matrix({
     // Contenu que ce joueur n'a pas encore atteint : on le retire de la liste
     // plutot que d'aligner des cases muettes, et on le compte pour le dire.
     const avant = list.length
-    const visibles = list.filter(({ item }) => masquer(item, kindFor(item)) !== 'tout')
+    const visibles = list.filter(({ item, missing }) => {
+      // Possede par quelqu'un d'affiche : il l'a forcement vu, le cacher
+      // serait absurde et ferait disparaitre sa propre collection.
+      if (missing.length < activeMembers.length) return true
+      return masquer(item, kindFor(item)) !== 'tout'
+    })
     caches = avant - visibles.length
     list.length = 0
     list.push(...visibles)

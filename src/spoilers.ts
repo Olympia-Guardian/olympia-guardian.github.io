@@ -57,9 +57,32 @@ export function avancementMsq(chars: { data: Character }[], jalons: Jalon[]): nu
       if (p !== undefined && (max === null || p > max)) max = p
     }
   }
-  if (!connu) return null
-  // Aucun jalon possédé alors que les succès sont connus : le joueur débute.
-  return max ?? 0
+  if (connu) return max ?? 0
+
+  // Sans succès — un perso de niveau 20 n'en a aucun, et c'est justement celui
+  // qu'il faut protéger — on se rabat sur le niveau, que le jeu impose comme
+  // porte d'entrée de chaque extension. On retient le niveau du métier le plus
+  // haut : un vétéran qui monte un métier neuf reste un vétéran.
+  const niveau = Math.max(0, ...chars.map((c) => plusHautNiveau(c.data)))
+  return niveau > 0 ? avancementParNiveau(niveau) : null
+}
+
+function plusHautNiveau(c: Character): number {
+  const jobs = c.profile?.jobs ?? []
+  return Math.max(c.profile?.activeLevel ?? 0, ...jobs.map((j) => j.level ?? 0))
+}
+
+/** Borne BASSE de ce que le joueur a forcément vu, pas haute : on protège au
+ *  plus large tant qu'on n'a pas ses succès. Chaque palier est le niveau
+ *  maximal d'une extension, atteint en en terminant la trame. */
+function avancementParNiveau(niveau: number): number {
+  if (niveau >= 100) return 7.0
+  if (niveau >= 90) return 6.0
+  if (niveau >= 80) return 5.0
+  if (niveau >= 70) return 4.0
+  if (niveau >= 60) return 3.0
+  if (niveau >= 50) return 2.0
+  return 0
 }
 
 /** Un objet révèle-t-il quelque chose que ce joueur n'a pas encore vu ?

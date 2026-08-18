@@ -738,8 +738,8 @@ const STR = {
     en: 'Story followed up to patch {patch}.',
   },
   spoilerUnknown: {
-    fr: 'Avancement inconnu : rien n’est masqué. Il se déduit de tes succès d’histoire, encore faut-il qu’ils soient renseignés.',
-    en: 'Progress unknown: nothing is hidden. It comes from your story achievements, which must be filled in first.',
+    fr: 'Avancement inconnu : rien n’est masqué. Il se déduit de tes succès d’histoire, ou à défaut du niveau de tes métiers.',
+    en: 'Progress unknown: nothing is hidden. It comes from your story achievements, or failing that from your job levels.',
   },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },

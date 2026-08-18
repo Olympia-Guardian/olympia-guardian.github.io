@@ -65,8 +65,12 @@ redirection non déclarée, et c'est justement ce qui protège la session.
 
 Google affiche un **ID client** et un **secret client**.
 
+Toutes les commandes ci-dessous se lancent **depuis le dossier du dépôt**,
+sinon wrangler cherche `worker/wrangler.toml` là où il se trouve et échoue :
+
 ```bash
-npx wrangler secret put GOOGLE_CLIENT_SECRET --config worker/wrangler.toml
+cd c:\Dev\OGS
+npx wrangler@4.121.0 secret put GOOGLE_CLIENT_SECRET --config worker/wrangler.toml
 ```
 
 L'ID client, lui, est public : il va dans `worker/wrangler.toml`, section
@@ -98,7 +102,8 @@ elle, la connexion fonctionne mais le raccourci de vérification ne sert à rien
 ### 2.2 Poser les clés
 
 ```bash
-npx wrangler secret put XIVAUTH_CLIENT_SECRET --config worker/wrangler.toml
+cd c:\Dev\OGS
+npx wrangler@4.121.0 secret put XIVAUTH_CLIENT_SECRET --config worker/wrangler.toml
 ```
 
 L'ID client va dans `[vars]` sous le nom `XIVAUTH_CLIENT_ID`.

@@ -50,9 +50,16 @@ export function useFournisseurs(): Fournisseur[] {
 
 /** À appeler avant toute lecture du hash : capture #login=… et restaure le
  *  hash de groupe pré-connexion. Retourne le jeton s'il y en a un. */
+/** Vrai si la session vient d'etre ouverte a l'instant (retour du fournisseur),
+ *  par opposition a un simple rechargement avec un jeton deja en place. Sert a
+ *  emmener la personne sur son journal plutot que de la laisser ou elle etait. */
+let arriveeDeConnexion = false
+export const vientDeSeConnecter = () => arriveeDeConnexion
+
 export function captureLoginToken(): string | null {
   const match = location.hash.match(/login=([\w-]+)/)
   if (match) {
+    arriveeDeConnexion = true
     try {
       lsSet(TOKEN_KEY, match[1])
       const prev = lsGet(PRELOGIN_KEY) ?? ''

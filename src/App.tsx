@@ -1,7 +1,7 @@
 import { lsGet, lsRemove, lsSet } from './storage'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
-import { useAuth, useFournisseurs } from './auth'
+import { useAuth, useFournisseurs, vientDeSeConnecter } from './auth'
 import { useDigest } from './digest'
 import { useGroups } from './groups'
 import { MyPage } from './views/MyPage'
@@ -285,6 +285,22 @@ export default function App() {
   useEffect(() => {
     setHashParam('tab', tab === 'planning' ? null : tab)
   }, [tab])
+  /** Se deconnecter renvoie devant la porte : rester sur un ecran qui n'a plus
+   *  de contenu donne l'impression que quelque chose s'est casse. */
+  function deconnexion() {
+    auth.logout()
+    setTab('login')
+  }
+  // Retour de connexion : on emmene sur le journal, la ou on lie ses persos et
+  // coche ses collections. Sauf si un lien d'invitation attend d'etre traite :
+  // il a sa propre suite, et la couper renverrait au point de depart.
+  const arriveeTraitee = useRef(false)
+  useEffect(() => {
+    if (arriveeTraitee.current || !vientDeSeConnecter()) return
+    arriveeTraitee.current = true
+    if (!readHashParam('j') && !readHashParam('c')) setTab('mypage')
+  }, [])
+
   // Dernière collection consultée : cliquer sur « Collections » y revient.
   const [collectionTab, setCollectionTab] = useState<Kind | 'fashion'>(() => {
     const t = readHashParam('tab')
@@ -622,7 +638,7 @@ export default function App() {
                             <TabIcon k="admin" /> {t('adminTitle')}
                           </button>
                         )}
-                        <button className="account-menu-item is-danger" onClick={auth.logout}>
+                        <button className="account-menu-item is-danger" onClick={deconnexion}>
                           <TabIcon k="logout" /> {t('logout')}
                         </button>
                       </div>
@@ -1057,6 +1073,9 @@ export default function App() {
               <AdminPage token={auth.token} />
             )}
             {tab === 'guide' && <GuidePage />}
+            {/* Les persos du COMPTE, pas ceux du groupe affiche : un perso
+                verifie mais absent du roster existe quand meme, et la page
+                annoncait « aucun perso verifie » a tort. */}
             {tab === 'account' && auth.user && auth.token && (
               <AccountPage
                 user={auth.user}
@@ -1064,7 +1083,10 @@ export default function App() {
                 db={db}
                 lang={lang}
                 setLang={setLang}
-                chars={myChars.map((m) => ({ id: m.id, name: m.data.name }))}
+                chars={verifiedIds.map((id) => ({
+                  id,
+                  name: ready.find((m) => m.id === id)?.data.name ?? '',
+                }))}
                 onImport={async (charId, par) => {
                   // Uniquement des ajouts : un fichier partiel ne peut rien
                   // effacer, et le frein du worker n'a même pas à intervenir.
@@ -1075,7 +1097,7 @@ export default function App() {
                   invalidateCharacter(charId)
                   reload(charId)
                 }}
-                onLogout={auth.logout}
+                onLogout={deconnexion}
                 onManageChars={() => setTab('mypage')}
               />
             )}

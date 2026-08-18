@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { KINDS, WORKER_API, type Kind } from '../api'
+import { useEffect, useRef, useState } from 'react'
+import { fetchCharacter, KINDS, WORKER_API, type Kind } from '../api'
 import { authHeaders } from '../auth'
 import { kindLabel, useI18n, type Lang } from '../i18n'
 import type { Db } from '../store'
@@ -62,6 +62,23 @@ export function AccountPage({
 }) {
   const { t } = useI18n()
   const fichier = useRef<HTMLInputElement>(null)
+  // Un perso lie hors du groupe affiche n'a pas de nom sous la main : on va le
+  // chercher (la fiche est en cache la plupart du temps) plutot que d'afficher
+  // un numero brut dans le selecteur d'import.
+  const [noms, setNoms] = useState<Record<number, string>>({})
+  useEffect(() => {
+    let annule = false
+    for (const c of chars) {
+      if (c.name || noms[c.id]) continue
+      void fetchCharacter(c.id)
+        .then((f) => !annule && setNoms((p) => ({ ...p, [c.id]: f.name })))
+        .catch(() => undefined)
+    }
+    return () => {
+      annule = true
+    }
+  }, [chars, noms])
+  const nomDe = (c: { id: number; name: string }) => c.name || noms[c.id] || `#${c.id}`
   // Choix explicite seulement : les personnages arrivent après le premier
   // rendu, donc figer la cible ici la laisserait à zéro et l'import ne
   // partirait jamais — en silence, ce qui est le pire des cas.
@@ -188,7 +205,7 @@ export function AccountPage({
           <select value={cible} onChange={(e) => setChoisi(Number(e.target.value))}>
             {chars.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {nomDe(c)}
               </option>
             ))}
           </select>

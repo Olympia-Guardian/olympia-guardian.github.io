@@ -26,6 +26,28 @@ const PRELOGIN_KEY = 'ogs.prelogin.v1'
 
 export type Fournisseur = 'discord' | 'google' | 'xivauth'
 
+/** Fournisseurs réellement configurés côté serveur. Discord seul par défaut :
+ *  c'est le seul dont on soit certain, et mieux vaut un bouton manquant qu'un
+ *  bouton qui échoue. */
+export function useFournisseurs(): Fournisseur[] {
+  const [liste, setListe] = useState<Fournisseur[]>(['discord'])
+  useEffect(() => {
+    let annule = false
+    fetch(`${WORKER_API}/providers`, { signal: AbortSignal.timeout(10000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((l) => {
+        if (!annule && Array.isArray(l) && l.length > 0) setListe(l as Fournisseur[])
+      })
+      .catch(() => {
+        // injoignable : on garde Discord, qui a toujours existé
+      })
+    return () => {
+      annule = true
+    }
+  }, [])
+  return liste
+}
+
 /** À appeler avant toute lecture du hash : capture #login=… et restaure le
  *  hash de groupe pré-connexion. Retourne le jeton s'il y en a un. */
 export function captureLoginToken(): string | null {

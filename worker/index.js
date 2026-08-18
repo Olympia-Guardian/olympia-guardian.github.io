@@ -3053,6 +3053,16 @@ const routes = {
     const url = new URL(req.url)
 
     // --- comptes : OAuth Discord + session + liaison de perso
+    // Quels fournisseurs sont réellement configurés. Sans ça, l'interface
+    // afficherait des boutons qui échouent tant que les clés ne sont pas
+    // posées — et, une fois posées, les boutons apparaissent tout seuls sans
+    // qu'il faille recompiler le front.
+    if (url.pathname === '/providers' && req.method === 'GET') {
+      const dispo = Object.keys(FOURNISSEURS).filter((k) => FOURNISSEURS[k].id(env))
+      return new Response(JSON.stringify(dispo), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=300', ...CORS },
+      })
+    }
     const authMatch = url.pathname.match(/^\/auth\/(\w+)(\/callback)?$/)
     if (authMatch && req.method === 'GET') {
       return authMatch[2]

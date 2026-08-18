@@ -1,7 +1,7 @@
 import { lsGet, lsRemove, lsSet } from './storage'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, KIND_FAMILIES, type Kind } from './api'
-import { useAuth } from './auth'
+import { useAuth, useFournisseurs } from './auth'
 import { useDigest } from './digest'
 import { useGroups } from './groups'
 import { MyPage } from './views/MyPage'
@@ -107,6 +107,7 @@ export default function App() {
 
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
   const auth = useAuth()
+  const fournisseurs = useFournisseurs()
 
   // Groupes : LE modèle de l'app — privés (navigateur ou compte) et
   // synchronisés (invitation par lien). Le groupe actif fournit les membres.
@@ -479,23 +480,28 @@ export default function App() {
                 <button className="btn btn-ghost account-btn" onClick={() => auth.login()} title={t('loginIntro')}>
                   <TabIcon k="login" /> {t('loginShort')}
                 </button>
-                {/* Deux autres portes. XIVAuth mérite la sienne : il atteste
+                {/* Deux autres portes, affichées seulement si le serveur les a
+                    réellement configurées. XIVAuth mérite la sienne : il atteste
                     les personnages, donc il évite de recopier un code sur le
                     Lodestone — c'est un raccourci, pas une simple alternative. */}
-                <button
-                  className="btn btn-ghost btn-icon-only"
-                  onClick={() => auth.login('google')}
-                  title={t('loginGoogle')}
-                >
-                  G
-                </button>
-                <button
-                  className="btn btn-ghost btn-icon-only"
-                  onClick={() => auth.login('xivauth')}
-                  title={t('loginXivauth')}
-                >
-                  <TabIcon k="lodestone" />
-                </button>
+                {fournisseurs.includes('google') && (
+                  <button
+                    className="btn btn-ghost btn-icon-only"
+                    onClick={() => auth.login('google')}
+                    title={t('loginGoogle')}
+                  >
+                    G
+                  </button>
+                )}
+                {fournisseurs.includes('xivauth') && (
+                  <button
+                    className="btn btn-ghost btn-icon-only"
+                    onClick={() => auth.login('xivauth')}
+                    title={t('loginXivauth')}
+                  >
+                    <TabIcon k="lodestone" />
+                  </button>
+                )}
               </>
             ) : (
               <>

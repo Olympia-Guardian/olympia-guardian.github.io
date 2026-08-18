@@ -707,17 +707,23 @@ const FOURNISSEURS = {
     secret: (env) => env.XIVAUTH_CLIENT_SECRET,
     async profil(jeton) {
       const r = await fetch('https://xivauth.net/api/v1/user', {
-        headers: { Authorization: `Bearer ${jeton}` },
+        headers: { Authorization: `Bearer ${jeton}`, Accept: 'application/json' },
       })
-      if (!r.ok) return null
+      if (!r.ok) {
+        console.error('xivauth /user', r.status, (await r.text()).slice(0, 200))
+        return null
+      }
       const me = await r.json()
       return { id: String(me.id), nom: me.display_name || 'Aventurier', avatar: me.avatar_url ?? '' }
     },
     async personnages(jeton) {
       const r = await fetch('https://xivauth.net/api/v1/characters', {
-        headers: { Authorization: `Bearer ${jeton}` },
+        headers: { Authorization: `Bearer ${jeton}`, Accept: 'application/json' },
       })
-      if (!r.ok) return []
+      if (!r.ok) {
+        console.error('xivauth /characters', r.status, (await r.text()).slice(0, 200))
+        return []
+      }
       const liste = await r.json()
       return (Array.isArray(liste) ? liste : (liste.characters ?? []))
         .map((c) => Number(c.lodestone_id))
@@ -806,7 +812,7 @@ function lireCookie(req, nom) {
   return null
 }
 
-async function authCallback(env, url, req, fournisseur) {
+async function authCallback(env, url, req, fournisseur, ctx) {
   const payload = await verifyState(env, url.searchParams.get('state'))
   const code = url.searchParams.get('code')
   if (!payload || !code) return response('{"error":"invalid state"}', 400)
@@ -818,25 +824,65 @@ async function authCallback(env, url, req, fournisseur) {
 
   // Le fournisseur est celui inscrit dans l'état signé, pas celui de l'URL :
   // l'état est la seule partie que l'appelant ne peut pas fabriquer.
-  const f = FOURNISSEURS[payload.p ?? fournisseur]
+  const nomDemande = payload.p ?? fournisseur
+  const f = FOURNISSEURS[nomDemande]
   if (!f || !f.secret(env)) return response('{"error":"unknown provider"}', 404)
 
-  const tokenRes = await fetch(f.token, {
+  // Deux facons normalisees de prouver son identite au serveur de jetons :
+  // les identifiants dans le corps, ou en authentification HTTP Basic. Discord
+  // et Google acceptent la premiere ; Doorkeeper, la bibliotheque OAuth de
+  // XIVAuth, veut la seconde et repond sinon « invalid_client ». On garde donc
+  // celle qui marche deja et on bascule sur Basic devant ce refus precis — un
+  // refus d'authentification ne consomme pas le code, la seconde tentative est
+  // donc legitime.
+  const champs = {
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: f.retour,
+  }
+  let tokenRes = await fetch(f.token, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: f.id(env),
-      client_secret: f.secret(env),
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: f.retour,
-    }),
+    body: new URLSearchParams({ ...champs, client_id: f.id(env), client_secret: f.secret(env) }),
   })
-  if (!tokenRes.ok) return response('{"error":"token exchange failed"}', 502)
+  if (tokenRes.status === 401) {
+    tokenRes = await fetch(f.token, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${btoa(`${f.id(env)}:${f.secret(env)}`)}`,
+      },
+      body: new URLSearchParams(champs),
+    })
+  }
+  if (!tokenRes.ok) {
+    // Le fournisseur explique toujours pourquoi il refuse (invalid_client,
+    // invalid_grant, PKCE manquant...). Renvoyer un « token exchange failed »
+    // nu obligeait a deviner ; sa reponse ne contient aucun secret, seulement
+    // un code d'erreur normalise, donc on la trace et on la transmet.
+    const detail = (await tokenRes.text()).slice(0, 300)
+    // Longueurs seulement, jamais les valeurs : un secret colle avec un retour
+    // a la ligne ou tronque se voit immediatement, sans rien exposer.
+    const cle = f.secret(env) ?? ''
+    console.error(
+      'echange de jeton refuse',
+      nomDemande,
+      tokenRes.status,
+      `id:${f.id(env)?.length ?? 0} secret:${cle.length}${cle !== cle.trim() ? ' AVEC ESPACES' : ''}`,
+      detail,
+    )
+    return response(
+      JSON.stringify({ error: 'token exchange failed', provider: nomDemande, status: tokenRes.status, detail }),
+      502,
+    )
+  }
   const { access_token } = await tokenRes.json()
 
   const profil = await f.profil(access_token)
-  if (!profil) return response('{"error":"profile fetch failed"}', 502)
+  if (!profil) {
+    console.error('lecture du profil refusee', nomDemande)
+    return response(JSON.stringify({ error: 'profile fetch failed', provider: nomDemande }), 502)
+  }
 
   const nom = payload.p ?? fournisseur
   const userId = `${nom}:${profil.id}`
@@ -854,6 +900,7 @@ async function authCallback(env, url, req, fournisseur) {
   if (f.personnages) {
     try {
       const ids = await f.personnages(access_token)
+      const lies = []
       for (const charId of ids.slice(0, 20)) {
         const pris = await env.DB.prepare(
           'SELECT user_id FROM bindings WHERE char_id = ?1 AND verified = 1',
@@ -867,6 +914,16 @@ async function authCallback(env, url, req, fournisseur) {
         )
           .bind(userId, charId, Date.now())
           .run()
+        lies.push(charId)
+      }
+      // Un perso atteste ici n'a jamais ete lu chez nous : sa fiche n'existe
+      // pas encore, et le journal n'afficherait qu'un numero pendant que le
+      // navigateur attend une lecture du Lodestone qui prend plusieurs
+      // secondes. On la prepare pendant la redirection, sans la faire attendre.
+      if (ctx && lies.length > 0) {
+        ctx.waitUntil(
+          Promise.all(lies.slice(0, 5).map((id) => getCharacter(env, id, false).catch(() => null))),
+        )
       }
     } catch (e) {
       // Une attestation ratée ne doit pas empêcher la connexion elle-même.
@@ -3071,7 +3128,7 @@ const routes = {
     const authMatch = url.pathname.match(/^\/auth\/(\w+)(\/callback)?$/)
     if (authMatch && req.method === 'GET') {
       return authMatch[2]
-        ? authCallback(env, url, req, authMatch[1])
+        ? authCallback(env, url, req, authMatch[1], ctx)
         : authStart(env, url, authMatch[1])
     }
     if (url.pathname === '/report' && req.method === 'POST') {

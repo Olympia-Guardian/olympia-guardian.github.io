@@ -716,6 +716,12 @@ const STR = {
     fr: 'Se connecter avec XIVAuth : tes personnages déjà attestés chez eux sont liés et vérifiés d’office, sans code à recopier sur le Lodestone',
     en: 'Sign in with XIVAuth: characters already attested there are linked and verified straight away, no code to copy onto the Lodestone',
   },
+  charSheetFailed: { fr: 'Fiche illisible', en: 'Sheet unavailable' },
+  charSheetRetry: { fr: 'Relire les fiches', en: 'Reload the sheets' },
+  charSheetRetryHint: {
+    fr: 'La lecture sur le Lodestone a echoue ou pris trop de temps. Relancer.',
+    en: 'Reading from the Lodestone failed or took too long. Try again.',
+  },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },

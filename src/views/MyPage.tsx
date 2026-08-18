@@ -1329,6 +1329,7 @@ export function MyPage({
   const [adding, setAdding] = useState(false)
   // Fiches des persos vérifiés : sert au sélecteur (nom + portrait).
   const [chars, setChars] = useState<Record<number, Character>>({})
+  const [rates, setRates] = useState<number[]>([])
 
   useEffect(() => {
     if (verified) lsSet(ACTIVE_CHAR_KEY, String(verified.charId))
@@ -1351,7 +1352,10 @@ export function MyPage({
       fetchCharacter(id)
         .then((c) => setChars((prev) => ({ ...prev, [id]: c })))
         .catch(() => {
-          // perso injoignable : le sélecteur se rabat sur son identifiant
+          // Un numero nu ne dit rien : on marque la fiche comme illisible pour
+          // que l'ecran propose de reessayer au lieu de laisser croire a un
+          // compte vide. C'est le premier ecran d'un nouvel inscrit.
+          setRates((prev) => (prev.includes(id) ? prev : [...prev, id]))
         })
     }
   }, [verifiedIds])
@@ -1559,12 +1563,29 @@ export function MyPage({
               >
                 {c && <img src={c.avatar} alt="" width={26} height={26} onError={onAvatarImgError} />}
                 <span className="char-tab-id">
-                  <b>{c ? c.name : `#${b.charId}`}</b>
-                  {c && <span className="player-server">{c.server}</span>}
+                  <b>{c ? c.name : rates.includes(b.charId) ? t('charSheetFailed') : t('loading')}</b>
+                  <span className="player-server">{c ? c.server : `#${b.charId}`}</span>
                 </span>
               </button>
             )
           })}
+          {rates.length > 0 && (
+            <button
+              className="char-tab"
+              title={t('charSheetRetryHint')}
+              onClick={() => {
+                const aRelire = rates
+                setRates([])
+                for (const id of aRelire) {
+                  fetchCharacter(id, true)
+                    .then((c) => setChars((prev) => ({ ...prev, [id]: c })))
+                    .catch(() => setRates((prev) => (prev.includes(id) ? prev : [...prev, id])))
+                }
+              }}
+            >
+              <TabIcon k="sync" /> {t('charSheetRetry')}
+            </button>
+          )}
           <button
             className={`char-tab char-add ${adding ? 'is-active' : ''}`}
             title={t('bindAdd')}

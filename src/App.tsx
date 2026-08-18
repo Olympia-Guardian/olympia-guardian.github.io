@@ -25,7 +25,7 @@ import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
 import { useWishlist } from './wishlist'
-import { avancementMsq, useModeSpoiler, useStory } from './spoilers'
+import { avancementMsq, SpoilerCtx, useModeSpoiler, useStory } from './spoilers'
 import { AccountPage } from './views/Account'
 import { LoginPage } from './views/Login'
 import { NewsPage } from './views/News'
@@ -178,6 +178,7 @@ export default function App() {
   // L'aperçu prime sur le réel, y compris en mode « aucun » : on simule pour
   // voir, il serait absurde que le réglage personnel neutralise l'essai.
   const msq = spoil.simule ?? (spoil.mode === 'aucun' ? null : msqReel)
+  const spoilValue = useMemo(() => ({ msq, mode: spoil.mode }), [msq, spoil.mode])
   const news = useMemo(() => patchNews(db, myChars), [db, myChars])
   const [newsSeen, setNewsSeen] = useState<string | null>(() => lsGet('ogs.newsseen.v1'))
   const newsCard = news && news.patch !== newsSeen ? news : null
@@ -452,6 +453,8 @@ export default function App() {
 
   return (
     <LangContext.Provider value={langValue}>
+      {/* Le masquage vaut partout, pas seulement dans la grille des collections. */}
+      <SpoilerCtx.Provider value={spoilValue}>
       {/* Ce qui fait vraiment attendre : les catalogues au demarrage, les gros
           en seconde vague, et la lecture des fiches sur le Lodestone. Le reste
           repond trop vite pour meriter une barre. */}
@@ -1258,6 +1261,7 @@ export default function App() {
           <p className="footer-legal">FINAL FANTASY XIV © SQUARE ENIX</p>
         </footer>
       </div>
+      </SpoilerCtx.Provider>
     </LangContext.Provider>
   )
 }

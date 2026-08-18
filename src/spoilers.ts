@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { Character, Item } from './api'
 import { lsGet, lsSet } from './storage'
 
@@ -148,4 +148,18 @@ export function useModeSpoiler() {
     }
   }
   return { mode, choisir, simule, simuler }
+}
+
+// Contexte : le journal rend les objets dans cinq composants differents, et
+// faire descendre deux valeurs a travers tous aurait alourdi chaque signature
+// pour rien. Chacun demande son masque la ou il affiche.
+export const SpoilerCtx = createContext<{ msq: number | null; mode: ModeSpoiler }>({
+  msq: null,
+  mode: 'histoire',
+})
+
+/** Masque a appliquer a cet objet, selon le reglage courant. */
+export function useMasque(item: Item, kind: string): Masque {
+  const { msq, mode } = useContext(SpoilerCtx)
+  return masqueDe(item, kind, msq, mode)
 }

@@ -723,7 +723,7 @@ const STR = {
     en: 'Reading from the Lodestone failed or took too long. Try again.',
   },
   spoilerSection: { fr: 'Révélations de l’histoire', en: 'Story spoilers' },
-  spoilerHidden: { fr: 'Récompense d’histoire · patch {patch}', en: 'Story reward · patch {patch}' },
+  spoilerHidden: { fr: 'Contenu du patch {patch}', en: 'Patch {patch} content' },
   spoilerWhy: {
     fr: 'Masqué : tu n’en es pas encore là dans l’histoire. Clique pour voir quand même.',
     en: 'Hidden: you have not reached this point in the story. Click to look anyway.',

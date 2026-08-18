@@ -21,7 +21,7 @@ import { sourceIcon, typeLabel } from '../sources'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
 import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError, xivIconUrl } from '../ui'
 import { useFlushOnHide } from '../useFlushOnHide'
-import { useMasque } from '../spoilers'
+import { useMasque, useMasqueur } from '../spoilers'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
@@ -1007,6 +1007,7 @@ function CollectionEditor({
   owned,
   pieceOwned,
   readOnly,
+  onRevealAll,
   onSave,
   onSavePieces,
 }: {
@@ -1017,6 +1018,8 @@ function CollectionEditor({
   /** Tenues : pièces possédées (suivi individuel). */
   pieceOwned?: number[]
   readOnly?: boolean
+  /** Tout révéler d'un geste, depuis la liste elle-même. */
+  onRevealAll?: () => void
   onSave: (kind: Kind, ids: number[]) => void
   onSavePieces?: (ids: number[]) => void
 }) {
@@ -1160,10 +1163,18 @@ function CollectionEditor({
     return s
   }, [ids, pieceIds, db, kind])
 
+  const masquer = useMasqueur()
+  // Contenu non atteint : retire de la liste plutot qu'affiche en cases
+  // muettes. Compte a part pour le dire — rien ne doit sembler perdu.
+  const caches = useMemo(
+    () => db[kind].filter((it) => masquer(it, kind) === 'tout').length,
+    [db, kind, masquer],
+  )
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
     const base = db[kind].filter(
       (it) =>
+        masquer(it, kind) !== 'tout' &&
         (!q ||
           it.name.toLowerCase().includes(q) ||
           it.nameEn.toLowerCase().includes(q) ||
@@ -1194,7 +1205,7 @@ function CollectionEditor({
         groupEn: it.achTypeEn ?? 'Other',
       }))
     return base
-  }, [db, kind, search, onlyMissing, shownIds])
+  }, [db, kind, search, onlyMissing, shownIds, masquer])
 
   // Points de succès : possédés / total, calculés depuis le catalogue.
   const achPts = useMemo(() => {
@@ -1250,6 +1261,14 @@ function CollectionEditor({
           </div>
         )}
       </div>
+      {caches > 0 && (
+        <p className="notice notice-filter">
+          <span>{t('spoilerHiddenCount', { n: caches })}</span>
+          <button className="btn btn-mini btn-ghost" onClick={onRevealAll}>
+            {t('spoilerRevealAll')}
+          </button>
+        </p>
+      )}
       <div className="editor-layout">
         <div className="editor-body">
           {kind === 'cards' ? (
@@ -1306,9 +1325,12 @@ export function MyPage({
   dbPending,
   relicDb,
   auth,
+  onRevealAll,
   members,
   onCharacterUpdated,
 }: {
+  /** Tout révéler d'un geste depuis les listes du journal. */
+  onRevealAll?: () => void
   db: Db
   /** Collections encore en cours de téléchargement (les trois gros catalogues
    *  arrivent après les autres) : l'onglet concerné dit qu'il charge au lieu
@@ -1990,6 +2012,7 @@ export function MyPage({
               owned={char[kind].ids}
               pieceOwned={kind === 'outfits' ? char.outfitPieceIds : undefined}
               readOnly={!EDITABLE.includes(kind)}
+              onRevealAll={onRevealAll}
               onSave={save}
               onSavePieces={kind === 'outfits' ? (ids) => save('outfitpieces', ids) : undefined}
             />

@@ -5,7 +5,7 @@ import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
 import { TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import type { Wishes } from '../wishlist'
-import { masqueDe, type ModeSpoiler } from '../spoilers'
+import { masqueDe, useMasqueur, type ModeSpoiler } from '../spoilers'
 
 type Ready = Member & { data: Character }
 
@@ -59,6 +59,7 @@ export function Matrix({
   wishes,
   msq,
   spoilMode,
+  onRevealAll,
   only,
   suggest,
   ownAdd,
@@ -77,6 +78,8 @@ export function Matrix({
   msq?: number | null
   /** Niveau de masquage choisi par le joueur. */
   spoilMode?: ModeSpoiler
+  /** Tout révéler d'un geste depuis la liste elle-même. */
+  onRevealAll?: () => void
   /** Restriction venue d'ailleurs (la cloche, pour les nouveautés d'un patch) :
    *  la vue ne montre que ces objets, en le disant et en offrant d'en sortir.
    *  Les clés valent « collection:id » — dans la vue « Mode » deux collections
@@ -98,6 +101,7 @@ export function Matrix({
   }
 }) {
   const { lang, t } = useI18n()
+  const masquer = useMasqueur()
   // Vue fusionnée : chaque objet connaît sa collection d'origine.
   const kindFor = (item: Item): Kind => item.kindOf ?? kind
   // Ajouts directs sur mes persos pendant la session (clé perso:collection:objet).
@@ -135,6 +139,7 @@ export function Matrix({
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], lang))
   }, [items, presentTypes, lang])
 
+  let caches = 0
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = items
@@ -165,6 +170,13 @@ export function Matrix({
         if (onlyMissing && missing.length === 0) return false
         return true
       })
+    // Contenu que ce joueur n'a pas encore atteint : on le retire de la liste
+    // plutot que d'aligner des cases muettes, et on le compte pour le dire.
+    const avant = list.length
+    const visibles = list.filter(({ item }) => masquer(item, kindFor(item)) !== 'tout')
+    caches = avant - visibles.length
+    list.length = 0
+    list.push(...visibles)
     switch (sort) {
       case 'missing':
         list.sort((a, b) => b.missing.length - a.missing.length || a.item.order - b.item.order)
@@ -177,7 +189,7 @@ export function Matrix({
         break
     }
     return list
-  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, onlyWished, wishes, suggest?.sentKeys])
+  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, onlyWished, wishes, masquer, suggest?.sentKeys])
 
   return (
     <div className="view">
@@ -248,6 +260,15 @@ export function Matrix({
           <span>{only.label}</span>
           <button className="btn btn-ghost btn-mini" onClick={only.onClear}>
             {t('newsFilterClear')}
+          </button>
+        </p>
+      )}
+
+      {caches > 0 && (
+        <p className="notice notice-filter">
+          <span>{t('spoilerHiddenCount', { n: caches })}</span>
+          <button className="btn btn-mini btn-ghost" onClick={onRevealAll}>
+            {t('spoilerRevealAll')}
           </button>
         </p>
       )}

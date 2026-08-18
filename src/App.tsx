@@ -985,6 +985,7 @@ export default function App() {
                 wishes={wish.wishes}
                 msq={msq}
                 spoilMode={spoil.mode}
+                onRevealAll={() => spoil.choisir('aucun')}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1058,6 +1059,7 @@ export default function App() {
                 wishes={wish.wishes}
                 msq={msq}
                 spoilMode={spoil.mode}
+                onRevealAll={() => spoil.choisir('aucun')}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1173,6 +1175,7 @@ export default function App() {
 
             {db && tab === 'mypage' && (
               <MyPage
+                onRevealAll={() => spoil.choisir('aucun')}
                 db={db}
                 dbPending={dbPending}
                 relicDb={relicDb}

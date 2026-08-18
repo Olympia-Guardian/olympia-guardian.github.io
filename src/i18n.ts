@@ -759,6 +759,11 @@ const STR = {
   },
   spoilSimNone: { fr: 'Mon avancement réel', en: 'My real progress' },
   spoilSimPatch: { fr: 'Un joueur au patch {patch}', en: 'A player at patch {patch}' },
+  spoilerHiddenCount: {
+    fr: '{n} objets cachés : du contenu que tu n’as pas encore atteint. Les compteurs, eux, comptent tout.',
+    en: '{n} items hidden: content you have not reached yet. The counters still count everything.',
+  },
+  spoilerRevealAll: { fr: 'Tout montrer', en: 'Show everything' },
   spoilerSource: { fr: 'Récompense patch {patch}', en: 'Patch {patch} reward' },
   spoilerToggle: { fr: 'Je me moque d’être spoilé', en: 'I do not mind spoilers' },
   spoilerToggleHint: {

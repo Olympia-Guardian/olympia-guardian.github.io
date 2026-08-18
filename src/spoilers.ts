@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { Character, Item } from './api'
 import { lsGet, lsSet } from './storage'
 
@@ -162,4 +162,43 @@ export const SpoilerCtx = createContext<{ msq: number | null; mode: ModeSpoiler 
 export function useMasque(item: Item, kind: string): Masque {
   const { msq, mode } = useContext(SpoilerCtx)
   return masqueDe(item, kind, msq, mode)
+}
+
+/** Le masque d'un objet quelconque, utilisable dans une boucle — un hook ne
+ *  peut pas etre appele par element, mais la fonction qu'il rend, si. */
+export function useMasqueur() {
+  const { msq, mode } = useContext(SpoilerCtx)
+  return useCallback((item: Item, kind: string) => masqueDe(item, kind, msq, mode), [msq, mode])
+}
+
+/** Avancement d'UN personnage, pour le planning. Deux bornes selon l'usage :
+ *  pour masquer, on suppose qu'il a vu le moins possible (on protege au large) ;
+ *  pour planifier, qu'il a debloque le plus possible (on ne lui retire pas du
+ *  contenu qu'il peut faire). La meme valeur ne peut pas servir aux deux.
+ */
+export function accesDe(c: Character, jalons: Jalon[]): number {
+  const parId = new Map(jalons.map((j) => [j.id, parseFloat(j.patch)]))
+  const col = c.achievements
+  if (col?.isPublic && col.ids.length > 0) {
+    let max = 0
+    for (const id of col.ids) {
+      const p = parId.get(id)
+      if (p !== undefined && p > max) max = p
+    }
+    // Les succes disent ou il en est ; la suite de l'extension en cours lui
+    // reste ouverte, donc on arrondit a la fin de celle-ci.
+    if (max > 0) return Math.floor(max) + 0.99
+  }
+  const jobs = c.profile?.jobs ?? []
+  const niveau = Math.max(c.profile?.activeLevel ?? 0, ...jobs.map((j) => j.level ?? 0), 0)
+  if (niveau >= 100) return Infinity
+  if (niveau >= 90) return 7.99
+  if (niveau >= 80) return 6.99
+  if (niveau >= 70) return 5.99
+  if (niveau >= 60) return 4.99
+  if (niveau >= 50) return 3.99
+  if (niveau > 0) return 2.99
+  // Niveau inconnu : on ne retire rien, un planning ampute vaut moins qu'un
+  // planning trop large.
+  return Infinity
 }

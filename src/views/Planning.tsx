@@ -147,6 +147,8 @@ function RunCard({
   )
 }
 
+import { accesDe, useStory } from '../spoilers'
+
 export function Planning({
   db,
   ready,
@@ -163,6 +165,11 @@ export function Planning({
   const [kindFilter, setKindFilter] = useState<KindFilter>('all')
   const [minMissing, setMinMissing] = useState(1)
   const [includeUnavailable, setIncludeUnavailable] = useState(false)
+  const jalons = useStory()
+  const acces = useMemo(
+    () => new Map(ready.map((m) => [m.id, accesDe(m.data, jalons)])),
+    [ready, jalons],
+  )
   const [compo, setCompo] = useState<CompoFilter>('all')
   const [search, setSearch] = useState('')
 
@@ -178,6 +185,11 @@ export function Planning({
         if (item.unobtainable && !includeUnavailable) continue
         const missing = ready.filter((m) => {
           if (!m.data[kind].isPublic) return false
+          // Contenu qu'il ne peut pas encore débloquer : le lui proposer à
+          // farmer n'est pas un spoiler, c'est un mauvais conseil. On prend la
+          // borne LARGE de ce qu'il peut atteindre — amputer le planning
+          // coûterait plus cher que de proposer un objet de trop.
+          if (item.patch && parseFloat(item.patch) > (acces.get(m.id) ?? Infinity)) return false
           return !ownedSets.get(m.id)?.[kind].has(item.id)
         })
         if (missing.length < minM) continue
@@ -249,7 +261,7 @@ export function Planning({
     }
     result.sort((a, b) => b.impact - a.impact)
     return result
-  }, [db, ready, ownedSets, scope, kindFilter, minMissing, includeUnavailable, compo])
+  }, [db, ready, ownedSets, scope, kindFilter, minMissing, includeUnavailable, compo, acces])
 
   const filteredRuns = useMemo(() => {
     const q = search.trim().toLowerCase()

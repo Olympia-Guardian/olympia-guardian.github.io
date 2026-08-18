@@ -18,6 +18,7 @@ export interface Jalon {
 
 const CLE_REVELER = 'ogs.spoilers.v1'
 const CLE_MODE = 'ogs.spoilermode.v1'
+const CLE_SIMU = 'ogs.spoilersimu.v1'
 
 /** Jalons d'histoire, publiés à part du gros catalogue des succès pour être
  *  disponibles dès le premier rendu : masquer trois secondes trop tard ne
@@ -125,5 +126,26 @@ export function useModeSpoiler() {
     setMode(m)
     lsSet(CLE_MODE, m)
   }
-  return { mode, choisir }
+
+  // Apercu : se mettre a la place d'un joueur arrete a tel patch, pour voir ce
+  // qu'il verrait. Garde le temps de l'onglet seulement — c'est un essai, pas
+  // une preference, et le retrouver dans trois jours serait deroutant.
+  const [simule, setSimule] = useState<number | null>(() => {
+    try {
+      const v = sessionStorage.getItem(CLE_SIMU)
+      return v ? Number(v) : null
+    } catch {
+      return null
+    }
+  })
+  const simuler = (v: number | null) => {
+    setSimule(v)
+    try {
+      if (v === null) sessionStorage.removeItem(CLE_SIMU)
+      else sessionStorage.setItem(CLE_SIMU, String(v))
+    } catch {
+      // pas de persistance : l'apercu vivra le temps de la page
+    }
+  }
+  return { mode, choisir, simule, simuler }
 }

@@ -743,6 +743,18 @@ const STR = {
     fr: 'Je me moque d’être spoilé, montre-moi tout.',
     en: 'I do not mind spoilers, show me everything.',
   },
+  spoilSimBanner: {
+    fr: 'Aperçu : tu vois l’application comme un joueur arrivé au patch {patch}.',
+    en: 'Preview: you are seeing the app as a player who reached patch {patch}.',
+  },
+  spoilSimStop: { fr: 'Revenir au réel', en: 'Back to reality' },
+  spoilSimTitle: { fr: 'Essayer un avancement', en: 'Try a progress point' },
+  spoilSimHint: {
+    fr: 'Pour voir ce que masquerait chaque niveau sans changer ton compte. L’aperçu ne dure que le temps de l’onglet.',
+    en: 'To see what each level would hide without changing your account. The preview lasts only for this tab.',
+  },
+  spoilSimNone: { fr: 'Mon avancement réel', en: 'My real progress' },
+  spoilSimPatch: { fr: 'Un joueur au patch {patch}', en: 'A player at patch {patch}' },
   spoilerSource: { fr: 'Récompense patch {patch}', en: 'Patch {patch} reward' },
   spoilerToggle: { fr: 'Je me moque d’être spoilé', en: 'I do not mind spoilers' },
   spoilerToggleHint: {

@@ -174,10 +174,10 @@ export default function App() {
   // patch qu'on y choisit.
   // Sur MES persos vérifiés : c'est mon avancement qui décide, pas celui d'un
   // membre du groupe. Sans repère, on ne masque rien.
-  const msq = useMemo(
-    () => (spoil.mode === 'aucun' ? null : avancementMsq(myChars, jalons)),
-    [myChars, jalons, spoil.mode],
-  )
+  const msqReel = useMemo(() => avancementMsq(myChars, jalons), [myChars, jalons])
+  // L'aperçu prime sur le réel, y compris en mode « aucun » : on simule pour
+  // voir, il serait absurde que le réglage personnel neutralise l'essai.
+  const msq = spoil.simule ?? (spoil.mode === 'aucun' ? null : msqReel)
   const news = useMemo(() => patchNews(db, myChars), [db, myChars])
   const [newsSeen, setNewsSeen] = useState<string | null>(() => lsGet('ogs.newsseen.v1'))
   const newsCard = news && news.patch !== newsSeen ? news : null
@@ -886,6 +886,14 @@ export default function App() {
             {/* Fiche de secours : elle ignore les collections cochées à la
                 main et se lirait comme une perte. On le dit, et on propose de
                 réessayer plutôt que de laisser quelqu'un croire au pire. */}
+            {spoil.simule !== null && (
+              <p className="notice notice-filter">
+                <span>{t('spoilSimBanner', { patch: spoil.simule })}</span>
+                <button className="btn btn-mini btn-ghost" onClick={() => spoil.simuler(null)}>
+                  {t('spoilSimStop')}
+                </button>
+              </p>
+            )}
             {ready.some((m) => m.data.partial) && (
               <p className="notice notice-stale">
                 {t('charPartial')}{' '}
@@ -1120,7 +1128,7 @@ export default function App() {
                 }}
                 onLogout={deconnexion}
                 onManageChars={() => setTab('mypage')}
-                spoil={{ mode: spoil.mode, choisir: spoil.choisir, msq: avancementMsq(myChars, jalons) }}
+                spoil={{ ...spoil, msq: msqReel, patchs: jalons }}
               />
             )}
             {tab === 'login' && !auth.user && (

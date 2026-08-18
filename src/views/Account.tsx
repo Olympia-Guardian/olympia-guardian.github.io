@@ -62,7 +62,14 @@ export function AccountPage({
   onLogout: () => void
   onManageChars: () => void
   /** Anti-révélation : le niveau courant et de quoi le changer. */
-  spoil: { mode: ModeSpoiler; choisir: (m: ModeSpoiler) => void; msq: number | null }
+  spoil: {
+    mode: ModeSpoiler
+    choisir: (m: ModeSpoiler) => void
+    msq: number | null
+    simule: number | null
+    simuler: (v: number | null) => void
+    patchs: { id: number; patch: string }[]
+  }
 }) {
   const { t } = useI18n()
   const fichier = useRef<HTMLInputElement>(null)
@@ -202,6 +209,22 @@ export function AccountPage({
         <p className="muted">
           {spoil.msq === null ? t('spoilerUnknown') : t('spoilerState', { patch: spoil.msq })}
         </p>
+        <h4 className="account-h4">{t('spoilSimTitle')}</h4>
+        <p className="muted">{t('spoilSimHint')}</p>
+        <select
+          value={spoil.simule ?? ''}
+          onChange={(e) => spoil.simuler(e.target.value === '' ? null : Number(e.target.value))}
+        >
+          <option value="">{t('spoilSimNone')}</option>
+          {[...new Set(spoil.patchs.map((j) => j.patch))]
+            .sort((a, b) => parseFloat(a) - parseFloat(b))
+            .map((p) => (
+              <option key={p} value={parseFloat(p)}>
+                {t('spoilSimPatch', { patch: p })}
+              </option>
+            ))}
+        </select>
+
         <div className="spoil-modes">
           {(['decouverte', 'histoire', 'aucun'] as ModeSpoiler[]).map((m) => (
             <label key={m} className={`spoil-mode ${spoil.mode === m ? 'is-active' : ''}`}>

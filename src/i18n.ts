@@ -728,6 +728,22 @@ const STR = {
     fr: 'Masqué : tu n’en es pas encore là dans l’histoire. Clique pour voir quand même.',
     en: 'Hidden: you have not reached this point in the story. Click to look anyway.',
   },
+  spoilMode_decouverte: { fr: 'Découverte', en: 'Discovery' },
+  spoilWhy_decouverte: {
+    fr: 'Tout ce qui vient d’après ton avancement voit sa provenance masquée : tu vois l’objet, pas le contenu d’où il sort. Les récompenses d’histoire et les succès, dont le nom trahit à lui seul, sont masqués en entier.',
+    en: 'Anything past your progress has its source hidden: you see the item, not the content it comes from. Story rewards and achievements, whose very names give it away, are hidden entirely.',
+  },
+  spoilMode_histoire: { fr: 'Histoire', en: 'Story' },
+  spoilWhy_histoire: {
+    fr: 'Seules les récompenses de quête postérieures à ton avancement sont masquées. Le reste s’affiche normalement.',
+    en: 'Only quest rewards beyond your progress are hidden. Everything else shows normally.',
+  },
+  spoilMode_aucun: { fr: 'Aucun', en: 'None' },
+  spoilWhy_aucun: {
+    fr: 'Je me moque d’être spoilé, montre-moi tout.',
+    en: 'I do not mind spoilers, show me everything.',
+  },
+  spoilerSource: { fr: 'Récompense patch {patch}', en: 'Patch {patch} reward' },
   spoilerToggle: { fr: 'Je me moque d’être spoilé', en: 'I do not mind spoilers' },
   spoilerToggleHint: {
     fr: 'Par défaut, les récompenses de quête postérieures à ton avancement dans l’histoire sont masquées : nom, image et source. Ton avancement est lu dans tes succès d’histoire, et il ne bouge qu’à la synchronisation d’un personnage.',

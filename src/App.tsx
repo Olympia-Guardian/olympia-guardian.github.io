@@ -25,7 +25,7 @@ import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
 import { useWishlist } from './wishlist'
-import { avancementMsq, useRevelerTout, useStory } from './spoilers'
+import { avancementMsq, useModeSpoiler, useStory } from './spoilers'
 import { AccountPage } from './views/Account'
 import { LoginPage } from './views/Login'
 import { NewsPage } from './views/News'
@@ -163,7 +163,7 @@ export default function App() {
   const wish = useWishlist()
   // Protection anti-révélation : où en est le joueur dans l'histoire.
   const jalons = useStory()
-  const spoil = useRevelerTout()
+  const spoil = useModeSpoiler()
   // Persos à moi et vérifiés : la seule base honnête pour dire « il te manque ».
   const myChars = useMemo(
     () => ready.filter((m) => verifiedIds.includes(m.id)),
@@ -175,8 +175,8 @@ export default function App() {
   // Sur MES persos vérifiés : c'est mon avancement qui décide, pas celui d'un
   // membre du groupe. Sans repère, on ne masque rien.
   const msq = useMemo(
-    () => (spoil.tout ? null : avancementMsq(myChars, jalons)),
-    [myChars, jalons, spoil.tout],
+    () => (spoil.mode === 'aucun' ? null : avancementMsq(myChars, jalons)),
+    [myChars, jalons, spoil.mode],
   )
   const news = useMemo(() => patchNews(db, myChars), [db, myChars])
   const [newsSeen, setNewsSeen] = useState<string | null>(() => lsGet('ogs.newsseen.v1'))
@@ -964,6 +964,7 @@ export default function App() {
                 ownedSets={ownedSets}
                 wishes={wish.wishes}
                 msq={msq}
+                spoilMode={spoil.mode}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1036,6 +1037,7 @@ export default function App() {
                 ownedSets={ownedSets}
                 wishes={wish.wishes}
                 msq={msq}
+                spoilMode={spoil.mode}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1118,7 +1120,7 @@ export default function App() {
                 }}
                 onLogout={deconnexion}
                 onManageChars={() => setTab('mypage')}
-                spoil={{ tout: spoil.tout, basculer: spoil.basculer, msq: avancementMsq(myChars, jalons) }}
+                spoil={{ mode: spoil.mode, choisir: spoil.choisir, msq: avancementMsq(myChars, jalons) }}
               />
             )}
             {tab === 'login' && !auth.user && (

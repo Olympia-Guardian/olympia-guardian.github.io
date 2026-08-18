@@ -5326,9 +5326,54 @@ a.player-name:hover {
 
 /* --------------------------------------------- masquage des révélations */
 
-/* L'image est floutée plutôt que retirée : la case garde sa place, la grille
-   ne se déforme pas, et on devine qu'il y a quelque chose sans le voir. */
-.item-icon.is-hidden-spoiler {
-  filter: blur(7px) saturate(0.35);
-  opacity: 0.5;
+/* Un point d'interrogation sur fond rouge remplace l'image : flouter laissait
+   deviner la silhouette, et une case vide se lisait comme un bogue. Le carre
+   garde exactement la taille d'une icone pour que la grille ne bouge pas. */
+.spoiler-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #7a2626, #4a1616);
+  border: 1px solid rgba(208, 59, 59, 0.55);
+  border-radius: var(--radius-s);
+}
+
+.spoiler-icon .kind-icon {
+  width: 60%;
+  height: 60%;
+  opacity: 0.9;
+}
+
+/* Choix du niveau de masquage, dans Mon compte. */
+.spoil-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.spoil-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+}
+
+.spoil-mode.is-active {
+  border-color: var(--gold);
+}
+
+.spoil-mode span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.spoil-mode small {
+  color: var(--muted);
+  line-height: 1.45;
 }

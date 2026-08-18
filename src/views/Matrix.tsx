@@ -5,7 +5,7 @@ import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
 import { TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import type { Wishes } from '../wishlist'
-import { estRevelation } from '../spoilers'
+import { masqueDe, type ModeSpoiler } from '../spoilers'
 
 type Ready = Member & { data: Character }
 
@@ -58,6 +58,7 @@ export function Matrix({
   titleLabel,
   wishes,
   msq,
+  spoilMode,
   only,
   suggest,
   ownAdd,
@@ -74,6 +75,8 @@ export function Matrix({
   /** Avancement dans l'histoire, pour masquer ce qui la revelerait. null =
    *  inconnu, et on ne masque alors rien. */
   msq?: number | null
+  /** Niveau de masquage choisi par le joueur. */
+  spoilMode?: ModeSpoiler
   /** Restriction venue d'ailleurs (la cloche, pour les nouveautés d'un patch) :
    *  la vue ne montre que ces objets, en le disant et en offrant d'en sortir.
    *  Les clés valent « collection:id » — dans la vue « Mode » deux collections
@@ -274,7 +277,8 @@ export function Matrix({
               // Recompense d'histoire que ce joueur n'a pas encore atteinte :
               // nom, image et source revelent chacun quelque chose. Un clic
               // ouvre la fiche, qui laisse le choix de regarder quand meme.
-              const cache = estRevelation(item, msq ?? null)
+              const masque = masqueDe(item, kindFor(item), msq ?? null, spoilMode ?? 'histoire')
+              const cache = masque === 'tout'
               return (
                 <tr key={`${kindFor(item)}-${item.id}`}>
                   <td className="col-item">
@@ -286,13 +290,19 @@ export function Matrix({
                       onClick={() => onShowItem(item, kindFor(item))}
                       onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(item, kindFor(item))}
                     >
-                      <img
-                        className={`item-icon ${cache ? 'is-hidden-spoiler' : ''}`}
-                        src={item.icon}
-                        alt=""
-                        loading="lazy"
-                        onError={onItemImgError}
-                      />
+                      {cache ? (
+                        <span className="item-icon spoiler-icon" title={t('spoilerWhy')}>
+                          <TabIcon k="unknown" />
+                        </span>
+                      ) : (
+                        <img
+                          className="item-icon"
+                          src={item.icon}
+                          alt=""
+                          loading="lazy"
+                          onError={onItemImgError}
+                        />
+                      )}
                       <div className="item-text">
                         <span className="item-name">
                           {cache ? t('spoilerHidden', { patch: item.patch }) : name}
@@ -328,6 +338,10 @@ export function Matrix({
                         </span>
                         {cache ? (
                           <span className="item-source">{t('spoilerWhy')}</span>
+                        ) : masque === 'source' ? (
+                          <span className="item-source">
+                            {t('spoilerSource', { patch: item.patch })}
+                          </span>
                         ) : primary ? (
                           <span className="item-source">
                             <TypeChip type={primary.type} /> {localSource(primary, lang)}

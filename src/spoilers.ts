@@ -17,6 +17,7 @@ export interface Jalon {
 }
 
 const CLE_REVELER = 'ogs.spoilers.v1'
+const CLE_MODE = 'ogs.spoilermode.v1'
 
 /** Jalons d'histoire, publiés à part du gros catalogue des succès pour être
  *  disponibles dès le premier rendu : masquer trois secondes trop tard ne
@@ -85,21 +86,44 @@ function avancementParNiveau(niveau: number): number {
   return 0
 }
 
-/** Un objet révèle-t-il quelque chose que ce joueur n'a pas encore vu ?
- *  Uniquement les récompenses de quête : le reste ne raconte rien. */
-export function estRevelation(item: Item, avancement: number | null): boolean {
-  if (avancement === null) return false
-  if (!item.patch) return false
-  if (!item.sources.some((s) => s.type === 'Quest')) return false
-  return parseFloat(item.patch) > avancement
+/** Trois niveaux, parce qu'un seul ne pouvait pas convenir. Tout masquer
+ *  au-delà de l'avancement cacherait 100 % du catalogue a un debutant, et un
+ *  traqueur de collection qui ne montre aucune collection ne sert a rien. */
+export type ModeSpoiler = 'aucun' | 'histoire' | 'decouverte'
+
+/** Ce qu'il faut cacher d'un objet donne. */
+export type Masque = 'rien' | 'source' | 'tout'
+
+/** En mode decouverte, le nom d'un succes EST sa provenance — « Tueur de
+ *  l'Arcadion » annonce le contenu a lui seul. Ceux-la se masquent en entier. */
+const NOM_REVELATEUR = new Set(['achievements'])
+
+export function masqueDe(
+  item: Item,
+  kind: string,
+  avancement: number | null,
+  mode: ModeSpoiler,
+): Masque {
+  if (mode === 'aucun' || avancement === null || !item.patch) return 'rien'
+  if (parseFloat(item.patch) <= avancement) return 'rien'
+  // Recompense de quete : c'est l'histoire elle-meme, on masque tout.
+  if (item.sources.some((s) => s.type === 'Quest')) return 'tout'
+  if (mode === 'histoire') return 'rien'
+  return NOM_REVELATEUR.has(kind) ? 'tout' : 'source'
 }
 
-/** Préférence « je m'en fous d'être spoilé », gardée sur l'appareil. */
-export function useRevelerTout() {
-  const [tout, setTout] = useState<boolean>(() => lsGet(CLE_REVELER) === '1')
-  const basculer = (v: boolean) => {
-    setTout(v)
-    lsSet(CLE_REVELER, v ? '1' : '0')
+/** Niveau de masquage choisi, garde sur l'appareil. « Histoire » par defaut :
+ *  c'est le seul qui protege du vrai spoiler sans vider l'ecran. */
+export function useModeSpoiler() {
+  const [mode, setMode] = useState<ModeSpoiler>(() => {
+    const v = lsGet(CLE_MODE)
+    if (v === 'aucun' || v === 'histoire' || v === 'decouverte') return v
+    // Ancienne preference booleenne « je m'en fous d'etre spoile ».
+    return lsGet(CLE_REVELER) === '1' ? 'aucun' : 'histoire'
+  })
+  const choisir = (m: ModeSpoiler) => {
+    setMode(m)
+    lsSet(CLE_MODE, m)
   }
-  return { tout, basculer }
+  return { mode, choisir }
 }

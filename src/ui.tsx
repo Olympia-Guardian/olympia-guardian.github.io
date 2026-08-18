@@ -177,6 +177,8 @@ const TAB_ICONS: Record<string, string> = {
   newgroup: '000017',
   quick: '000025',
   news: '000080',
+  // Point d'interrogation du jeu, pose a la place des objets masques.
+  unknown: '060042',
   wish: '000004',
   account: '000015',
   inspect: '000046',

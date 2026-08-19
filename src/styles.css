@@ -2723,35 +2723,48 @@ a.player-name:hover {
 /* L'icone devant, les visages derriere : on lit d'abord CE QUI manque, et
    ensuite a qui. Un seul exemplaire de l'icone, meme si quatre personnes
    attendent la meme piece. Aucun nom ecrit : la bulle les donne, et un nom
-   repete quatre fois par etage remplissait la carte pour rien. */
+   repete quatre fois par etage remplissait la carte pour rien.
+   Chaque besoin porte sa pastille : sans elle, les vignettes voisines se
+   confondaient en une seule file d'icones et de visages. */
 .besoin {
   display: flex;
   align-items: center;
+  padding: 3px 9px 3px 3px;
+  background: rgba(35, 35, 34, 0.9);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
 }
 
 .besoin-case {
   position: relative;
   z-index: 2;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
+/* Le retrait glisse les visages DERRIERE l'icone, mais pas dessous : a moins
+   quatorze, une personne seule disparaissait entierement et sa vignette
+   paraissait n'interesser personne. */
 .besoin-gens {
   position: relative;
   z-index: 1;
   display: flex;
-  margin-left: -14px;
+  margin-left: -7px;
 }
 
 .besoin-gens img {
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
   object-fit: cover;
   border-radius: 50%;
-  border: 1px solid var(--surface);
-  margin-left: -7px;
+  border: 1px solid var(--surface-2);
+  margin-left: -6px;
+}
+
+.besoin-gens img:first-child {
+  margin-left: 0;
 }
 
 

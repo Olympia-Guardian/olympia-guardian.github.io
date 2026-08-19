@@ -5024,6 +5024,19 @@ a.player-name:hover {
   margin-bottom: 16px;
 }
 
+/* Rien trouve : le constat, la raison quand il y en a une, et la sortie. */
+.market-vide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0 32px;
+}
+
+.market-vide .empty {
+  padding: 0;
+}
+
 .market-summary {
   color: var(--gold);
   font-weight: 550;

@@ -152,6 +152,18 @@ export function Market({
     }
   }, [perso])
 
+  /** Remet les filtres dans l'etat d'ouverture. Sans elle, on sortait d'une
+   *  recherche vide en defaisant a la main quatre reglages poses dix minutes
+   *  plus tot, sans toujours se rappeler lesquels. */
+  function reinitialiser() {
+    setRecherche('')
+    setKinds(new Set<Achetable>(['mounts', 'minions']))
+    setBudget(0)
+    setPrixMax(0)
+    setPrix(null)
+    setErreur(null)
+  }
+
   /** Toutes les pieces de tenue, a plat, avec l'adresse de leur icone reconstruite
    *  — le catalogue ne garde que le numero de la planche. */
   const pieces = useMemo(() => {
@@ -465,13 +477,24 @@ export function Market({
         </div>
       )}
 
-      {prix && selection.length === 0 && !erreur && (
-        <p className="empty">
-          {t(prixMax > 0 ? 'marketNothingCap' : 'marketNothing', {
-            budget: gils(budget, lang),
-            max: gils(prixMax, lang),
-          })}
-        </p>
+      {/* Deux facons de n'avoir rien : les filtres n'ont rien laisse passer
+          avant meme d'interroger Universalis, ou la recherche n'a rien ramene.
+          Le meme bloc repond aux deux, et propose la sortie. */}
+      {!erreur && !avancement && (manquants.length === 0 || (prix && selection.length === 0)) && (
+        <div className="market-vide">
+          <p className="empty">{t('marketNothingFound')}</p>
+          {(budget > 0 || prixMax > 0) && (
+            <p className="muted">
+              {t(prixMax > 0 ? 'marketNothingCap' : 'marketNothing', {
+                budget: gils(budget, lang),
+                max: gils(prixMax, lang),
+              })}
+            </p>
+          )}
+          <button className="btn btn-ghost" onClick={reinitialiser}>
+            <TabIcon k="sync" /> {t('marketReset')}
+          </button>
+        </div>
       )}
 
       {selection.length > 0 && (

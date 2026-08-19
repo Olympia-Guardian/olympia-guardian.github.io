@@ -23,9 +23,10 @@ import { ancre, ecrireAncre } from '../routes'
 import {
   Meter,
   ROLL_ICON,
-  itemIcon,
   TabIcon,
   TypeChip,
+  gcIconUrl,
+  itemIcon,
   onAvatarImgError,
   onItemImgError,
   xivIconUrl,
@@ -1832,15 +1833,33 @@ export function MyPage({
                           « {(lang === 'fr' && char.profile.titleFr) || char.profile.title} »
                         </span>
                       )}
-                      {char.profile?.grandCompany && (
-                        <span className="char-org" title={t('factGC')}>
-                          {char.profile.gcIcon && (
-                            <img src={char.profile.gcIcon} alt="" width={20} height={20} />
-                          )}
-                          {(lang === 'fr' && char.profile.grandCompanyFr) ||
-                            char.profile.grandCompany}
-                        </span>
-                      )}
+                      {char.profile?.grandCompany &&
+                        (() => {
+                          // Le Lodestone livre « Immortal Flames / Flame Captain »
+                          // en une seule chaine : la compagnie et le grade, qui
+                          // n'ont ni la meme image ni la meme duree de vie.
+                          const brut =
+                            (lang === 'fr' && char.profile?.grandCompanyFr) ||
+                            char.profile!.grandCompany!
+                          const [compagnie, grade] = brut.split(' / ')
+                          const embleme = gcIconUrl(char.profile!.grandCompany!.split(' / ')[0])
+                          return (
+                            <>
+                              <span className="char-org" title={t('factGC')}>
+                                {embleme && <img src={embleme} alt="" width={22} height={22} />}
+                                {compagnie}
+                              </span>
+                              {grade && (
+                                <span className="char-org" title={t('factRank')}>
+                                  {char.profile?.gcIcon && (
+                                    <img src={char.profile.gcIcon} alt="" width={20} height={20} />
+                                  )}
+                                  {grade}
+                                </span>
+                              )}
+                            </>
+                          )
+                        })()}
                       {char.profile?.freeCompany && (
                         <span className="char-org" title={t('factFC')}>
                           {(char.profile.fcCrest?.length ?? 0) > 0 && (

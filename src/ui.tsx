@@ -201,6 +201,24 @@ export function xivIconUrl(id: string): string {
   return `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/${id.slice(0, 3)}000/${id}_hr1.tex`)}`
 }
 
+/** Emblemes des trois grandes compagnies, choisis dans le catalogue d'icones.
+ *  Le Lodestone n'en publie AUCUN : l'image de son bloc « Grand Company » est
+ *  l'insigne de GRADE, qui change quand on monte. L'embleme, lui, ne vient que
+ *  des planches du jeu. */
+const GC_ICONS: Record<string, string> = {
+  Maelstrom: '060871',
+  'Order of the Twin Adder': '060872',
+  'Immortal Flames': '060873',
+}
+
+/** Embleme d'une grande compagnie a partir de son nom ANGLAIS, le seul stable :
+ *  le francais varie avec la langue de la fiche. Null si le nom ne correspond a
+ *  rien de connu, auquel cas on n'affiche pas de blason plutot qu'un faux. */
+export function gcIconUrl(nameEn: string): string | null {
+  const id = GC_ICONS[nameEn.trim()]
+  return id ? xivIconUrl(id) : null
+}
+
 /** Icone de navigation. Chargement IMMEDIAT et prioritaire, contrairement aux
  *  icones d'objets : elles sont peu nombreuses, elles structurent l'ecran, et
  *  en differe elles arrivaient onze secondes apres, coincees derriere les

@@ -513,6 +513,7 @@ const STR = {
   factGuardian: { fr: 'Divinité gardienne', en: 'Guardian' },
   factCity: { fr: 'Cité de départ', en: 'City-state' },
   factGC: { fr: 'Grande compagnie', en: 'Grand Company' },
+  factRank: { fr: 'Grade dans la grande compagnie', en: 'Grand company rank' },
   factFC: { fr: 'Compagnie libre', en: 'Free Company' },
   jobLevel: { fr: 'niveau {n}', en: 'level {n}' },
   jobLocked: { fr: 'non débloqué', en: 'not unlocked' },

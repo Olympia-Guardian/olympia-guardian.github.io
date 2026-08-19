@@ -346,10 +346,6 @@ const STR = {
     fr: 'Clique sur une relique pour la marquer comme obtenue : les matériaux restants se recalculent aussitôt.',
     en: 'Click a relic to mark it obtained, remaining materials update instantly.',
   },
-  relicSummaryNote: {
-    fr: "Chaque collection classe les joueurs du plus avancé au moins avancé. Le détail des paliers et des matériaux se trouve dans « Mon Journal ».",
-    en: 'Each collection ranks players from most to least complete. Step-by-step costs and materials live in “My Journal”.',
-  },
   spellNo: { fr: 'N° {n}', en: 'No. {n}' },
   spellAspect: { fr: 'Aspect', en: 'Aspect' },
   spellDamage: { fr: 'Dégâts', en: 'Damage' },

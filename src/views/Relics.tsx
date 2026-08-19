@@ -982,7 +982,6 @@ function RelicSummary({
           </ul>
         </section>
       ))}
-      <p className="relic-note">{t('relicSummaryNote')}</p>
     </div>
   )
 }

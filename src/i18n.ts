@@ -452,8 +452,8 @@ const STR = {
     en: 'Re-scrape the Lodestone profile now (once per day at most)',
   },
   syncForceCooldown: {
-    fr: 'Déjà synchronisé aujourd’hui, possible à nouveau dans ~{h} h',
-    en: 'Already synced today, available again in ~{h}h',
+    fr: 'Lecture déjà faite à l’instant, possible à nouveau dans {h} min',
+    en: 'Just read, available again in {h} min',
   },
   syncForceDone: { fr: 'Fiche Lodestone actualisée ✓', en: 'Lodestone profile refreshed ✓' },
   syncForceAlready: {
@@ -722,6 +722,14 @@ const STR = {
     fr: 'La lecture sur le Lodestone a echoue ou pris trop de temps. Relancer.',
     en: 'Reading from the Lodestone failed or took too long. Try again.',
   },
+  syncLast: { fr: 'Lodestone lu {quand}', en: 'Lodestone read {quand}' },
+  syncNow: { fr: 'à l’instant', en: 'just now' },
+  syncMin: { fr: 'il y a {n} min', en: '{n} min ago' },
+  syncHours: { fr: 'il y a {n} h', en: '{n} h ago' },
+  syncDays: { fr: 'il y a {n} j', en: '{n} d ago' },
+  syncRunning: { fr: 'Synchronisation…', en: 'Syncing…' },
+  charMore: { fr: 'Autres actions', en: 'More actions' },
+  collectImport: { fr: 'Importer depuis FFXIV Collect', en: 'Import from FFXIV Collect' },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },

@@ -505,11 +505,12 @@ async function getCharacter(env, id, force, connecte = true) {
       void compter(env, 'lodestone_echec')
     }
     if (!scraped && !row) return null
-    if (!scraped && row) {
-      await env.DB.prepare('UPDATE characters SET updated = ?2 WHERE id = ?1')
-        .bind(id, Date.now() - CHAR_TTL + 300_000)
-        .run()
-    }
+    // Lecture ratee : on ne touche PLUS a `updated`. Cette ligne servait a
+    // programmer une nouvelle tentative cinq minutes plus tard, du temps ou
+    // l'anciennete declenchait le scrape ; depuis que la synchro est un geste,
+    // elle ne fait plus que mentir sur la date de derniere lecture reussie,
+    // desormais affichee au joueur.
+
     if (scraped) {
       await env.DB.prepare(
         'INSERT INTO characters (id, name, server, dc, avatar, portrait, public_mounts, public_minions, updated, profile, forced_at) ' +

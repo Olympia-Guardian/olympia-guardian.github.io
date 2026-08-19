@@ -95,6 +95,19 @@ const JOB_NAMES_FR: Record<string, string> = {
 
 /** Niveaux de toutes les classes, groupés visuellement par rôle — les icônes
  *  du Lodestone parlent d'elles-mêmes, pas de libellés. */
+/** « il y a 3 h », « hier », « il y a 4 jours ». Une date absolue oblige a
+ *  calculer ; ce qu'on veut savoir, c'est si ca vaut la peine de cliquer. */
+function depuisQuand(iso: string, lang: string, t: (k: 'syncNow' | 'syncMin' | 'syncHours' | 'syncDays', v?: Record<string, string | number>) => string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  if (!Number.isFinite(ms) || ms < 0) return new Date(iso).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US')
+  const min = Math.floor(ms / 60_000)
+  if (min < 2) return t('syncNow')
+  if (min < 60) return t('syncMin', { n: min })
+  const h = Math.floor(min / 60)
+  if (h < 24) return t('syncHours', { n: h })
+  return t('syncDays', { n: Math.floor(h / 24) })
+}
+
 function CharStats({ profile }: { profile: CharProfile }) {
   const { lang, t } = useI18n()
   const roles: { role: string; jobs: CharProfile['jobs'] }[] = []
@@ -1327,6 +1340,7 @@ export function MyPage({
   const verified = verifiedList.find((b) => b.charId === activeId) ?? verifiedList[0]
   const pending = auth.bindings.find((b) => !b.verified)
   const [adding, setAdding] = useState(false)
+  const [menuOuvert, setMenuOuvert] = useState(false)
   // Fiches des persos vérifiés : sert au sélecteur (nom + portrait).
   const [chars, setChars] = useState<Record<number, Character>>({})
   const [rates, setRates] = useState<number[]>([])
@@ -1784,43 +1798,76 @@ export function MyPage({
                     </span>
                   </div>
                   <span className="mypage-char-actions">
-                    <a
-                      className="btn btn-ghost btn-mini btn-icon-only"
-                      href={`https://eu.finalfantasyxiv.com/lodestone/character/${char.id}/`}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={t('viewOnLodestone')}
-                    >
-                      <TabIcon k="lodestone" />
-                    </a>
+                    {/* La date de derniere lecture d'abord : depuis que la
+                        synchro est un geste et non plus un effet de bord, c'est
+                        elle qui dit s'il faut cliquer. Sans elle, le bouton ne
+                        repond a aucune question. */}
+                    <span className="sync-state" title={new Date(char.lastParsed).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US')}>
+                      {t('syncLast', { quand: depuisQuand(char.lastParsed, lang, t) })}
+                    </span>
                     <button
                       className="btn btn-ghost btn-mini"
                       disabled={syncing || Date.now() < char.nextForceAt}
                       title={
                         Date.now() < char.nextForceAt
                           ? t('syncForceCooldown', {
-                              h: Math.max(1, Math.ceil((char.nextForceAt - Date.now()) / 3_600_000)),
+                              h: Math.max(1, Math.ceil((char.nextForceAt - Date.now()) / 60_000)),
                             })
                           : t('syncForceTitle')
                       }
                       onClick={() => void forceSync()}
                     >
-                      {syncing ? '…' : <><TabIcon k="sync" /> {t('syncForce')}</>}
+                      <TabIcon k="sync" /> {syncing ? t('syncRunning') : t('syncForce')}
                     </button>
-                    <button
-                      className="btn btn-ghost btn-mini"
-                      disabled={importing}
-                      title={t('collectImportTitle')}
-                      onClick={() => void collectImport()}
-                    >
-                      {importing ? '…' : <><TabIcon k="collect" /> Collect</>}
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-mini mypage-unbind"
-                      onClick={() => doUnbind(char.id, char.name)}
-                    >
-                      <TabIcon k="unlink" /> {t('unbindChar')}
-                    </button>
+                    {/* Les actions rares passent derriere trois points, comme le
+                        menu du compte : elles encombraient une ligne ou seule la
+                        synchro se fait souvent. */}
+                    <span className="char-menu-wrap">
+                      <button
+                        className={`btn btn-ghost btn-mini btn-icon-only ${menuOuvert ? 'is-active' : ''}`}
+                        title={t('charMore')}
+                        aria-haspopup="menu"
+                        aria-expanded={menuOuvert}
+                        onClick={() => setMenuOuvert((v) => !v)}
+                      >
+                        ⋮
+                      </button>
+                      {menuOuvert && (
+                        <>
+                          <div className="account-shade" onClick={() => setMenuOuvert(false)} />
+                          <div className="account-menu char-menu" role="menu">
+                            <a
+                              className="account-menu-item"
+                              href={`https://eu.finalfantasyxiv.com/lodestone/character/${char.id}/`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={() => setMenuOuvert(false)}
+                            >
+                              <TabIcon k="lodestone" /> {t('viewOnLodestone')}
+                            </a>
+                            <button
+                              className="account-menu-item"
+                              disabled={importing}
+                              onClick={() => {
+                                setMenuOuvert(false)
+                                void collectImport()
+                              }}
+                            >
+                              <TabIcon k="collect" /> {t('collectImport')}
+                            </button>
+                            <button
+                              className="account-menu-item is-danger"
+                              onClick={() => {
+                                setMenuOuvert(false)
+                                doUnbind(char.id, char.name)
+                              }}
+                            >
+                              <TabIcon k="unlink" /> {t('unbindChar')}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </span>
                   </span>
                 </div>
                 {char.profile && <CharStats profile={char.profile} />}

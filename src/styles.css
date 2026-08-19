@@ -5323,3 +5323,34 @@ a.player-name:hover {
     opacity: 0.55;
   }
 }
+
+/* ----------------------------------------- barre d'actions d'un personnage */
+
+.mypage-char-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* La date passe avant le bouton et se lit d'un coup d'œil : c'est elle qui dit
+   s'il faut cliquer. */
+.sync-state {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.char-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.char-menu {
+  min-width: 230px;
+}
+
+/* Les trois points : même gabarit que les autres boutons, glyphe centré. */
+.mypage-char-actions .btn-icon-only {
+  font-size: 16px;
+  line-height: 1;
+}

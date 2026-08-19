@@ -12,10 +12,11 @@ import {
   ecartMoyenne,
   type Prix,
   type Repere,
+  chargerVendables,
 } from '../market'
 import type { Db, Member } from '../store'
 import { nomMembre } from '../store'
-import { ROLL_ICON, onItemImgError, TabIcon } from '../ui'
+import { ROLL_ICON, onItemImgError, TabIcon, xivIconUrl } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -28,12 +29,18 @@ type Ready = Member & { data: Character }
 // toutes inconnues. Une tenue est un ENSEMBLE, ce sont ses pieces qui se
 // vendent — l'identifiant que FFXIV Collect nous donne ne designe donc aucun
 // objet de l'hotel des ventes. La categorie promettait 161 achats impossibles.
-const ACHETABLES: Kind[] = [
+/** Categorie a part : une piece n'est pas une collection, c'est un morceau de
+ *  tenue. Elle a son propre stockage cote worker, `outfitpieces`, deja utilise
+ *  par « Mon Journal » pour cocher les pieces une a une. */
+type Achetable = Kind | 'outfitpieces'
+
+const ACHETABLES: Achetable[] = [
   'mounts',
   'minions',
   'orchestrions',
   'bardings',
   'fashions',
+  'outfitpieces',
   'hairstyles',
   'emotes',
 ]
@@ -85,7 +92,7 @@ export function Market({
   db: Db
   chars: Ready[]
   /** Coche « acheté » : verse l'objet dans la collection du personnage. */
-  onBuy: (charId: number, kind: Kind, id: number) => Promise<void>
+  onBuy: (charId: number, kind: Achetable, id: number) => Promise<void>
 }) {
   const { lang, t } = useI18n()
   const [charId, setCharId] = useState<number | null>(chars[0]?.id ?? null)
@@ -101,9 +108,18 @@ export function Market({
   // Europe), accessible mais avec un voyage plus lourd.
   const [portee, setPortee] = useState<'dc' | 'region'>('dc')
   const [region, setRegion] = useState<string | null>(null)
-  const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
+  const [kinds, setKinds] = useState<Set<Achetable>>(
+    () => new Set<Achetable>(['mounts', 'minions']),
+  )
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
   const [prix, setPrix] = useState<Prix | null>(null)
+  // La liste des objets qu'Universalis sait vendre : elle sert aux compteurs
+  // autant qu'aux appels. Sans elle, les categories annoncent des achats qui
+  // n'existent pas.
+  const [vendables, setVendables] = useState<Set<number> | null>(null)
+  useEffect(() => {
+    void chargerVendables().then(setVendables)
+  }, [])
   // Fenetre d'explication d'un ecart : l'objet regarde, ou rien.
   const [infos, setInfos] = useState<{ nom: string; repere: Repere } | null>(null)
   const [avancement, setAvancement] = useState<{ fait: number; total: number } | null>(null)
@@ -113,7 +129,7 @@ export function Market({
   // Une fois acheté, l'objet ne « manque » plus et sortirait de la liste : on
   // garde de quoi l'afficher, sinon la liste de courses se vide au fur et à
   // mesure qu'on la suit, et le total ne correspond plus à ce qu'on a dépensé.
-  const [achetes, setAchetes] = useState<Map<number, { item: Item; kind: Kind }>>(
+  const [achetes, setAchetes] = useState<Map<number, { item: Item; kind: Achetable }>>(
     () => new Map(),
   )
 
@@ -132,18 +148,52 @@ export function Market({
     }
   }, [perso])
 
-  /** Ce qui manque au personnage ET qui a un prix possible. */
-  const manquants = useMemo(() => {
-    if (!perso) return []
-    const out: { item: Item; kind: Kind }[] = []
-    for (const k of kinds) {
-      const possedes = new Set(perso.data[k].ids)
-      for (const it of db[k]) {
-        if (it.itemId && it.tradeable && !possedes.has(it.id)) out.push({ item: it, kind: k })
+  /** Toutes les pieces de tenue, a plat, avec l'adresse de leur icone reconstruite
+   *  — le catalogue ne garde que le numero de la planche. */
+  const pieces = useMemo(() => {
+    const out = new Map<number, Item>()
+    for (const tenue of db.outfits) {
+      for (const p of tenue.pieces ?? []) {
+        if (!p.id || !p.icon || out.has(p.id)) continue
+        const vignette = xivIconUrl(p.icon)
+        out.set(p.id, {
+          ...p,
+          icon: vignette,
+          image: vignette,
+          itemId: p.id,
+          tradeable: true,
+          sources: [],
+        } as unknown as Item)
       }
     }
     return out
-  }, [perso, kinds, db])
+  }, [db])
+
+  /** Combien d'objets une categorie propose reellement. */
+  const dispoDe = (k: Achetable): number => {
+    const liste =
+      k === 'outfitpieces'
+        ? [...pieces.values()]
+        : db[k].filter((it) => it.itemId && it.tradeable)
+    return vendables ? liste.filter((it) => vendables.has(it.itemId!)).length : liste.length
+  }
+
+  /** Ce qui manque au personnage ET qui a un prix possible. */
+  const manquants = useMemo(() => {
+    if (!perso) return []
+    const out: { item: Item; kind: Achetable }[] = []
+    for (const k of kinds) {
+      const possedes =
+        k === 'outfitpieces' ? new Set(perso.data.outfitPieceIds) : new Set(perso.data[k].ids)
+      const liste = k === 'outfitpieces' ? [...pieces.values()] : db[k]
+      for (const it of liste) {
+        if (!it.itemId || !it.tradeable || possedes.has(it.id)) continue
+        if (vendables && !vendables.has(it.itemId)) continue
+        out.push({ item: it, kind: k })
+      }
+    }
+    return out
+  }, [perso, kinds, db, pieces, vendables])
 
   const parItemId = useMemo(
     () => new Map(manquants.map((m) => [m.item.itemId!, m])),
@@ -302,7 +352,7 @@ export function Market({
           </button>
           {ACHETABLES.map((k) => {
             const actif = kinds.has(k)
-            const dispo = db[k].filter((it) => it.itemId && it.tradeable).length
+            const dispo = dispoDe(k)
             return (
               <button
                 key={k}
@@ -316,7 +366,8 @@ export function Market({
                   })
                 }
               >
-                {kindLabel(lang, k)} <i className="market-count">{dispo}</i>
+                {k === 'outfitpieces' ? t('marketPieces') : kindLabel(lang, k)}{' '}
+                <i className="market-count">{dispo}</i>
               </button>
             )
           })}

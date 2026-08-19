@@ -91,7 +91,16 @@ async function chargerCentres(): Promise<void> {
 // d'entree agrege — et le lot entier repartait sans moyenne.
 let vendables: Set<number> | null = null
 
-async function chargerVendables(): Promise<void> {
+/** La liste des objets vendables, chargee une fois. Publique parce que les
+ *  compteurs de l'ecran en ont besoin autant que les appels : annoncer « 161
+ *  tenues » quand aucune n'est achetable est le defaut qu'on vient de corriger,
+ *  et il reviendrait a la premiere categorie ajoutee. */
+export async function chargerVendables(): Promise<Set<number> | null> {
+  await remplirVendables()
+  return vendables
+}
+
+async function remplirVendables(): Promise<void> {
   if (vendables) return
   try {
     const res = await fetch('https://universalis.app/api/v2/marketable', {
@@ -190,7 +199,7 @@ export async function fetchPrices(
   // Les objets qu'Universalis ne connait pas ne sont pas demandes : ils n'ont
   // pas de prix a donner, et un seul d'entre eux suffisait a faire echouer tout
   // un lot.
-  await chargerVendables()
+  await remplirVendables()
   const demandes = vendables ? aChercher.filter((id) => vendables!.has(id)) : aChercher
 
   const lots: number[][] = []

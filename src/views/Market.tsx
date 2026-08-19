@@ -169,6 +169,26 @@ export function Market({
     return out
   }, [db])
 
+  /** Pieces qu'on possede deja. Le worker applique desormais la meme regle —
+   *  tenue possedee, donc pieces possedees — et c'est lui qui fait foi.
+   *
+   *  On la refait ici pour une raison precise : les fiches de personnage sont
+   *  gardees en cache dans le navigateur. Celles qui datent d'avant ce
+   *  changement portent encore une liste de pieces vide, et sans ce filet leur
+   *  proprietaire se verrait proposer d'acheter le costume qu'il porte, le
+   *  temps que le cache expire. */
+  const piecesPossedees = useMemo(() => {
+    const out = new Set<number>(perso?.data.outfitPieceIds ?? [])
+    if (perso) {
+      const tenues = new Set(perso.data.outfits.ids)
+      for (const tenue of db.outfits) {
+        if (!tenues.has(tenue.id)) continue
+        for (const p of tenue.pieces ?? []) if (p.id) out.add(p.id)
+      }
+    }
+    return out
+  }, [perso, db])
+
   /** Combien d'objets une categorie propose reellement. */
   const dispoDe = (k: Achetable): number => {
     const liste =
@@ -183,8 +203,7 @@ export function Market({
     if (!perso) return []
     const out: { item: Item; kind: Achetable }[] = []
     for (const k of kinds) {
-      const possedes =
-        k === 'outfitpieces' ? new Set(perso.data.outfitPieceIds) : new Set(perso.data[k].ids)
+      const possedes = k === 'outfitpieces' ? piecesPossedees : new Set(perso.data[k].ids)
       const liste = k === 'outfitpieces' ? [...pieces.values()] : db[k]
       for (const it of liste) {
         if (!it.itemId || !it.tradeable || possedes.has(it.id)) continue
@@ -193,7 +212,7 @@ export function Market({
       }
     }
     return out
-  }, [perso, kinds, db, pieces, vendables])
+  }, [perso, kinds, db, pieces, vendables, piecesPossedees])
 
   const parItemId = useMemo(
     () => new Map(manquants.map((m) => [m.item.itemId!, m])),

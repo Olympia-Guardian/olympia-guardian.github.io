@@ -593,18 +593,29 @@ async function getCharacter(env, id, force, connecte = true) {
     missingKinds.length > 0 || colRows.results.some((r) => r.source === 'empty')
   const { maps, totals, horsTotal } = await catalogs()
 
-  // Tenues : un ensemble dont TOUTES les pièces sont possédées est possédé,
-  // même s'il n'a jamais été coché en entier (règle « coché OU complet »).
-  const pieceIds = byKind.outfitpieces ?? []
-  if (pieceIds.length > 0 && maps.outfitPieces) {
-    const ownedPieces = new Set(pieceIds)
+  // Tenues et pieces : la regle vaut dans LES DEUX SENS.
+  //
+  //  - toutes les pieces cochees, donc la tenue est possedee, meme si elle n'a
+  //    jamais ete cochee en entier ;
+  //  - la tenue cochee, donc toutes ses pieces le sont : dire qu'on a la tenue,
+  //    c'est dire qu'on a ce qui la compose.
+  //
+  // Seul le premier sens existait. Quelqu'un qui cochait la tenue n'avait
+  // aucune piece a son nom, et Mon Marche lui proposait d'acheter une a une
+  // les pieces du costume qu'il portait deja.
+  if (maps.outfitPieces) {
+    const ownedPieces = new Set(byKind.outfitpieces ?? [])
     const stored = new Set(byKind.outfits ?? [])
     for (const [outfitId, pieces] of maps.outfitPieces) {
       if (pieces.length > 0 && !stored.has(outfitId) && pieces.every((p) => ownedPieces.has(p))) {
         stored.add(outfitId)
       }
     }
+    for (const outfitId of stored) {
+      for (const p of maps.outfitPieces.get(outfitId) ?? []) ownedPieces.add(p)
+    }
     byKind.outfits = [...stored]
+    byKind.outfitpieces = [...ownedPieces]
   }
 
   const OUVERTES = new Set(['mounts', 'minions'])

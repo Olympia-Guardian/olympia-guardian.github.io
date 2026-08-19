@@ -352,8 +352,10 @@ export interface Etage {
   /** Coffres encore attendus du raid, tous joueurs confondus. */
   pieces: number
   kills: number
-  /** Qui attend quoi, pour que le nombre s'explique de lui-même. */
-  parJoueur: { charId: number; emplacements: RaidEmplacement[] }[]
+  /** Qui attend quoi, pour que le nombre s'explique de lui-même. On garde le
+   *  visé entier, et pas seulement l'emplacement : l'arme n'a pas d'icône de
+   *  catégorie dans le jeu, il faut montrer la pièce elle-même. */
+  parJoueur: { charId: number; vises: Vise[] }[]
 }
 
 export function etages(vises: { charId: number; vises: Vise[] }[]): Etage[] {
@@ -370,10 +372,10 @@ export function etages(vises: { charId: number; vises: Vise[] }[]): Etage[] {
       e.pieces++
       let j = e.parJoueur.find((x) => x.charId === charId)
       if (!j) {
-        j = { charId, emplacements: [] }
+        j = { charId, vises: [] }
         e.parJoueur.push(j)
       }
-      j.emplacements.push(v.emplacement)
+      j.vises.push(v)
     }
   }
   const out = [...parEtage.values()].sort((a, b) => a.etage - b.etage)

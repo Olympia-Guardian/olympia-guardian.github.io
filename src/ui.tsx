@@ -198,21 +198,24 @@ export const TAB_ICONS: Record<string, string> = {
   purge: '000029',
 }
 
-/** Les silhouettes de cases vides de la fenêtre d'équipement du jeu. Elles
- *  disent un emplacement sans montrer d'objet en particulier : exactement ce
- *  qu'il faut pour annoncer « il manque une bague à quelqu'un ». */
+/** Les icônes de CATÉGORIE d'objet du jeu (feuille ItemUICategory) : un casque
+ *  pour la tête, un anneau pour les bagues. Elles disent un emplacement sans
+ *  montrer d'objet en particulier, exactement ce qu'il faut pour annoncer
+ *  « il manque une bague à quelqu'un ».
+ *
+ *  L'ARME n'y figure pas : le jeu n'a pas de catégorie « arme », il en a une
+ *  par job (arme de gladiateur, de barde...). Là, on montre la vraie pièce
+ *  visée, qui en dit plus de toute façon. */
 const SLOT_ICONS: Record<string, string> = {
-  weapon: '062001',
-  head: '062003',
-  body: '062004',
-  hands: '062005',
-  legs: '062007',
-  feet: '062008',
-  earring: '062009',
-  necklace: '062010',
-  bracelet: '062011',
-  ring1: '062012',
-  ring2: '062012',
+  head: '060124',
+  body: '060126',
+  legs: '060128',
+  hands: '060129',
+  feet: '060130',
+  necklace: '060132',
+  earring: '060133',
+  bracelet: '060134',
+  ring: '060135',
 }
 
 export function slotIconUrl(cle: string): string | null {

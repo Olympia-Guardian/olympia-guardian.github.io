@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { iconeObjet, type Character, type RaidPalier } from '../api'
+import { iconeObjet, type Character, type RaidEmplacement, type RaidPalier } from '../api'
 import { useI18n } from '../i18n'
 import {
   bisDeFeuille,
@@ -19,6 +19,34 @@ import { nomCourt, type Member } from '../store'
 import { onAvatarImgError, onItemImgError, slotIconUrl } from '../ui'
 
 type Ready = Member & { data: Character }
+
+/** Un emplacement, ses demandeurs, et l'icone qui le represente. */
+interface Besoin {
+  cle: string
+  emplacement: RaidEmplacement
+  charIds: number[]
+}
+
+/** Regroupe les besoins d'un etage par CATEGORIE d'emplacement. Le suffixe
+ *  numerique tombe : « bague 1 » et « bague 2 » sont la meme categorie pour le
+ *  jeu, et deux anneaux ne se distinguent pas sur une vignette. */
+function regrouper(parJoueur: { charId: number; vises: Vise[] }[]): Besoin[] {
+  const out = new Map<string, Besoin>()
+  for (const j of parJoueur) {
+    for (const v of j.vises) {
+      const cle = v.emplacement.cle.replace(/\d+$/, '')
+      const b = out.get(cle) ?? { cle, emplacement: v.emplacement, charIds: [] }
+      b.charIds.push(j.charId)
+      out.set(cle, b)
+    }
+  }
+  return [...out.values()]
+}
+
+/** Le nom de la categorie, sans son numero : « Bague », pas « Bague 1 ». */
+function nomCategorie(e: RaidEmplacement, lang: string): string {
+  return (lang === 'fr' ? e.fr : e.en).replace(/\s*\d+$/, '')
+}
 
 /** Une bannière manquante s'efface : mieux vaut une carte sans image qu'une
  *  icône de fichier cassé étalée en fond. */
@@ -123,41 +151,48 @@ export function Butin({
                 <p className="kills-label">
                   {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
                 </p>
-                {/* Ce qui manque, en images : la silhouette de la case du jeu,
-                    et devant elle le visage de celui qui l'attend. Le meme
-                    contenu que la liste de noms d'avant, en un coup d'oeil. */}
+                {/* Ce qui manque, en images : l'icone de la case du jeu UNE
+                    fois, et derriere elle les visages de ceux qui l'attendent.
+                    Les deux bagues s'y confondent, le jeu n'ayant qu'une
+                    categorie « bague » et un anneau ne se distinguant pas de
+                    l'autre sur une vignette. */}
                 {e.parJoueur.length > 0 && (
                   <ul className="kills-besoins">
-                    {e.parJoueur.flatMap((j) => {
-                      const membre = membreDe(j.charId)
-                      return j.emplacements.map((emp) => (
-                        <li
-                          key={`${j.charId}.${emp.cle}`}
-                          title={`${nomDe(j.charId)} · ${lang === 'fr' ? emp.fr : emp.en}`}
-                        >
-                          <img
-                            className="besoin-case"
-                            src={slotIconUrl(emp.cle) ?? emp.icon}
-                            alt=""
-                            width={34}
-                            height={34}
-                            loading="lazy"
-                            onError={onItemImgError}
-                          />
-                          {membre && (
-                            <img
-                              className="besoin-avatar"
-                              src={membre.data.avatar}
-                              alt=""
-                              width={20}
-                              height={20}
-                              loading="lazy"
-                              onError={onAvatarImgError}
-                            />
-                          )}
-                        </li>
-                      ))
-                    })}
+                    {regrouper(e.parJoueur).map((b) => (
+                      <li key={b.cle} className="besoin">
+                        <img
+                          className="besoin-case"
+                          src={slotIconUrl(b.cle) ?? b.emplacement.icon}
+                          alt=""
+                          width={34}
+                          height={34}
+                          loading="lazy"
+                          onError={onItemImgError}
+                        />
+                        <span className="besoin-gens">
+                          {b.charIds.map((id) => {
+                            const membre = membreDe(id)
+                            return (
+                              membre && (
+                                <img
+                                  key={id}
+                                  src={membre.data.avatar}
+                                  alt=""
+                                  width={22}
+                                  height={22}
+                                  loading="lazy"
+                                  onError={onAvatarImgError}
+                                />
+                              )
+                            )
+                          })}
+                        </span>
+                        <span className="besoin-quoi">
+                          {nomCategorie(b.emplacement, lang)}
+                          <em>{b.charIds.map((id) => nomDe(id)).join(', ')}</em>
+                        </span>
+                      </li>
+                    ))}
                   </ul>
                 )}
               </div>

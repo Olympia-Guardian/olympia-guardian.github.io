@@ -2852,12 +2852,20 @@ a.player-name:hover {
 }
 
 /* Le coin de l'icone porte ce qu'il reste a faire. */
+/* flex-shrink: 0, sinon le nom de l'objet ecrase l'icone. Un element flex se
+   retrecit par defaut : la largeur des 40 pixels tombait sous la poussee du
+   texte pendant que la hauteur restait, et toutes les pieces s'affichaient
+   ecrasees en hauteur. */
 .bis-vignette {
   position: relative;
+  flex-shrink: 0;
   line-height: 0;
 }
 
 .bis-vignette img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
   border-radius: var(--radius-s);
 }
 
@@ -2884,10 +2892,13 @@ a.player-name:hover {
 /* Pour le memoquartz, la marque est le COMPOSANT lui-meme : voir la fibre sur
    la vignette dit ce qu'elle coute mieux que le mot « memoquartz ». */
 .bis-marque-img {
+  width: 18px;
+  height: 18px;
   padding: 0;
   background: none;
   border-radius: 4px;
   border-color: var(--surface-2);
+  object-fit: contain;
 }
 
 .bis-slot-texte {

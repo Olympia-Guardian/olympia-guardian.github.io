@@ -441,6 +441,8 @@ const STR = {
   butinKills: { fr: '{n} kill(s) à faire', en: '{n} clear(s) to go' },
   butinFloor: { fr: 'Étage {n}', en: 'Floor {n}' },
   butinDone: { fr: 'Plus rien à y prendre', en: 'Nothing left to take' },
+  butinDeplier: { fr: 'Voir le détail des pièces', en: 'Show which pieces' },
+  butinPlier: { fr: 'Masquer le détail', en: 'Hide the detail' },
   // Le BiS importé, et ce qu'on en déduit
   bisImporter: { fr: 'Importer mon BiS', en: 'Import my BiS' },
   bisRemplacer: { fr: 'Remplacer', en: 'Replace' },

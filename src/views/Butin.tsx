@@ -16,7 +16,7 @@ import {
   type Vise,
 } from '../raid'
 import { nomCourt, type Member } from '../store'
-import { onAvatarImgError, onItemImgError, slotIconUrl } from '../ui'
+import { TabIcon, onAvatarImgError, onItemImgError, slotIconUrl } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -106,6 +106,19 @@ export function Butin({
 
   const composants = useMemo(() => materiauxManquants(palier, cartes), [palier, cartes])
 
+  // Le detail des pieces se deplie a la demande. La carte repond d'abord au
+  // « combien de soirees » ; le « pour qui » est une deuxieme question, et
+  // quatre listes ouvertes en permanence repoussaient les joueurs sous la ligne
+  // de flottaison.
+  const [ouverts, setOuverts] = useState<Set<number>>(() => new Set())
+  const basculerEtage = (n: number) =>
+    setOuverts((prev) => {
+      const suite = new Set(prev)
+      if (suite.has(n)) suite.delete(n)
+      else suite.add(n)
+      return suite
+    })
+
   /** L'étage tel que le jeu et les joueurs le nomment. Le numéro ne sert que de
    *  secours, si un palier arrivait sans ses étages. */
   const etageDe = (n: number) => palier.etages?.[n - 1]
@@ -151,12 +164,23 @@ export function Butin({
                 <p className="kills-label">
                   {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
                 </p>
+                {e.parJoueur.length > 0 && (
+                  <button
+                    type="button"
+                    className="icon-btn kills-plier"
+                    aria-expanded={ouverts.has(e.etage)}
+                    title={ouverts.has(e.etage) ? t('butinPlier') : t('butinDeplier')}
+                    onClick={() => basculerEtage(e.etage)}
+                  >
+                    <TabIcon k="infos" />
+                  </button>
+                )}
                 {/* Ce qui manque, en images : l'icone de la case du jeu UNE
                     fois, et derriere elle les visages de ceux qui l'attendent.
                     Les deux bagues s'y confondent, le jeu n'ayant qu'une
                     categorie « bague » et un anneau ne se distinguant pas de
                     l'autre sur une vignette. */}
-                {e.parJoueur.length > 0 && (
+                {e.parJoueur.length > 0 && ouverts.has(e.etage) && (
                   <ul className="kills-besoins">
                     {regrouper(e.parJoueur).map((b) => (
                       <li
@@ -175,6 +199,9 @@ export function Butin({
                           loading="lazy"
                           onError={onItemImgError}
                         />
+                        <span className="besoin-nom">
+                          {nomCategorie(b.emplacement, lang)}
+                        </span>
                         <span className="besoin-gens">
                           {b.charIds.map((id) => {
                             const membre = membreDe(id)

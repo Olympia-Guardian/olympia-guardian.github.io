@@ -2710,29 +2710,49 @@ a.player-name:hover {
 
 /* Ce qui manque a l'etage, en images : la silhouette de la case du jeu, et
    devant elle le visage de celui qui l'attend. */
+/* Le bouton se tient AU-DESSUS du separateur : il annonce ce qui vient, et
+   quand rien n'est deplie il reste seul, sans trait qui ne separerait rien. */
+.kills-plier {
+  margin-top: 8px;
+}
+
+/* Une ligne par emplacement : ce qui manque a gauche, qui l'attend a droite.
+   En vignettes cote a cote, quatre emplacements formaient un pave ou l'oeil ne
+   savait plus ou commencer. */
 .kills-besoins {
   list-style: none;
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   padding: 8px 0 0;
   border-top: 1px solid var(--hairline);
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
+  flex-direction: column;
+  gap: 3px;
 }
 
 /* L'icone devant, les visages derriere : on lit d'abord CE QUI manque, et
    ensuite a qui. Un seul exemplaire de l'icone, meme si quatre personnes
    attendent la meme piece. Aucun nom ecrit : la bulle les donne, et un nom
    repete quatre fois par etage remplissait la carte pour rien.
-   Chaque besoin porte sa pastille : sans elle, les vignettes voisines se
-   confondaient en une seule file d'icones et de visages. */
+   Les visages tiennent le bout de la ligne : on lit l'emplacement, puis on
+   remonte a qui l'attend, sans avoir a chercher. */
 .besoin {
   display: flex;
   align-items: center;
-  padding: 3px 9px 3px 3px;
-  background: rgba(35, 35, 34, 0.9);
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
+  gap: 8px;
+  padding: 2px 4px;
+  border-radius: var(--radius-s);
+}
+
+.besoin:hover {
+  background: rgba(35, 35, 34, 0.7);
+}
+
+.besoin-nom {
+  font-size: 11px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .besoin-case {
@@ -2744,14 +2764,10 @@ a.player-name:hover {
   flex-shrink: 0;
 }
 
-/* Le retrait glisse les visages DERRIERE l'icone, mais pas dessous : a moins
-   quatorze, une personne seule disparaissait entierement et sa vignette
-   paraissait n'interesser personne. */
 .besoin-gens {
-  position: relative;
-  z-index: 1;
   display: flex;
-  margin-left: -7px;
+  margin-left: auto;
+  padding-left: 8px;
 }
 
 .besoin-gens img {

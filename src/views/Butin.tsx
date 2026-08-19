@@ -2,15 +2,17 @@ import { useMemo, useState } from 'react'
 import { iconeObjet, type Character, type RaidPalier } from '../api'
 import { useI18n } from '../i18n'
 import {
+  bisDeFeuille,
   ErreurBis,
   etages,
   etatSuivant,
-  importerBis,
+  lireFeuille,
   materiauDe,
   materiauxManquants,
   rangerBis,
   type Bis,
   type Etat,
+  type Feuille,
   type Vise,
 } from '../raid'
 import { nomCourt, type Member } from '../store'
@@ -70,6 +72,10 @@ export function Butin({
 
   const composants = useMemo(() => materiauxManquants(palier, cartes), [palier, cartes])
 
+  /** « M10S », pas « Étage 2 » : c'est ainsi qu'un static nomme sa soirée. Le
+   *  numéro ne sert que de secours, si un palier arrivait sans ses noms. */
+  const nomEtage = (n: number) => palier.etages?.[n - 1] ?? t('butinFloor', { n })
+
   const nomDe = (charId: number) => {
     const c = cartes.find((x) => x.membre.id === charId)
     return c ? nomCourt(c.membre) : ''
@@ -84,7 +90,7 @@ export function Butin({
         {parEtage.map((e) => (
           <section key={e.etage} className={`kills-card ${e.kills === 0 ? 'is-done' : ''}`}>
             <header>
-              <b>{t('butinFloor', { n: e.etage })}</b>
+              <b>{nomEtage(e.etage)}</b>
               <span className="kills-n">{e.kills}</span>
             </header>
             <p className="kills-label">
@@ -139,6 +145,7 @@ export function Butin({
             vises={c.vises}
             bis={bis[c.membre.id]}
             modifiable={peutModifier(c.membre.id)}
+            nomEtage={nomEtage}
             onImport={(b) => onImport(c.membre.id, b)}
             onBascule={(id, suivant) => onBascule(c.membre.id, id, suivant)}
           />
@@ -165,6 +172,7 @@ function CarteJoueur({
   vises,
   bis,
   modifiable,
+  nomEtage,
   onImport,
   onBascule,
 }: {
@@ -173,6 +181,7 @@ function CarteJoueur({
   vises: Vise[]
   bis: Bis | undefined
   modifiable: boolean
+  nomEtage: (n: number) => string
   onImport: (bis: Bis) => Promise<void>
   onBascule: (id: number, suivant: Etat) => void
 }) {
@@ -214,6 +223,7 @@ function CarteJoueur({
                 palier={palier}
                 vise={v}
                 modifiable={modifiable}
+                nomEtage={nomEtage}
                 onBascule={onBascule}
               />
             ))}
@@ -234,6 +244,7 @@ function CarteJoueur({
                 palier={palier}
                 vise={v}
                 modifiable={modifiable}
+                nomEtage={nomEtage}
                 onBascule={onBascule}
               />
             ))}
@@ -290,11 +301,13 @@ function Pastille({
   palier,
   vise,
   modifiable,
+  nomEtage,
   onBascule,
 }: {
   palier: RaidPalier
   vise: Vise
   modifiable: boolean
+  nomEtage: (n: number) => string
   onBascule: (id: number, suivant: Etat) => void
 }) {
   const { lang, t } = useI18n()
@@ -305,7 +318,7 @@ function Pastille({
 
   const etat_court =
     etat === 'attendu'
-      ? t('butinFloor', { n: emplacement.etage })
+      ? nomEtage(emplacement.etage)
       : etat === 'obtenu'
         ? t('bisObtenue')
         : etat === 'a-acheter'
@@ -322,13 +335,24 @@ function Pastille({
   // La bulle dit tout ce que la vignette n'a pas la place d'écrire : les noms
   // entiers (deux pour le paladin, arme et bouclier), l'état, et le geste.
   const bulle = [
-    pieces.map((p) => (lang === 'fr' ? p.fr : p.en)).join(' + ') ||
-      (lang === 'fr' ? emplacement.fr : emplacement.en),
+    lang === 'fr' ? emplacement.fr : emplacement.en,
+    pieces.map((p) => (lang === 'fr' ? p.fr : p.en)).join(' + '),
     etat_court,
     !modifiable ? t('bisPasLeDroit') : suivant ? t(CLIC[etat] as 'bisClicPrendre') : '',
   ]
     .filter(Boolean)
     .join('\n')
+
+  // Le nom de la PIÈCE, celui qu'on lit dans le jeu et sur les sites de BiS. La
+  // place étant comptée, il se coupe au besoin : la bulle le donne entier, et
+  // la position de la case dit déjà de quel emplacement il s'agit.
+  const nom = piece
+    ? lang === 'fr'
+      ? piece.fr
+      : piece.en
+    : lang === 'fr'
+      ? emplacement.fr
+      : emplacement.en
 
   return (
     <li className={`bis-slot est-${etat}`}>
@@ -347,7 +371,6 @@ function Pastille({
             loading="lazy"
             onError={onItemImgError}
           />
-          {etat === 'attendu' && <span className="bis-marque">{emplacement.etage}</span>}
           {(etat === 'obtenu' || etat === 'complet') && (
             <span className="bis-marque est-ok">✓</span>
           )}
@@ -364,7 +387,7 @@ function Pastille({
           )}
         </span>
         <span className="bis-slot-texte">
-          <span className="bis-slot-nom">{lang === 'fr' ? emplacement.fr : emplacement.en}</span>
+          <span className="bis-slot-nom">{nom}</span>
           {/* La place reste prise même quand il n'y a rien à dire : sans ça, une
               case se décalerait de quelques pixels sur sa voisine. */}
           <span className="bis-slot-ou">{etat_court || '\u00a0'}</span>
@@ -391,24 +414,69 @@ function Import({
   const [lien, setLien] = useState('')
   const [encours, setEncours] = useState(false)
   const [erreur, setErreur] = useState('')
+  // Une feuille XIVGear porte souvent plusieurs sets (« 2.50 », « 2.45 »,
+  // « Relic »...). Rien ne dit lequel le joueur utilise : on lui montre la
+  // liste plutôt que de prendre le premier et de se tromper en silence.
+  const [feuille, setFeuille] = useState<Feuille | null>(null)
 
   if (!modifiable) return <p className="empty bis-vide">{t('bisAucun')}</p>
+
+  async function poser(bis: Bis) {
+    setEncours(true)
+    try {
+      await onImport(bis)
+      setLien('')
+      setFeuille(null)
+    } catch (err) {
+      const cle = err instanceof ErreurBis ? err.message : 'bisEchecEcriture'
+      setErreur(t(cle as 'bisLienInvalide'))
+    } finally {
+      setEncours(false)
+    }
+  }
 
   async function envoyer(e: React.FormEvent) {
     e.preventDefault()
     setErreur('')
     setEncours(true)
     try {
-      await onImport(await importerBis(lien))
-      setLien('')
+      const lue = await lireFeuille(lien)
+      setEncours(false)
+      if (lue.sets.length === 1) await poser(bisDeFeuille(lue, 0))
+      else setFeuille(lue)
     } catch (err) {
       // Le message d'erreur EST une clé de traduction : l'import parle la
       // langue de la vue, sans que la vue ait à connaître ses cas d'échec.
       const cle = err instanceof ErreurBis ? err.message : 'bisEchecEcriture'
       setErreur(t(cle as 'bisLienInvalide'))
-    } finally {
       setEncours(false)
     }
+  }
+
+  if (feuille) {
+    return (
+      <div className="bis-import">
+        <p className="muted">{t('bisChoisirSet', { n: feuille.sets.length })}</p>
+        <ul className="bis-sets">
+          {feuille.sets.map((jeu, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={encours}
+                onClick={() => poser(bisDeFeuille(feuille, i))}
+              >
+                {jeu.nom || feuille.nom || `#${i + 1}`}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button type="button" className="btn-ghost" onClick={() => setFeuille(null)}>
+          {t('bisAnnuler')}
+        </button>
+        {erreur && <p className="bis-erreur">{erreur}</p>}
+      </div>
+    )
   }
 
   return (
@@ -418,7 +486,7 @@ function Import({
         <input
           type="url"
           value={lien}
-          placeholder="https://etro.gg/gearset/..."
+          placeholder="https://etro.gg/gearset/... · https://xivgear.app/?page=sl|..."
           onChange={(e) => setLien(e.target.value)}
           required
         />

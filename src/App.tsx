@@ -50,6 +50,11 @@ import { Butin } from './views/Butin'
 import { marches, type Bis, type Etat as EtatRaid } from './raid'
 import { Relics } from './views/Relics'
 
+/** Les écrans qui parlent de collections, donc ceux qu'un groupe de raid n'a
+ *  pas. Tout le reste (mon journal, l'administration, le guide, le marché) lui
+ *  survit : ces pages ne dépendent pas du groupe actif. */
+const ECRANS_COLLECTION: Tab[] = ['planning', 'collections', 'fashion', 'relics', ...KINDS]
+
 /** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
 function useCharName(charId: number): string | null {
   const [name, setName] = useState<string | null>(null)
@@ -463,8 +468,13 @@ export default function App() {
   // Changer de groupe change les ecrans disponibles : rester sur le planning
   // d'un groupe de raid, ou sur le butin d'un groupe de collection, laisserait
   // un ecran vide sans onglet pour en sortir.
+  //
+  // Seuls les ecrans de COLLECTION renvoient au butin. La liste inverse — tout
+  // sauf butin, groupes et mon journal — interdisait aussi l'administration, le
+  // guide et le marche, qui n'ont rien a voir avec le groupe actif : les ouvrir
+  // depuis un groupe de raid ramenait aussitot au butin.
   useEffect(() => {
-    if (enRaid && tab !== 'butin' && tab !== 'groups' && tab !== 'mypage') setTab('butin')
+    if (enRaid && ECRANS_COLLECTION.includes(tab)) setTab('butin')
     if (!enRaid && tab === 'butin') setTab('planning')
   }, [enRaid, tab])
 
@@ -505,7 +515,10 @@ export default function App() {
 
   // Sidepanel replié ? (par défaut : rail pour les gros groupes)
   const [rosterOpen, setRosterOpen] = useState<boolean | null>(null)
-  const rosterCollapsed = !(rosterOpen ?? members.length <= 8)
+  // Sur le butin, la colonne des personnages fait doublon : chaque joueur a
+  // deja sa carte, en plus grand. Elle part donc repliee, tant que personne ne
+  // l'a ouverte a la main.
+  const rosterCollapsed = !(rosterOpen ?? (tab !== 'butin' && members.length <= 8))
 
   // Treize collections ne tiennent pas dans une pilule d'onglets : la barre du
   // haut ne garde que les grandes sections, la collection se choisit sur une

@@ -63,52 +63,198 @@ export interface Bis {
 // Import
 // ---------------------------------------------------------------------------
 
-/** Etro sert son API sans authentification et l'ouvre aux autres origines :
- *  l'import tient entièrement dans le navigateur, sans relais par le worker. */
+/** Les deux planificateurs servent leur API sans authentification et l'ouvrent
+ *  aux autres origines : l'import tient entièrement dans le navigateur, sans
+ *  relais par le worker. */
 const ETRO_API = 'https://etro.gg/api/gearsets/'
+const XIVGEAR_LIEN = 'https://api.xivgear.app/shortlink/'
+const XIVGEAR_BIS = 'https://staticbis.xivgear.app/'
 
 /** Une erreur d'import qui se dit au joueur. Le message est une CLÉ de
  *  traduction : la vue sait l'afficher dans sa langue. */
 export class ErreurBis extends Error {}
 
-function uuidEtro(lien: string): string | null {
+/** Ce qu'un lien contient vraiment.
+ *
+ *  Un lien Etro porte UN set. Une feuille XIVGear en porte souvent plusieurs
+ *  (« 2.50 Savage Weapon », « 2.45 », « Relic »...), et rien ne dit lequel le
+ *  joueur utilise : c'est à lui de trancher, pas à nous de prendre le premier. */
+export interface Feuille {
+  source: 'etro' | 'xivgear'
+  job: string
+  /** Nom de la feuille chez son auteur. */
+  nom: string
+  url: string
+  sets: { nom: string; pieces: Record<string, number> }[]
+}
+
+function uuid(lien: string): string | null {
   const m = lien.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
   return m ? m[0] : null
 }
 
-export async function importerBis(lien: string): Promise<Bis> {
-  const propre = lien.trim()
-  const uuid = uuidEtro(propre)
-  // Un lien XIVGear ne porte pas d'uuid : on le dit plutôt que d'échouer sur
-  // « lien invalide », qui laisserait croire à une faute de frappe.
-  if (!uuid) {
-    throw new ErreurBis(/xivgear/i.test(propre) ? 'bisXivgear' : 'bisLienInvalide')
-  }
-
-  let brut: Record<string, unknown>
+async function json(url: string): Promise<Record<string, unknown>> {
+  let res: Response
   try {
-    const res = await fetch(`${ETRO_API}${uuid}/`, { signal: AbortSignal.timeout(15000) })
-    if (res.status === 404) throw new ErreurBis('bisIntrouvable')
-    if (!res.ok) throw new ErreurBis('bisInjoignable')
-    brut = (await res.json()) as Record<string, unknown>
-  } catch (e) {
-    throw e instanceof ErreurBis ? e : new ErreurBis('bisInjoignable')
+    res = await fetch(url, { signal: AbortSignal.timeout(15000) })
+  } catch {
+    throw new ErreurBis('bisInjoignable')
   }
+  // Refus du site (404 introuvable, 400 identifiant mal formé) : le lien est en
+  // cause, pas le réseau. Le dire évite de renvoyer le joueur réessayer plus
+  // tard pour un lien qui ne marchera jamais.
+  if (res.status >= 400 && res.status < 500) throw new ErreurBis('bisIntrouvable')
+  if (!res.ok) throw new ErreurBis('bisInjoignable')
+  try {
+    return (await res.json()) as Record<string, unknown>
+  } catch {
+    throw new ErreurBis('bisInjoignable')
+  }
+}
 
+// --------------------------------------------------------------------- Etro
+
+async function feuilleEtro(lien: string, id: string): Promise<Feuille> {
+  const brut = await json(`${ETRO_API}${id}/`)
   const pieces: Record<string, number> = {}
   for (const { etro } of CASES) {
     const v = brut[etro]
     if (typeof v === 'number' && v > 0) pieces[etro] = v
   }
-  // Un set sans une seule pièce n'apprend rien et casserait tous les comptes.
-  if (Object.keys(pieces).length === 0) throw new ErreurBis('bisVide')
-
   return {
+    source: 'etro',
     job: typeof brut.jobAbbrev === 'string' ? brut.jobAbbrev : '',
     nom: typeof brut.name === 'string' ? brut.name : '',
-    url: propre,
-    pieces,
+    url: lien,
+    sets: [{ nom: '', pieces }],
   }
+}
+
+// ------------------------------------------------------------------ XIVGear
+
+/** Les cases de XIVGear ramenées aux nôtres. Il les nomme autrement (`Hand`,
+ *  `Wrist`, `RingLeft`), pour les mêmes douze emplacements. */
+const CASES_XIVGEAR: Record<string, string> = {
+  Weapon: 'weapon',
+  OffHand: 'offHand',
+  Head: 'head',
+  Body: 'body',
+  Hand: 'hands',
+  Legs: 'legs',
+  Feet: 'feet',
+  Ears: 'ears',
+  Neck: 'neck',
+  Wrist: 'wrists',
+  RingLeft: 'fingerL',
+  RingRight: 'fingerR',
+}
+
+/** Où pointe un lien XIVGear. Deux formes servent : le lien court d'un set
+ *  qu'on a soi-même construit, et le catalogue public de BiS du site. */
+function cibleXivgear(
+  lien: string,
+): { type: 'sl'; id: string; set?: number } | { type: 'bis'; chemin: string[] } | null {
+  // Le séparateur de chemin est une barre verticale, souvent encodée au
+  // copier-coller.
+  const propre = lien.replaceAll('%7C', '|')
+  const partage = propre.match(/share\.xivgear\.app\/share\/([0-9a-f-]{36})/i)
+  if (partage) return { type: 'sl', id: partage[1] }
+
+  let url: URL
+  try {
+    url = new URL(propre)
+  } catch {
+    return null
+  }
+  if (!/(^|\.)xivgear\.app$/i.test(url.hostname)) return null
+
+  // L'ancienne forme mettait le chemin dans l'ancre, la nouvelle dans « page ».
+  const chemin = url.searchParams.get('page') ?? url.hash.replace(/^#\/?/, '').replaceAll('/', '|')
+  const parts = chemin.split('|').filter(Boolean)
+  if (parts[0] === 'embed') parts.shift()
+
+  const brutSet = url.searchParams.get('onlySetIndex')
+  const set = brutSet !== null && /^\d+$/.test(brutSet) ? Number(brutSet) : undefined
+
+  // Un lien court désigne un identifiant, pas un chemin : on vérifie sa forme
+  // ici plutôt que d'aller déranger leur serveur pour qu'il nous le dise.
+  if (parts[0] === 'sl' && uuid(parts[1] ?? '')) return { type: 'sl', id: parts[1], set }
+  // Le catalogue est servi en fichiers : on n'y laisse passer que des noms de
+  // dossier, jamais un chemin fabriqué.
+  if (parts[0] === 'bis' && parts.length > 1) {
+    const chemin = parts.slice(1)
+    if (!chemin.every((p) => /^[a-z0-9_-]{1,40}$/i.test(p))) return null
+    return { type: 'bis', chemin }
+  }
+  return null
+}
+
+async function feuilleXivgear(
+  lien: string,
+  cible: NonNullable<ReturnType<typeof cibleXivgear>>,
+): Promise<Feuille> {
+  const brut =
+    cible.type === 'sl'
+      ? await json(`${XIVGEAR_LIEN}${encodeURIComponent(cible.id)}`)
+      : await json(`${XIVGEAR_BIS}${cible.chemin.join('/')}.json`)
+
+  const tous = Array.isArray(brut.sets) ? (brut.sets as Record<string, unknown>[]) : []
+  // Un lien peut désigner UN set de la feuille. L'index compte les séparateurs,
+  // il s'applique donc avant qu'on les écarte.
+  const gardes = cible.type === 'sl' && cible.set !== undefined && tous[cible.set]
+    ? [tous[cible.set]]
+    : tous
+
+  const sets = []
+  for (const jeu of gardes) {
+    // Une feuille porte des intertitres (« Relic », « No Relic ») qui ne sont
+    // pas des sets : ils n'ont pas de pièces, et le filtre suivant les écarte.
+    const items = (jeu?.items ?? {}) as Record<string, { id?: unknown }>
+    const pieces: Record<string, number> = {}
+    for (const [leur, notre] of Object.entries(CASES_XIVGEAR)) {
+      const id = items[leur]?.id
+      if (typeof id === 'number' && id > 0) pieces[notre] = id
+    }
+    if (Object.keys(pieces).length > 0) {
+      sets.push({ nom: typeof jeu.name === 'string' ? jeu.name : '', pieces })
+    }
+  }
+
+  return {
+    source: 'xivgear',
+    job: typeof brut.job === 'string' ? brut.job : '',
+    nom: typeof brut.name === 'string' ? brut.name : '',
+    url: lien,
+    sets,
+  }
+}
+
+// --------------------------------------------------------------------------
+
+/** Lit un lien, d'où qu'il vienne. Rend la feuille et ses sets ; le choix, s'il
+ *  y en a un, revient au joueur. */
+export async function lireFeuille(lien: string): Promise<Feuille> {
+  const propre = lien.trim()
+  const cible = cibleXivgear(propre)
+  const feuille = cible
+    ? await feuilleXivgear(propre, cible)
+    : await feuilleEtro(propre, uuid(propre) ?? erreurLien(propre))
+  // Une feuille sans une seule pièce n'apprend rien et casserait tous les
+  // comptes : mieux vaut le dire que d'enregistrer un BiS vide.
+  if (feuille.sets.length === 0) throw new ErreurBis('bisVide')
+  return feuille
+}
+
+function erreurLien(lien: string): never {
+  throw new ErreurBis(/xivgear/i.test(lien) ? 'bisXivgearForme' : 'bisLienInvalide')
+}
+
+/** Le set choisi, prêt à être enregistré. Le nom garde la trace des deux
+ *  niveaux : la feuille, et le set qu'on y a pris. */
+export function bisDeFeuille(feuille: Feuille, index: number): Bis {
+  const set = feuille.sets[index] ?? feuille.sets[0]
+  const nom = [feuille.nom, set.nom].filter(Boolean).join(' · ')
+  return { job: feuille.job, nom, url: feuille.url, pieces: set.pieces }
 }
 
 // ---------------------------------------------------------------------------

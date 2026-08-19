@@ -447,8 +447,12 @@ const STR = {
   bisAnnuler: { fr: 'Annuler', en: 'Cancel' },
   bisEnCours: { fr: 'Lecture…', en: 'Reading…' },
   bisAide: {
-    fr: 'Colle le lien de ton set Etro. Rien d’autre à saisir : le palier dit quelles pièces tombent en savage et lesquelles s’achètent en mémoquartz.',
-    en: 'Paste the link to your Etro set. Nothing else to fill in: the tier tells which pieces drop in savage and which are bought with tomestones.',
+    fr: 'Colle ton lien Etro ou XIVGear. Rien d’autre à saisir : le palier dit quelles pièces tombent en savage et lesquelles s’achètent en mémoquartz.',
+    en: 'Paste your Etro or XIVGear link. Nothing else to fill in: the tier tells which pieces drop in savage and which are bought with tomestones.',
+  },
+  bisChoisirSet: {
+    fr: 'Cette feuille porte {n} sets. Lequel joues-tu ?',
+    en: 'That sheet holds {n} sets. Which one do you play?',
   },
   bisAucun: {
     fr: 'Pas de BiS importé pour ce palier.',
@@ -481,9 +485,9 @@ const STR = {
     fr: 'Ce lien ne ressemble pas à un set Etro.',
     en: 'That link does not look like an Etro set.',
   },
-  bisXivgear: {
-    fr: 'XIVGear n’est pas encore lu. Pour l’instant, seul Etro.',
-    en: 'XIVGear is not read yet. Etro only, for now.',
+  bisXivgearForme: {
+    fr: 'Ce lien XIVGear n’a pas une forme que je sais lire.',
+    en: 'That XIVGear link is not in a shape I can read.',
   },
   bisIntrouvable: { fr: 'Ce set n’existe pas chez Etro.', en: 'Etro has no such set.' },
   bisInjoignable: {

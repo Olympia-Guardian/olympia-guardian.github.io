@@ -2668,10 +2668,35 @@ a.player-name:hover {
 /* Une carte par joueur. Le tableau croise disait la meme chose, mais il fallait
    suivre une ligne des yeux sur toute la largeur pour savoir ou en etait UN
    joueur : la question qu'on se pose le plus souvent. */
+/* Quatre joueurs par ligne : c'est la moitie d'un static, et deux lignes
+   suffisent alors a voir les huit d'un coup d'oeil. En dessous de 1400px la
+   place manque, on retombe a deux, puis a une. */
 .bis-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(410px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+}
+
+@media (max-width: 1700px) {
+  .bis-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .bis-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Les sets d'une feuille XIVGear : un bouton par set, on ne devine pas lequel. */
+.bis-sets {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .bis-card {
@@ -2745,7 +2770,11 @@ a.player-name:hover {
    place ou il la cherche depuis des annees. */
 .bis-doll {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* minmax(0, 1fr) et non 1fr : sans le zero, une colonne de grille ne descend
+     jamais sous la largeur de son contenu, et « Manteau de protecteur en laiton
+     royal ameliore » poussait les deux colonnes hors de la carte en ecrasant le
+     portrait entre elles. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px;
   margin-top: 12px;
   align-items: stretch;
@@ -2755,9 +2784,14 @@ a.player-name:hover {
   list-style: none;
   margin: 0;
   padding: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.bis-slot {
+  min-width: 0;
 }
 
 /* La colonne de droite est en miroir, comme dans le jeu : l'icone du cote du
@@ -2773,12 +2807,25 @@ a.player-name:hover {
 }
 
 .bis-portrait {
-  width: 96px;
+  width: 84px;
   height: 100%;
+  align-self: stretch;
   object-fit: cover;
   object-position: top center;
   border-radius: var(--radius-s);
   border: 1px solid var(--hairline);
+}
+
+/* Sous 1100px la carte n'a plus la place de trois colonnes : le portrait sort,
+   les deux colonnes restent. Mieux vaut perdre l'illustration que la lisibilite. */
+@media (max-width: 1100px) {
+  .bis-portrait {
+    display: none;
+  }
+
+  .bis-doll {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 /* Le nom de la PIECE ne tient pas sur une case (« Bagues d'oreille de
@@ -2787,6 +2834,7 @@ a.player-name:hover {
    l'icone qui montre la piece, et la bulle qui donne le nom entier. */
 .bis-slot button {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2813,6 +2861,9 @@ a.player-name:hover {
   border-radius: var(--radius-s);
 }
 
+/* Le coin de l'icone ne porte plus que ce que le texte ne dit pas : la coche
+   du fini, et le composant qu'attend une piece de memoquartz. Le nom de
+   l'etage, lui, est passe sous l'objet, ou il se lit vraiment. */
 .bis-marque {
   position: absolute;
   right: -5px;
@@ -2822,17 +2873,12 @@ a.player-name:hover {
   padding: 0 3px;
   border-radius: 999px;
   border: 1px solid var(--surface-2);
-  background: var(--gold);
-  color: #171716;
+  background: var(--good);
+  color: #fff;
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
-}
-
-.bis-marque.est-ok {
-  background: var(--good);
-  color: #fff;
 }
 
 /* Pour le memoquartz, la marque est le COMPOSANT lui-meme : voir la fibre sur

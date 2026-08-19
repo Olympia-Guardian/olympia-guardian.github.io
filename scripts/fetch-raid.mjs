@@ -27,18 +27,27 @@ import { writeFile } from 'node:fs/promises'
 const OUT = new URL('../public/data/', import.meta.url)
 const API = 'https://v2.xivapi.com/api'
 
+// `etages` porte le nom que les joueurs donnent a chaque etage. « Etage 2 » ne
+// se dit nulle part : on annonce M10S, et le tableau parle la meme langue que
+// le static. L'ordre suit celui d'EMPLACEMENTS, du premier etage au dernier.
 const PALIERS = [
   { cle: 'asphodelos', famille: 'Asphodelos', ilvl: 600,
+    etages: ['P1S', 'P2S', 'P3S', 'P4S'],
     fr: 'Asphodélos (P1S-P4S)', en: 'Asphodelos (P1S-P4S)' },
   { cle: 'abyssos', famille: 'Abyssos', ilvl: 630,
+    etages: ['P5S', 'P6S', 'P7S', 'P8S'],
     fr: 'Abyssos (P5S-P8S)', en: 'Abyssos (P5S-P8S)' },
   { cle: 'anabaseios', famille: 'Ascension', ilvl: 660,
+    etages: ['P9S', 'P10S', 'P11S', 'P12S'],
     fr: 'Anabaseios (P9S-P12S)', en: 'Anabaseios (P9S-P12S)' },
   { cle: 'aac-light', famille: 'Dark Horse', ilvl: 730,
+    etages: ['M1S', 'M2S', 'M3S', 'M4S'],
     fr: 'AAC Poids mi-lourds (M1S-M4S)', en: 'AAC Light-heavyweight (M1S-M4S)' },
   { cle: 'aac-cruiser', famille: 'Babyface', ilvl: 760,
+    etages: ['M5S', 'M6S', 'M7S', 'M8S'],
     fr: 'AAC Poids lourds (M5S-M8S)', en: 'AAC Cruiserweight (M5S-M8S)' },
   { cle: 'aac-heavy', famille: 'Grand Champion', ilvl: 790,
+    etages: ['M9S', 'M10S', 'M11S', 'M12S'],
     fr: 'AAC Poids super-lourds (M9S-M12S)', en: 'AAC Heavyweight (M9S-M12S)' },
 ]
 
@@ -296,6 +305,7 @@ for (let rang = 0; rang < PALIERS.length; rang++) {
     fr: p.fr,
     en: p.en,
     ilvl: p.ilvl,
+    etages: p.etages,
     emplacements: liste,
     pieces: table,
     materiaux: compos,

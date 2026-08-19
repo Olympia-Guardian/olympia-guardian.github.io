@@ -283,7 +283,7 @@ const CACHE_MAX_CHARS = 300_000
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
-const RAID_V = 'v4'
+const RAID_V = 'v5'
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
@@ -681,6 +681,9 @@ export interface RaidPalier {
   fr: string
   en: string
   ilvl: number
+  /** Le nom que les joueurs donnent à chaque étage : M9S, M10S… « Étage 2 » ne
+   *  se dit à aucune table de raid. */
+  etages: string[]
   emplacements: RaidEmplacement[]
   pieces: RaidPiece[]
   materiaux: RaidMateriau[]

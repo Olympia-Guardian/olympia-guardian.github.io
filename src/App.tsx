@@ -21,7 +21,7 @@ import {
   useRaidDb,
   useRelicDb,
 } from './store'
-import { apiGetBis, apiSetBis, apiSetRaidFait, apiSuggest } from './groupsApi'
+import { apiGetBis, apiSetBis, apiSetRaidEtat, apiSuggest } from './groupsApi'
 import {
   convertirAncienLien,
   ecrireEmplacement,
@@ -47,7 +47,7 @@ import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Butin } from './views/Butin'
-import type { Bis } from './raid'
+import { marches, type Bis, type Etat as EtatRaid } from './raid'
 import { Relics } from './views/Relics'
 
 /** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
@@ -417,11 +417,17 @@ export default function App() {
     setBisGroupe((prev) => ({ ...prev, [charId]: bis }))
   }
 
-  /** « Je l'ai obtenue ». Le seul geste qui ne se deduit d'aucune donnee. */
-  async function basculerRaid(charId: number, id: number, fait: boolean) {
+  /** Ou en est un emplacement. Les seuls gestes qui ne se deduisent d'aucune
+   *  donnee : je l'ai obtenue, je l'ai achetee, je l'ai amelioree. Les deux
+   *  listes partent ENSEMBLE, parce qu'un clic peut changer les deux. */
+  async function basculerRaid(charId: number, id: number, suivant: EtatRaid) {
     if (!groupeRaidId || !auth.token || !peutModifierRaid(charId)) return
+    const m = marches(suivant)
     try {
-      await apiSetRaidFait(auth.token, groupeRaidId, charId, fait ? { add: [id] } : { remove: [id] })
+      await apiSetRaidEtat(auth.token, groupeRaidId, charId, {
+        fait: m.fait ? { add: [id] } : { remove: [id] },
+        ameliore: m.ameliore ? { add: [id] } : { remove: [id] },
+      })
       invalidateCharacter(charId)
       reload(charId)
     } catch {

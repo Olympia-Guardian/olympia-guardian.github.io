@@ -240,6 +240,9 @@ export type Character = { [K in Kind]: CharCollection } & {
    *  du raid et ce qui vient d'ailleurs ne se stocke pas : le BiS importé le
    *  dit déjà, emplacement par emplacement. */
   raidFait: number[]
+  /** Emplacements dont la pièce de mémoquartz est AMÉLIORÉE. Deuxième marche :
+   *  une pièce de tomes s'achète, puis se termine avec un composant du raid. */
+  raidAmeliore: number[]
   /** Profil Lodestone étendu (absent tant que la fiche n'a pas été re-scrapée). */
   profile: CharProfile | null
   /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
@@ -280,7 +283,7 @@ const CACHE_MAX_CHARS = 300_000
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
-const RAID_V = 'v3'
+const RAID_V = 'v4'
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
@@ -447,6 +450,7 @@ function mapCharacter(r: any): Character {
     nextForceAt: r.next_force_at ?? 0,
     outfitPieceIds: (r.outfit_piece_ids as number[] | undefined) ?? [],
     raidFait: (r.raid_fait as number[] | undefined) ?? [],
+    raidAmeliore: (r.raid_ameliore as number[] | undefined) ?? [],
     ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??
@@ -659,6 +663,19 @@ export interface RaidPiece {
   icone: number
 }
 
+/** Un composant d'amélioration : ce que coûte une pièce de mémoquartz en plus
+ *  des tomes. Il tombe en savage, mais au hasard des étages : c'est pourquoi il
+ *  se compte à part et jamais en soirées. */
+export interface RaidMateriau {
+  /** Ce qu'il sert à faire : `armure`, `accessoire`, `arme` améliorent la pièce
+   *  achetée ; `achat` sert à acheter l'arme, avant même de l'améliorer. */
+  cle: 'armure' | 'accessoire' | 'arme' | 'achat'
+  id: number
+  fr: string
+  en: string
+  icone: number
+}
+
 export interface RaidPalier {
   cle: string
   fr: string
@@ -666,6 +683,7 @@ export interface RaidPalier {
   ilvl: number
   emplacements: RaidEmplacement[]
   pieces: RaidPiece[]
+  materiaux: RaidMateriau[]
 }
 
 export interface RaidDb {

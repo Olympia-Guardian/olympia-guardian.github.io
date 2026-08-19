@@ -460,12 +460,27 @@ const STR = {
   },
   bisReste: { fr: 'Reste {n} pièce(s) du raid', en: '{n} piece(s) left from the raid' },
   bisRien: { fr: 'Rien à attendre du raid', en: 'Nothing left to expect from the raid' },
-  bisTome: { fr: 'Mémoquartz', en: 'Tomestones' },
   bisAilleurs: { fr: 'Ailleurs', en: 'Elsewhere' },
   bisVideSlot: { fr: 'Case vide', en: 'Empty slot' },
   bisObtenue: { fr: 'Obtenue', en: 'Obtained' },
+  // Le mémoquartz a deux marches : on l’achète, puis on la termine avec un
+  // composant qui, lui, tombe en savage.
+  bisAAcheter: { fr: 'Mémoquartz, à acheter', en: 'Tomestones, to buy' },
+  bisAAmeliorer: { fr: 'Achetée, à améliorer', en: 'Bought, to upgrade' },
+  bisComplet: { fr: 'Améliorée', en: 'Upgraded' },
   bisClicPrendre: { fr: 'Clique : je l’ai obtenue', en: 'Click: I got it' },
   bisClicRendre: { fr: 'Clique : pas encore obtenue', en: 'Click: not yet' },
+  bisClicAcheter: { fr: 'Clique : je l’ai achetée', en: 'Click: I bought it' },
+  bisClicAmeliorer: { fr: 'Clique : je l’ai améliorée', en: 'Click: I upgraded it' },
+  bisClicDefaire: { fr: 'Clique : repartir de zéro', en: 'Click: start over' },
+  compoTitre: {
+    fr: 'Composants encore nécessaires au groupe',
+    en: 'Upgrade components the group still needs',
+  },
+  compoAleatoire: {
+    fr: 'Ils tombent en savage eux aussi, mais au hasard des étages : impossible de les compter en soirées sans inventer.',
+    en: 'They drop in savage too, but on no fixed floor: counting them as clears would mean making numbers up.',
+  },
   bisPasLeDroit: {
     fr: 'Seul le joueur (ou le chef du groupe) coche ici.',
     en: 'Only the player (or the group leader) ticks here.',

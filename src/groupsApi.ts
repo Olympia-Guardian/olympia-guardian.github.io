@@ -162,13 +162,18 @@ export function apiSetBis(
   return call(`/group/${id}/bis/${charId}`, token, { method: 'PUT', body: bis })
 }
 
-/** Coche ou décoche des emplacements obtenus. */
-export function apiSetRaidFait(
+/** Où en est un emplacement. Les deux marches partent ensemble : un seul clic
+ *  les change ensemble, et deux requêtes laisseraient un état impossible entre
+ *  les deux. */
+export function apiSetRaidEtat(
   token: string,
   id: string,
   charId: number,
-  delta: { add?: number[]; remove?: number[] },
-): Promise<{ ok: true; ids: number[] }> {
+  delta: {
+    fait?: { add?: number[]; remove?: number[] }
+    ameliore?: { add?: number[]; remove?: number[] }
+  },
+): Promise<{ ok: true; raidfait?: number[]; raidameliore?: number[] }> {
   return call(`/group/${id}/raid/${charId}`, token, { method: 'PUT', body: delta })
 }
 

@@ -1,7 +1,17 @@
 import { useMemo, useState } from 'react'
 import { iconeObjet, type Character, type RaidPalier } from '../api'
 import { useI18n } from '../i18n'
-import { ErreurBis, etages, importerBis, rangerBis, type Bis, type Vise } from '../raid'
+import {
+  ErreurBis,
+  etages,
+  etatSuivant,
+  importerBis,
+  materiauxManquants,
+  rangerBis,
+  type Bis,
+  type Etat,
+  type Vise,
+} from '../raid'
 import { nomCourt, type Member } from '../store'
 import { onAvatarImgError, onItemImgError } from '../ui'
 
@@ -15,8 +25,13 @@ type Ready = Member & { data: Character }
 //
 // En dessous, une carte par joueur. Ce que chacun vise ne se saisit pas : il l'a
 // déjà écrit dans son BiS, on colle le lien et le catalogue du palier range les
-// douze pièces tout seul. Le seul geste qui reste est celui qui ne se déduit
-// d'aucune donnée : « je l'ai obtenue ».
+// douze pièces tout seul. Ne restent que les gestes qui ne se déduisent d'aucune
+// donnée : « je l'ai obtenue », et pour le mémoquartz « je l'ai achetée », puis
+// « je l'ai améliorée ».
+//
+// Les composants d'amélioration tombent en savage eux aussi, mais au hasard des
+// étages : ils se comptent à part, sous les kills, sans jamais se convertir en
+// soirées. Un chiffre honnête vaut mieux qu'une prévision inventée.
 // ---------------------------------------------------------------------------
 
 export function Butin({
@@ -34,7 +49,7 @@ export function Butin({
   /** Qui peut toucher à la carte de ce personnage. */
   peutModifier: (charId: number) => boolean
   onImport: (charId: number, bis: Bis) => Promise<void>
-  onBascule: (charId: number, id: number, fait: boolean) => void
+  onBascule: (charId: number, id: number, suivant: Etat) => void
 }) {
   const { lang, t } = useI18n()
 
@@ -42,7 +57,7 @@ export function Butin({
     () =>
       ready.map((m) => ({
         membre: m,
-        vises: rangerBis(palier, bis[m.id] ?? null, m.data.raidFait),
+        vises: rangerBis(palier, bis[m.id] ?? null, m.data.raidFait, m.data.raidAmeliore),
       })),
     [ready, palier, bis],
   )
@@ -51,6 +66,8 @@ export function Butin({
     () => etages(cartes.map((c) => ({ charId: c.membre.id, vises: c.vises }))),
     [cartes],
   )
+
+  const composants = useMemo(() => materiauxManquants(palier, cartes), [palier, cartes])
 
   const nomDe = (charId: number) => {
     const c = cartes.find((x) => x.membre.id === charId)
@@ -86,6 +103,33 @@ export function Butin({
         ))}
       </div>
 
+      {/* Les composants. Ils coûtent des soirées eux aussi, mais aucune donnée
+          ne dit lesquelles : on les compte, on ne les répartit pas. */}
+      {composants.length > 0 && (
+        <section className="compo-bande">
+          <h4>{t('compoTitre')}</h4>
+          <ul className="compo-liste">
+            {composants.map((c) => (
+              <li key={c.materiau.cle}>
+                <img
+                  src={iconeObjet(c.materiau.icone)}
+                  alt=""
+                  width={28}
+                  height={28}
+                  loading="lazy"
+                  onError={onItemImgError}
+                />
+                <span className="compo-nom">
+                  {lang === 'fr' ? c.materiau.fr : c.materiau.en}
+                </span>
+                <b className="compo-n">{c.nombre}</b>
+              </li>
+            ))}
+          </ul>
+          <p className="muted">{t('compoAleatoire')}</p>
+        </section>
+      )}
+
       <div className="bis-cards">
         {cartes.map((c) => (
           <CarteJoueur
@@ -95,7 +139,7 @@ export function Butin({
             bis={bis[c.membre.id]}
             modifiable={peutModifier(c.membre.id)}
             onImport={(b) => onImport(c.membre.id, b)}
-            onBascule={(id, fait) => onBascule(c.membre.id, id, fait)}
+            onBascule={(id, suivant) => onBascule(c.membre.id, id, suivant)}
           />
         ))}
       </div>
@@ -118,7 +162,7 @@ function CarteJoueur({
   bis: Bis | undefined
   modifiable: boolean
   onImport: (bis: Bis) => Promise<void>
-  onBascule: (id: number, fait: boolean) => void
+  onBascule: (id: number, suivant: Etat) => void
 }) {
   const { t } = useI18n()
   const [saisie, setSaisie] = useState(false)
@@ -191,6 +235,16 @@ function CarteJoueur({
 
 // ---------------------------------------------------------------------------
 
+/** Ce que dit l'infobulle, état par état. Une table plutôt qu'un nom de clé
+ *  fabriqué : les états portent des traits d'union, pas les clés. */
+const CLIC: Record<string, string> = {
+  attendu: 'bisClicPrendre',
+  obtenu: 'bisClicRendre',
+  'a-acheter': 'bisClicAcheter',
+  'a-ameliorer': 'bisClicAmeliorer',
+  complet: 'bisClicDefaire',
+}
+
 function Pastille({
   vise,
   modifiable,
@@ -198,11 +252,12 @@ function Pastille({
 }: {
   vise: Vise
   modifiable: boolean
-  onBascule: (id: number, fait: boolean) => void
+  onBascule: (id: number, suivant: Etat) => void
 }) {
   const { lang, t } = useI18n()
-  const { emplacement, pieces, inconnus, etat } = vise
+  const { emplacement, pieces, etat } = vise
   const piece = pieces[0]
+  const suivant = etatSuivant(etat)
 
   // Ce que la pastille montre : la pièce visée, pas une étiquette abstraite.
   // Faute de BiS pour cette case, on nomme au moins l'emplacement.
@@ -214,27 +269,30 @@ function Pastille({
       ? emplacement.fr
       : emplacement.en
 
-  // La provenance en toutes lettres. Un emplacement attendu affiche son étage :
-  // c'est ce qu'on veut savoir devant un tableau de raid.
+  // Où en est la pièce, en toutes lettres. Un emplacement attendu du raid
+  // affiche son ÉTAGE : c'est ce qu'on veut savoir devant un tableau de raid.
+  // Une pièce de mémoquartz dit la marche qui lui manque encore.
   const ou =
     etat === 'attendu'
       ? t('butinFloor', { n: emplacement.etage })
-      : etat === 'fait'
+      : etat === 'obtenu'
         ? t('bisObtenue')
-        : pieces.length > 0
-          ? t('bisTome')
-          : inconnus.length > 0
-            ? t('bisAilleurs')
-            : t('bisVideSlot')
+        : etat === 'a-acheter'
+          ? t('bisAAcheter')
+          : etat === 'a-ameliorer'
+            ? t('bisAAmeliorer')
+            : etat === 'complet'
+              ? t('bisComplet')
+              : etat === 'inconnu'
+                ? t('bisAilleurs')
+                : t('bisVideSlot')
 
-  const cliquable = modifiable && (etat === 'attendu' || etat === 'fait')
+  const cliquable = modifiable && suivant !== null
   const infobulle = !modifiable
     ? t('bisPasLeDroit')
-    : etat === 'attendu'
-      ? t('bisClicPrendre')
-      : etat === 'fait'
-        ? t('bisClicRendre')
-        : ''
+    : suivant
+      ? t(CLIC[etat] as 'bisClicPrendre')
+      : ''
 
   return (
     <li className={`bis-slot est-${etat}`}>
@@ -242,7 +300,7 @@ function Pastille({
         type="button"
         disabled={!cliquable}
         title={infobulle}
-        onClick={() => onBascule(emplacement.id, etat !== 'fait')}
+        onClick={() => suivant && onBascule(emplacement.id, suivant)}
       >
         <img
           src={piece ? iconeObjet(piece.icone) : emplacement.icon}

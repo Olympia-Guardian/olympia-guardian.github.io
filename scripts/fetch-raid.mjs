@@ -7,7 +7,10 @@
 //  - `pieces`, tout l'équipement du palier — les 77 pièces savage ET les
 //    pièces de mémoquartz du même niveau. C'est elle qui range un BiS collé :
 //    un identifiant d'objet y donne son emplacement et sa provenance, donc
-//    ce qu'on attend du raid, sans une question au joueur.
+//    ce qu'on attend du raid, sans une question au joueur ;
+//  - `materiaux`, les quatre composants qui améliorent le mémoquartz. Eux
+//    aussi tombent en savage : une pièce de tomes n'est pas gratuite en
+//    soirées, elle l'est seulement en coffres.
 //
 // Deux choses que XIVAPI ne dit pas, et qui sont donc écrites ici :
 //
@@ -89,6 +92,47 @@ function emplacementDe(categorie) {
     if (champs[champ] === 1) return cle
   }
   return null
+}
+
+// Ce que coûte une pièce de mémoquartz en plus des tomes : un composant, qui
+// tombe en savage. Leurs noms changent à chaque palier sans suivre de règle
+// (Roborant, Coating, Brine, Shine, Ester, Solvent, Glaze...), et RIEN dans les
+// données du jeu ne dit lequel améliore quoi : seule la description de l'objet
+// le dit, en toutes lettres. Elle a été lue une fois, le résultat est ici.
+//
+// L'ÉTAGE n'y figure pas, volontairement : les composants tombent au hasard des
+// étages. Leur en attribuer un donnerait un décompte de soirées faux, et faux
+// avec l'air d'être précis.
+//
+//  armure     : tête, torse, mains, jambes, pieds
+//  accessoire : boucles, collier, bracelet, bagues
+//  arme       : l'améliore
+//  achat      : et celui-là sert à l'ACHETER, avant même de l'améliorer
+const MATERIAUX = {
+  asphodelos: {
+    armure: 'Radiant Twine', accessoire: 'Radiant Coating',
+    arme: 'Radiant Roborant', achat: 'Discal Tomestone',
+  },
+  abyssos: {
+    armure: 'Moonshine Twine', accessoire: 'Moonshine Shine',
+    arme: 'Moonshine Brine', achat: 'Ultralight Tomestone',
+  },
+  anabaseios: {
+    armure: 'Divine Twine', accessoire: 'Divine Shine',
+    arme: 'Divine Solvent', achat: 'Hermetic Tomestone',
+  },
+  'aac-light': {
+    armure: 'Surgelight Twine', accessoire: 'Surgelight Glaze',
+    arme: 'Surgelight Solvent', achat: 'Universal Tomestone',
+  },
+  'aac-cruiser': {
+    armure: 'Evercharged Twine', accessoire: 'Evercharged Glaze',
+    arme: 'Evercharged Ester', achat: 'Universal Tomestone 2.0',
+  },
+  'aac-heavy': {
+    armure: 'Thundersteeped Twine', accessoire: 'Thundersteeping Glaze',
+    arme: 'Thundersteeped Solvent', achat: 'Universal Tomestone 3.0',
+  },
 }
 
 async function json(url) {
@@ -195,6 +239,25 @@ async function pieces(palier) {
   return liste
 }
 
+/** Les quatre composants d'un palier. Le nom exact compte : « Universal
+ *  Tomestone » et « Universal Tomestone 2.0 » sont deux paliers différents, et
+ *  une recherche floue les confondrait. */
+async function materiaux(palier) {
+  const table = MATERIAUX[palier.cle]
+  if (!table) throw new Error(`${palier.cle} : aucun composant déclaré`)
+  const out = []
+  for (const [cle, nom] of Object.entries(table)) {
+    const q = encodeURIComponent(`+Name~"${nom}" +LevelItem=1`)
+    const d = await json(`${API}/search?sheets=Item&query=${q}&limit=40&fields=Name,Icon`)
+    const ligne = (d.results ?? []).find((r) => r.fields?.Name === nom)
+    if (!ligne) throw new Error(`${palier.cle} : « ${nom} » introuvable, écriture refusée`)
+    out.push({ cle, id: ligne.row_id, en: nom, icone: ligne.fields?.Icon?.id ?? 0 })
+  }
+  const fr = await nomsFr(out.map((x) => x.id))
+  for (const m of out) m.fr = fr.get(m.id) ?? m.en
+  return out
+}
+
 /** Une table amputée rangerait un BiS de travers, et sans le dire : une pièce
  *  savage manquante deviendrait « prise ailleurs » et le compte des soirées
  *  tomberait trop bas. On exige donc que chaque provenance couvre toutes les
@@ -227,6 +290,7 @@ for (let rang = 0; rang < PALIERS.length; rang++) {
   }
   const table = await pieces(p)
   verifier(p.cle, table)
+  const compos = await materiaux(p)
   paliers.push({
     cle: p.cle,
     fr: p.fr,
@@ -234,11 +298,13 @@ for (let rang = 0; rang < PALIERS.length; rang++) {
     ilvl: p.ilvl,
     emplacements: liste,
     pieces: table,
+    materiaux: compos,
   })
   const nSavage = table.filter((x) => x.provenance === 'savage').length
   console.log(
     `${p.cle}: ${liste.length} emplacements, ${table.length} pièces ` +
-      `(${nSavage} savage, ${table.length - nSavage} mémoquartz) — ilvl ${p.ilvl}`,
+      `(${nSavage} savage, ${table.length - nSavage} mémoquartz), ` +
+      `${compos.length} composants — ilvl ${p.ilvl}`,
   )
 }
 

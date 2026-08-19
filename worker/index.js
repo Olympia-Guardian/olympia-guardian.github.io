@@ -661,14 +661,16 @@ async function getCharacter(env, id, force, connecte = true) {
     minions: block('minions', !!char.public_minions),
     ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),
     relicIds: byKind.relics ?? [],
-    // Equipement de raid OBTENU, par identifiant d'emplacement. C'est la seule
-    // chose qu'on stocke ici : ce qui vient du raid et ce qui vient d'ailleurs
-    // se lit dans le BiS importe (table raid_bis), il n'y a rien a declarer.
+    // Equipement de raid, par identifiant d'emplacement. D'ou vient chaque
+    // piece ne se stocke pas : le BiS importe (table raid_bis) le dit deja.
+    // Restent les deux marches que rien ne peut deduire — je l'ai, et pour le
+    // memoquartz je l'ai amelioree avec un composant du raid.
     //
-    // Volontairement absente de missingKinds : elle ne vient d'aucune source
-    // exterieure, son absence ne doit donc pas declencher un amorcage FFXIV
-    // Collect qui n'aurait rien a apporter.
+    // Volontairement absentes de missingKinds : elles ne viennent d'aucune
+    // source exterieure, leur absence ne doit donc pas declencher un amorcage
+    // FFXIV Collect qui n'aurait rien a apporter.
     raid_fait: byKind.raidfait ?? [],
+    raid_ameliore: byKind.raidameliore ?? [],
     outfit_piece_ids: byKind.outfitpieces ?? [],
     needsSeed,
   }
@@ -1184,10 +1186,10 @@ async function putCollections(env, user, charId, raw) {
   // synchro Lodestone réécrit ces deux collections (source lodestone).
   // outfitpieces : pièces de tenues possédées (stockage auxiliaire, comme
   // relics — un ensemble dont toutes les pièces sont là devient possédé).
-  // raidfait : equipement de raid obtenu, meme nature auxiliaire. Il s'ecrit
-  // aussi par /group/:id/raid/:charId, ou le CHEF du groupe y a droit.
+  // raidfait / raidameliore : equipement de raid, meme nature auxiliaire. Ils
+  // s'ecrivent aussi par /group/:id/raid/:charId, ou le CHEF du groupe y a droit.
   const deltas = []
-  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raidfait']) {
+  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raidfait', 'raidameliore']) {
     const v = doc?.[kind]
     if (v === undefined) continue
     if (Array.isArray(v)) {
@@ -1915,9 +1917,16 @@ async function putRaidBis(env, user, id, charId, raw) {
   return response(JSON.stringify({ ok: true, updated: now }))
 }
 
-/** PUT /group/:id/raid/:charId : coche (ou decoche) des emplacements obtenus.
- *  Meme stockage que les collections — un ensemble d'identifiants — mais avec
- *  le droit d'ecriture du groupe. */
+/** Les deux marches d'un emplacement, et les listes qui les portent. */
+const MARCHES = { fait: 'raidfait', ameliore: 'raidameliore' }
+
+/** PUT /group/:id/raid/:charId : ou en est un emplacement.
+ *
+ *  Corps : { fait: {add, remove}, ameliore: {add, remove} }. Les deux marches
+ *  bougent dans le MEME appel, parce qu'un seul clic les change ensemble :
+ *  passer une piece de memoquartz de « amelioree » a « a acheter » retire les
+ *  deux d'un coup, et deux requetes laisseraient un etat impossible entre les
+ *  deux. Meme stockage que les collections, avec le droit d'ecriture du groupe. */
 async function putRaidFait(env, user, id, charId, raw) {
   if (!(await accesRaid(env, user, id, charId))) return response('{"error":"forbidden"}', 403)
   let body
@@ -1926,38 +1935,50 @@ async function putRaidFait(env, user, id, charId, raw) {
   } catch {
     return response('{"error":"invalid body"}', 422)
   }
-  const add = body?.add ?? []
-  const remove = body?.remove ?? []
-  if (!validIds(add, 200) || !validIds(remove, 200)) {
-    return response('{"error":"invalid ids"}', 422)
+  const deltas = []
+  for (const [champ, kind] of Object.entries(MARCHES)) {
+    const v = body?.[champ]
+    if (!v) continue
+    const add = v.add ?? []
+    const remove = v.remove ?? []
+    if (!validIds(add, 200) || !validIds(remove, 200)) {
+      return response('{"error":"invalid ids"}', 422)
+    }
+    if (add.length > 0 || remove.length > 0) deltas.push([kind, add, remove])
   }
-  if (add.length === 0 && remove.length === 0) {
-    return response('{"error":"nothing to update"}', 422)
-  }
-  const actuel = await env.DB.prepare(
-    "SELECT ids FROM collections WHERE char_id = ?1 AND kind = 'raidfait'",
+  if (deltas.length === 0) return response('{"error":"nothing to update"}', 422)
+
+  const actuels = await env.DB.prepare(
+    'SELECT kind, ids FROM collections WHERE char_id = ?1 AND kind IN (?2, ?3)',
   )
-    .bind(charId)
-    .first()
-  let liste = []
-  try {
-    liste = actuel ? JSON.parse(actuel.ids) : []
-  } catch {
-    liste = []
+    .bind(charId, MARCHES.fait, MARCHES.ameliore)
+    .all()
+  const parKind = new Map()
+  for (const r of actuels.results) {
+    try {
+      parKind.set(r.kind, JSON.parse(r.ids))
+    } catch {
+      parKind.set(r.kind, [])
+    }
   }
-  const set = new Set(liste)
-  for (const n of add) set.add(n)
-  for (const n of remove) set.delete(n)
   const now = Date.now()
-  await env.DB.prepare(
+  const stmt = env.DB.prepare(
     'INSERT INTO collections (char_id, kind, ids, updated, source) ' +
-      "VALUES (?1, 'raidfait', ?2, ?3, 'user') ON CONFLICT(char_id, kind) DO UPDATE SET " +
-      'ids = ?2, updated = ?3',
+      "VALUES (?1, ?2, ?3, ?4, 'user') ON CONFLICT(char_id, kind) DO UPDATE SET " +
+      'ids = ?3, updated = ?4',
   )
-    .bind(charId, JSON.stringify([...set]), now)
-    .run()
+  const sortie = {}
+  const lot = []
+  for (const [kind, add, remove] of deltas) {
+    const set = new Set(parKind.get(kind) ?? [])
+    for (const n of add) set.add(n)
+    for (const n of remove) set.delete(n)
+    sortie[kind] = [...set]
+    lot.push(stmt.bind(charId, kind, JSON.stringify([...set]), now))
+  }
+  await env.DB.batch(lot)
   await notifierGroupe(env, id)
-  return response(JSON.stringify({ ok: true, ids: [...set] }))
+  return response(JSON.stringify({ ok: true, ...sortie }))
 }
 
 /** Ajoute un perso au groupe (membres + horodatage), sans contrôle d'accès. */

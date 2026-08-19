@@ -3,10 +3,11 @@
 // Un joueur a déjà écrit, ailleurs, ce qu'il vise pièce par pièce. Lui
 // redemander emplacement par emplacement ce qu'il prendra en savage serait de
 // la saisie pure : le lien suffit, la provenance se lit dans le catalogue du
-// palier. Le seul geste qui reste est celui qui ne se déduit d'aucune donnée —
-// « je l'ai obtenue ».
+// palier. Ne restent que les gestes qui ne se déduisent d'aucune donnée : « je
+// l'ai obtenue », et pour le mémoquartz « je l'ai achetée », puis « je l'ai
+// améliorée ».
 
-import type { RaidEmplacement, RaidPalier, RaidPiece } from './api'
+import type { RaidEmplacement, RaidMateriau, RaidPalier, RaidPiece } from './api'
 
 /** Pièces lâchées par un étage à chaque kill. C'est ce chiffre qui transforme
  *  des besoins en nombre de soirées : il est isolé ici pour se corriger d'une
@@ -32,6 +33,21 @@ const CASES: { etro: string; emplacement: string }[] = [
   { etro: 'fingerL', emplacement: 'ring1' },
   { etro: 'fingerR', emplacement: 'ring2' },
 ]
+
+/** Quel composant améliore quel emplacement du jeu. Trois familles, pas une par
+ *  case : c'est ainsi que le jeu les vend. */
+const FAMILLE: Record<string, RaidMateriau['cle']> = {
+  weapon: 'arme',
+  head: 'armure',
+  body: 'armure',
+  hands: 'armure',
+  legs: 'armure',
+  feet: 'armure',
+  earring: 'accessoire',
+  necklace: 'accessoire',
+  bracelet: 'accessoire',
+  ring: 'accessoire',
+}
 
 /** Un BiS tel qu'on le garde : le job, le nom que le joueur a donné à son set,
  *  le lien d'origine pour le réimporter, et un identifiant d'objet par case. */
@@ -99,7 +115,19 @@ export async function importerBis(lien: string): Promise<Bis> {
 // Ce qu'on en déduit
 // ---------------------------------------------------------------------------
 
-export type Etat = 'attendu' | 'fait' | 'ailleurs'
+/** Où en est un emplacement.
+ *
+ *  Le savage n'a que deux marches : la pièce tombe finie. Le mémoquartz en a
+ *  trois, parce qu'il s'achète d'abord et se termine ensuite avec un composant
+ *  qui, lui, vient du raid. */
+export type Etat =
+  | 'attendu'
+  | 'obtenu'
+  | 'a-acheter'
+  | 'a-ameliorer'
+  | 'complet'
+  | 'inconnu'
+  | 'vide'
 
 /** Un emplacement, une fois le BiS rangé : ce que le joueur y vise, d'où ça
  *  vient, et où il en est. */
@@ -117,15 +145,18 @@ export interface Vise {
 /** Range un BiS contre le catalogue d'un palier.
  *
  *  La règle tient en une phrase : un emplacement est ATTENDU DU RAID si au
- *  moins une des pièces visées y tombe en savage. Le reste — mémoquartz,
- *  artisanat, objet inconnu — se prend ailleurs et ne coûte aucune soirée. */
+ *  moins une des pièces visées y tombe en savage. Le reste vient du mémoquartz
+ *  ou d'ailleurs, ce qui ne veut pas dire gratuit : le mémoquartz se termine
+ *  avec un composant qui tombe, lui aussi, en savage. */
 export function rangerBis(
   palier: RaidPalier,
   bis: Bis | null,
   faits: number[],
+  ameliores: number[] = [],
 ): Vise[] {
   const parId = new Map(palier.pieces.map((p) => [p.id, p]))
   const fait = new Set(faits)
+  const ameliore = new Set(ameliores)
   return palier.emplacements.map((emplacement) => {
     const pieces: RaidPiece[] = []
     const inconnus: number[] = []
@@ -137,17 +168,42 @@ export function rangerBis(
       if (piece) pieces.push(piece)
       else inconnus.push(id)
     }
-    const duRaid = pieces.some((p) => p.provenance === 'savage')
-    const etat: Etat = !duRaid ? 'ailleurs' : fait.has(emplacement.id) ? 'fait' : 'attendu'
+    const jai = fait.has(emplacement.id)
+    let etat: Etat
+    if (pieces.some((p) => p.provenance === 'savage')) etat = jai ? 'obtenu' : 'attendu'
+    else if (pieces.length > 0) etat = ameliore.has(emplacement.id) ? 'complet' : jai ? 'a-ameliorer' : 'a-acheter'
+    else etat = inconnus.length > 0 ? 'inconnu' : 'vide'
     return { emplacement, pieces, inconnus, etat }
   })
 }
 
+/** L'état suivant quand on clique. Le savage bascule, le mémoquartz monte ses
+ *  marches et revient au début : on peut toujours défaire une erreur. */
+export function etatSuivant(etat: Etat): Etat | null {
+  if (etat === 'attendu') return 'obtenu'
+  if (etat === 'obtenu') return 'attendu'
+  if (etat === 'a-acheter') return 'a-ameliorer'
+  if (etat === 'a-ameliorer') return 'complet'
+  if (etat === 'complet') return 'a-acheter'
+  return null
+}
+
+/** Ce qu'un état vaut dans le stockage : deux listes, deux booléens. */
+export function marches(etat: Etat): { fait: boolean; ameliore: boolean } {
+  return {
+    fait: etat === 'obtenu' || etat === 'a-ameliorer' || etat === 'complet',
+    ameliore: etat === 'complet',
+  }
+}
+
 /** Combien de soirées il reste, étage par étage. C'est la seule question qu'un
- *  static se pose devant un palier : pas un inventaire, un nombre de soirs. */
+ *  static se pose devant un palier : pas un inventaire, un nombre de soirs.
+ *
+ *  Les composants n'y figurent pas : ils tombent au hasard des étages, leur en
+ *  attribuer un donnerait un compte faux avec l'air d'être précis. */
 export interface Etage {
   etage: number
-  /** Pièces encore attendues du raid, tous joueurs confondus. */
+  /** Coffres encore attendus du raid, tous joueurs confondus. */
   pieces: number
   kills: number
   /** Qui attend quoi, pour que le nombre s'explique de lui-même. */
@@ -177,4 +233,40 @@ export function etages(vises: { charId: number; vises: Vise[] }[]): Etage[] {
   const out = [...parEtage.values()].sort((a, b) => a.etage - b.etage)
   for (const e of out) e.kills = Math.ceil(e.pieces / PIECES_PAR_KILL)
   return out
+}
+
+/** Les composants qu'il manque encore au groupe.
+ *
+ *  Ils tombent en savage eux aussi, mais sans étage attitré : on les compte, on
+ *  ne les convertit pas en soirées. Un chiffre honnête vaut mieux qu'une
+ *  prévision inventée. */
+export interface Besoin {
+  materiau: RaidMateriau
+  nombre: number
+}
+
+export function materiauxManquants(
+  palier: RaidPalier,
+  cartes: { vises: Vise[] }[],
+): Besoin[] {
+  const compte = new Map<string, number>()
+  const ajoute = (cle: string) => compte.set(cle, (compte.get(cle) ?? 0) + 1)
+  for (const { vises } of cartes) {
+    for (const v of vises) {
+      if (v.etat !== 'a-acheter' && v.etat !== 'a-ameliorer') continue
+      // Une par PIÈCE et non par emplacement : le paladin qui vise l'arme et le
+      // bouclier en mémoquartz en améliore bien deux.
+      for (const piece of v.pieces) {
+        const famille = FAMILLE[piece.emplacement]
+        if (!famille) continue
+        ajoute(famille)
+        // L'arme de mémoquartz coûte deux fois : un mémoquartz générique pour
+        // l'acheter, puis son agent renforçant pour la terminer.
+        if (famille === 'arme' && v.etat === 'a-acheter') ajoute('achat')
+      }
+    }
+  }
+  return palier.materiaux
+    .map((materiau) => ({ materiau, nombre: compte.get(materiau.cle) ?? 0 }))
+    .filter((b) => b.nombre > 0)
 }

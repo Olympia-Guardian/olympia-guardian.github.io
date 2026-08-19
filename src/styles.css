@@ -2799,34 +2799,107 @@ a.player-name:hover {
   white-space: nowrap;
 }
 
-/* Attendu du raid : dore, parce que c'est la seule chose qui coute des soirees.
-   Obtenu : vert et barre, c'est derriere nous. Ailleurs : gris, ca ne se
-   clique pas, mais ca se lit — savoir qu'une piece vient du memoquartz evite
-   de la chercher au raid. */
+/* Cinq allures, une par marche restante.
+
+   Dore : le raid doit encore la lacher, c'est ce qui coute des soirees.
+   Ambre : le memoquartz, qui ne coute pas de coffre mais bien un composant.
+   Vert : plus rien a faire, pour l'une comme pour l'autre.
+   Gris eteint : une piece qu'on ne sait pas nommer, ou une case vide. */
 .bis-slot.est-attendu button {
   border-color: rgba(214, 178, 107, 0.55);
   background: rgba(214, 178, 107, 0.1);
 }
 
-.bis-slot.est-fait button {
+.bis-slot.est-a-acheter button,
+.bis-slot.est-a-ameliorer button {
+  border-color: rgba(250, 178, 25, 0.4);
+  background: rgba(250, 178, 25, 0.08);
+}
+
+/* La deuxieme marche est plus proche du but que la premiere : le nom cesse
+   d'etre en attente, seul le « a ameliorer » reste allume. */
+.bis-slot.est-a-ameliorer .bis-slot-ou {
+  color: var(--warning);
+}
+
+.bis-slot.est-obtenu button,
+.bis-slot.est-complet button {
   border-color: rgba(12, 163, 12, 0.45);
   background: rgba(12, 163, 12, 0.12);
 }
 
-.bis-slot.est-fait .bis-slot-nom {
+.bis-slot.est-obtenu .bis-slot-nom,
+.bis-slot.est-complet .bis-slot-nom {
   text-decoration: line-through;
 }
 
-.bis-slot.est-fait .bis-slot-ou {
+.bis-slot.est-obtenu .bis-slot-ou,
+.bis-slot.est-complet .bis-slot-ou {
   color: var(--good);
 }
 
-.bis-slot.est-ailleurs button {
-  opacity: 0.65;
+.bis-slot.est-inconnu button,
+.bis-slot.est-vide button {
+  opacity: 0.6;
 }
 
-.bis-slot.est-ailleurs img {
+.bis-slot.est-inconnu img,
+.bis-slot.est-vide img {
   filter: grayscale(1);
+}
+
+/* Les composants ne se comptent pas en soirees : ils tombent au hasard des
+   etages. D'ou une bande a part, sous les kills et non parmi eux. */
+.compo-bande {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+
+.compo-bande h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.compo-bande p {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.compo-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compo-liste li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+
+.compo-liste img {
+  border-radius: var(--radius-s);
+  flex-shrink: 0;
+}
+
+.compo-nom {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.compo-n {
+  font-size: 15px;
+  color: var(--gold);
 }
 
 /* Sans BiS, la carte ne montre pas une grille vide a remplir a la main : elle

@@ -88,12 +88,14 @@ const STR = {
   },
   heroTitle: { fr: 'Complétez vos collections ensemble', en: 'Complete your collections together' },
   heroBody: {
-    fr: "Connecte-toi avec Discord, lie ton personnage en le cherchant par son nom, puis rejoins ou crée ton groupe. L'appli croise vos quatorze collections (montures, mascottes, cartes, mode, émotes, orchestrion, magie bleue, succès, reliques…) et vous dit quel contenu farmer ensemble pour que chaque run profite au plus de monde.",
-    en: 'Sign in with Discord, link your character by searching its name, then join or create your group. The app cross-references your fourteen collections (mounts, minions, cards, fashion, emotes, orchestrion, blue magic, achievements, relics…) and tells you what to farm together so every run benefits as many players as possible.',
+    fr: "Suis un personnage par son ID Lodestone : ses montures et ses mascottes arrivent toutes seules, et le planning te dit quoi farmer ensemble. Avec un compte, tes quatorze collections s'ajoutent (cartes, mode, émotes, orchestrion, magie bleue, succès, reliques…) et le groupe se partage vraiment.",
+    en: 'Track a character by Lodestone ID: their mounts and minions come in on their own, and the planner tells you what to farm together. With an account, all fourteen collections join in (cards, fashion, emotes, orchestrion, blue magic, achievements, relics…) and the group becomes truly shared.',
   },
+  heroLogin: { fr: 'Se connecter', en: 'Sign in' },
+  heroFollow: { fr: 'Suivre un personnage', en: 'Track a character' },
   heroHint: {
-    fr: 'Astuce : le Guide (bouton « ? » en haut à droite) explique chaque écran. Et sans compte, tu peux déjà explorer en suivant des persos par leur ID Lodestone dans un groupe hors ligne.',
-    en: 'Tip: the Guide ("?" button, top right) explains every screen. Even without an account you can explore by tracking characters by Lodestone ID in an offline group.',
+    fr: 'Sans compte, seules les montures et les mascottes sont lisibles : elles viennent du Lodestone. Le reste se coche dans « Mon Journal », qui demande un compte.',
+    en: 'Without an account, only mounts and minions are readable: they come from the Lodestone. The rest is ticked in “My Journal”, which needs an account.',
   },
   footer: {
     fr: 'catalogues rafraîchis chaque nuit',
@@ -418,6 +420,12 @@ const STR = {
   },
   createGroupNoFounder: { fr: 'sans personnage', en: 'no character' },
   groupsTab: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
+  /** Sans compte, les contacts n'existent pas : le bouton ne promet que les groupes. */
+  groupsTabAlone: { fr: 'Groupes', en: 'Groups' },
+  guideAloneNote: {
+    fr: 'Sans compte, seules les montures et les mascottes apparaissent ici : elles se lisent sur le Lodestone. Les douze autres collections se cochent dans « Mon Journal », qui demande un compte.',
+    en: 'Without an account, only mounts and minions show up here: they are read from the Lodestone. The other twelve collections are ticked in “My Journal”, which needs an account.',
+  },
   groupsManage: { fr: '⚙️ Gérer les groupes…', en: '⚙️ Manage groups…' },
   groupsPageTitle: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
   groupsSection: { fr: 'Groupes', en: 'Groups' },
@@ -597,6 +605,9 @@ const STR = {
   yesterday: { fr: 'hier', en: 'yesterday' },
   daysAgo: { fr: 'il y a {n} j', en: '{n} d ago' },
   playerNote: { fr: 'Collections à renseigner dans « Mon Journal »', en: 'Collections to fill in from “My Journal”' },
+  /** Sans compte, « Mon Journal » ne s'ouvre pas : la note dirait d'aller
+   *  quelque part d'inaccessible. */
+  playerNoteAlone: { fr: 'Connecte-toi pour renseigner les autres collections', en: 'Sign in to fill in the other collections' },
   playerNoteTitle: {
     fr: "Le Lodestone n'expose que les montures et les mascottes. Les onze autres collections (cartes, mode, tenues, armoire, bardes, émotes, portraits, orchestrion, magie bleue) se cochent directement dans « Mon Journal », après avoir lié son personnage.",
     en: 'The Lodestone only exposes mounts and minions. The other eleven collections (cards, fashion, outfits, armoire, bardings, emotes, portraits, orchestrion, blue magic) are checked directly in “My Journal”, once your character is linked.',
@@ -948,6 +959,12 @@ const STR = {
   helpGroupsBody: {
     fr: 'Deux types de groupes : hors ligne (tu suis qui tu veux par ID Lodestone) et en ligne (chacun rejoint via un lien d’invitation, validé par le créateur). Les contacts sont tes amis : partage ton lien de contact, vois leurs persos, invite-les direct dans tes groupes, et bloque en silence si besoin.',
     en: 'Two kinds of groups: offline (track anyone by Lodestone ID) and online (people join via an invite link, approved by the owner). Contacts are your friends: share your contact link, see their characters, invite them straight into your groups, and block silently if needed.',
+  },
+  /** Hors compte : ni contacts, ni groupe en ligne. Decrire les deux ferait
+   *  chercher des boutons qui n'existent pas a l'ecran. */
+  helpGroupsAloneBody: {
+    fr: 'Un groupe hors ligne vit dans ton navigateur : tu y suis qui tu veux par son ID Lodestone, sans rien demander à personne. Avec un compte, les groupes en ligne s’ouvrent : chacun rejoint par un lien d’invitation que tu valides, et tes contacts te permettent d’inviter tes amis en deux clics.',
+    en: 'An offline group lives in your browser: track anyone by Lodestone ID, no permission needed. With an account, online groups open up: people join through an invite link you approve, and contacts let you invite friends in two clicks.',
   },
   helpBellTitle: { fr: 'Notifications', en: 'Notifications' },
   helpBellBody: {

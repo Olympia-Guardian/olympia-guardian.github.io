@@ -1,5 +1,5 @@
 import { accesDe, useStory } from '../access'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PLANNING_KINDS, type Character, type Item, type Kind, type Source } from '../api'
 import { kindLabel, localName, localSource, useI18n, type StrKey } from '../i18n'
 import {
@@ -152,11 +152,16 @@ export function Planning({
   db,
   ready,
   ownedSets,
+  kinds: KINDS_VUS = PLANNING_KINDS,
   onShowItem,
 }: {
   db: Db
   ready: Ready[]
   ownedSets: Map<number, Record<Kind, Set<number>>>
+  /** Collections dont on parle ici. Restreinte à montures et mascottes hors
+   *  compte : proposer de farmer des cartes à quelqu'un qui ne peut pas les
+   *  cocher, c'est lui promettre un suivi qui n'existera jamais. */
+  kinds?: Kind[]
   onShowItem: (item: Item, kind: Kind) => void
 }) {
   const { lang, t } = useI18n()
@@ -174,7 +179,7 @@ export function Planning({
 
   const runs = useMemo(() => {
     const map = new Map<string, Run>()
-    const kinds: Kind[] = kindFilter === 'all' ? PLANNING_KINDS : [kindFilter]
+    const kinds: Kind[] = kindFilter === 'all' ? KINDS_VUS : [kindFilter]
     // En vue « juste pour moi », un seuil > 1 gardé d'avant viderait tout.
     const minM = Math.min(minMissing, ready.length)
     for (const kind of kinds) {
@@ -278,15 +283,21 @@ export function Planning({
   }, [runs, search, lang])
 
   const stats = useMemo(() => {
-    const counts = Object.fromEntries(PLANNING_KINDS.map((k) => [k, new Set<number>()])) as Record<
+    const counts = Object.fromEntries(KINDS_VUS.map((k) => [k, new Set<number>()])) as Record<
       Kind,
       Set<number>
     >
-    for (const run of runs) for (const e of run.entries) counts[e.kind].add(e.item.id)
+    for (const run of runs) for (const e of run.entries) counts[e.kind]?.add(e.item.id)
     return { counts, runs: runs.length }
-  }, [runs])
+  }, [runs, KINDS_VUS])
 
   const [visible, setVisible] = useState(30)
+
+  // Le filtre garde son choix d'une session à l'autre : s'il vise une
+  // collection qu'on ne montre plus, on revient à « toutes ».
+  useEffect(() => {
+    if (kindFilter !== 'all' && !KINDS_VUS.includes(kindFilter)) setKindFilter('all')
+  }, [kindFilter, KINDS_VUS])
 
   if (ready.length === 0) return null
 
@@ -294,7 +305,7 @@ export function Planning({
     <div className="view">
       <div className="stat-row">
         <StatTile value={stats.runs} label={t('tileRuns')} />
-        {(kindFilter === 'all' ? PLANNING_KINDS : [kindFilter]).map((k) => (
+        {(kindFilter === 'all' ? KINDS_VUS : [kindFilter]).map((k) => (
           <StatTile key={k} value={stats.counts[k].size} label={t(TILE_KEYS[k])} />
         ))}
       </div>
@@ -310,7 +321,7 @@ export function Planning({
           onChange={(e) => setKindFilter(e.target.value as KindFilter)}
         >
           <option value="all">{t('allCollections')}</option>
-          {PLANNING_KINDS.map((k) => (
+          {KINDS_VUS.map((k) => (
             <option key={k} value={k}>
               {kindLabel(lang, k)}
             </option>

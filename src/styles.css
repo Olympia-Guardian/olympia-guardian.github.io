@@ -3315,6 +3315,14 @@ a.player-name:hover {
   margin-bottom: 12px;
 }
 
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 22px 0 18px;
+}
+
 .hero-hint {
   font-size: 13px;
   color: var(--muted);

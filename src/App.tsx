@@ -1,6 +1,6 @@
 import { lsGet, lsRemove, lsSet } from './storage'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { KINDS, KIND_FAMILIES, type Kind } from './api'
+import { KINDS, KIND_FAMILIES, LODESTONE_KINDS, PLANNING_KINDS, type Kind } from './api'
 import { useAuth, useFournisseurs, vientDeSeConnecter } from './auth'
 import { useDigest } from './digest'
 import { useGroups } from './groups'
@@ -110,6 +110,24 @@ export default function App() {
     [auth.bindings],
   )
   const grp = useGroups(auth.token, verifiedIds)
+  // Sans compte, douze des quatorze collections resteraient vides : elles ne se
+  // remplissent qu'en les cochant dans « Mon Journal ». On ne montre donc que
+  // ce que le Lodestone sait dire de lui-meme.
+  //
+  // On juge sur le JETON, pas sur `auth.user` : le jeton est lu dans le
+  // navigateur des le premier rendu, la fiche du compte n'arrive qu'apres
+  // l'appel a /me. Sur `auth.user`, un habitue connecte serait pris pour un
+  // visiteur pendant ce delai — et chasse de /collections#emotes vers l'accueil
+  // de section sous ses yeux.
+  const horsCompte = !auth.token
+  const kindsVus = useMemo(() => (horsCompte ? LODESTONE_KINDS : PLANNING_KINDS), [horsCompte])
+  const famillesVues = useMemo(
+    () =>
+      horsCompte
+        ? KIND_FAMILIES.filter((f) => f.kinds.every((k) => LODESTONE_KINDS.includes(k)))
+        : KIND_FAMILIES,
+    [horsCompte],
+  )
   // La cloche : suggestions reçues, demandes d'ami, invitations de groupe.
   const sugg = useSuggestions(auth.token)
   const [bellOpen, setBellOpen] = useState(false)
@@ -309,6 +327,16 @@ export default function App() {
     setTab(dest as Tab)
   }
 
+  /** « Suivre un personnage » : on emmene au champ qui existe deja dans la
+   *  barre laterale plutot que d'en ouvrir un second ailleurs. Deux champs pour
+   *  la meme chose, c'est une question de plus a se poser. */
+  function viseChampAjout() {
+    const champ = document.getElementById('add-input')
+    if (!champ) return
+    champ.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    champ.focus()
+  }
+
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [shownItem, setShownItem] = useState<ShownItem | null>(null)
   const [reporting, setReporting] = useState(false)
@@ -358,6 +386,15 @@ export default function App() {
       setFocusId(null)
     }
   }, [members, focusId])
+
+  // Une adresse de collection qu'on ne montre pas hors compte (/collections#emotes)
+  // ramène au choix de collection : mieux vaut la liste de ce qui existe qu'une
+  // grille vide sans onglet actif.
+  useEffect(() => {
+    if (horsCompte && (KINDS as string[]).includes(tab) && !LODESTONE_KINDS.includes(tab as Kind))
+      setTab('collections')
+    if (horsCompte && tab === 'fashion') setTab('collections')
+  }, [horsCompte, tab])
 
   // « Avancement » disparaît quand on se retrouve seul (groupe quitté, membre
   // retiré, lien partagé). Sans ce garde-fou, l'écran resterait affiché sans
@@ -483,7 +520,7 @@ export default function App() {
               className={`btn btn-ghost account-btn ${tab === 'groups' ? 'is-active' : ''}`}
               onClick={() => setTab('groups')}
             >
-              <TabIcon k="groups" /> {t('groupsTab')}
+              <TabIcon k="groups" /> {t(horsCompte ? 'groupsTabAlone' : 'groupsTab')}
             </button>
             {!auth.user ? (
               <>
@@ -663,7 +700,7 @@ export default function App() {
 
         {isCollection && (
           <nav className="kind-bar">
-            {KIND_FAMILIES.map((fam) =>
+            {famillesVues.map((fam) =>
               fam.merged ? (
                 <span key={fam.key} className="kind-family">
                   <button
@@ -723,6 +760,7 @@ export default function App() {
             activeKind={
               isCollection && tab !== 'collections' ? (tab as Kind | 'fashion') : undefined
             }
+            connecte={!horsCompte}
             controls={
               <div className="sidebar-controls">
                 {ready.length > 1 && (
@@ -885,13 +923,29 @@ export default function App() {
             {/* Le discours d'accueil se tait sur la page de connexion : il y
                 repete l'invitation a se connecter et repousse le formulaire
                 sous la ligne de flottaison. */}
-            {db && members.length === 0 && tab !== 'mypage' && tab !== 'groups' && tab !== 'login' && (
-              <div className="hero">
-                <h1>{t('heroTitle')}</h1>
-                <p>{t('heroBody')}</p>
-                <p className="hero-hint">{t('heroHint')}</p>
-              </div>
-            )}
+            {db &&
+              members.length === 0 &&
+              tab !== 'mypage' &&
+              tab !== 'groups' &&
+              tab !== 'login' &&
+              tab !== 'collections' && (
+                <div className="hero">
+                  <h1>{t('heroTitle')}</h1>
+                  <p>{t('heroBody')}</p>
+                  {/* Les deux seules actions possibles a cet instant. Sans
+                      elles, le formulaire d'ajout restait cache dans la barre
+                      laterale et la connexion tout en haut a droite. */}
+                  <div className="hero-actions">
+                    <button className="btn btn-primary" onClick={() => setTab('login')}>
+                      <TabIcon k="login" /> {t('heroLogin')}
+                    </button>
+                    <button className="btn btn-ghost" onClick={viseChampAjout}>
+                      <TabIcon k="addfriend" /> {t('heroFollow')}
+                    </button>
+                  </div>
+                  <p className="hero-hint">{t('heroHint')}</p>
+                </div>
+              )}
 
             {db && ready.length > 0 && activeReady.length === 0 && tab !== 'groups' && tab !== 'mypage' && (
               <p className="empty">{t('allAbsent')}</p>
@@ -929,6 +983,7 @@ export default function App() {
                 db={db}
                 ready={activeReady}
                 ownedSets={ownedSets}
+                kinds={kindsVus}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
               />
             )}
@@ -1057,7 +1112,13 @@ export default function App() {
             )}
             {db && activeReady.length > 0 && tab === 'relics' &&
               (relicDb ? (
-                <Relics db={relicDb} cdb={db} ready={activeReady} />
+                <Relics
+                  db={relicDb}
+                  cdb={db}
+                  ready={activeReady}
+                  kinds={horsCompte ? LODESTONE_KINDS : undefined}
+                  avecReliques={!horsCompte}
+                />
               ) : (
                 <p className="empty">{t('relicsLoading')}</p>
               ))}
@@ -1074,7 +1135,7 @@ export default function App() {
             {tab === 'admin' && auth.token && auth.user?.isAdmin && (
               <AdminPage token={auth.token} />
             )}
-            {tab === 'guide' && <GuidePage />}
+            {tab === 'guide' && <GuidePage connecte={!horsCompte} />}
             {/* Les persos du COMPTE, pas ceux du groupe affiche : un perso
                 verifie mais absent du roster existe quand meme, et la page
                 annoncait « aucun perso verifie » a tort. */}

@@ -66,6 +66,12 @@ export const PLANNING_KINDS: Kind[] = KINDS.filter(
   (k) => k !== 'frames' && k !== 'outfits' && k !== 'armoires' && k !== 'achievements',
 )
 
+/** Ce qu'on sait d'un personnage SANS compte : le Lodestone, et rien d'autre.
+ *  Les douze autres collections ne se remplissent qu'en les cochant dans « Mon
+ *  Journal », ce qui demande un compte — les afficher à zéro ne renseigne
+ *  personne et laisse croire que le perso ne possède rien. */
+export const LODESTONE_KINDS: Kind[] = ['mounts', 'minions']
+
 /** Familles d'onglets : les petites collections cousines partagent un onglet.
  *  `merged` : la famille s'affiche comme UNE catégorie (liste groupée par
  *  sous-collection) au lieu d'un onglet par collection. */

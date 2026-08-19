@@ -698,8 +698,10 @@ export function GroupsPage({
   const { t } = useI18n()
   const [creating, setCreating] = useState(false)
   // Onglet courant (Groupes / Contacts) — dans l'ancre pour survivre au reload.
+  // Les contacts n'existent qu'avec un compte : sans jeton, useContacts n'a
+  // rien à demander et l'onglet ne pouvait afficher qu'un vide.
   const [section, setSection] = useState<'groups' | 'contacts'>(() =>
-    ancre() === 'contacts' ? 'contacts' : 'groups',
+    ancre() === 'contacts' && token ? 'contacts' : 'groups',
   )
   useEffect(() => {
     ecrireAncre(section === 'groups' ? null : section)
@@ -707,20 +709,22 @@ export function GroupsPage({
 
   return (
     <div className="view groups-page">
-      <nav className="kind-bar groups-tabs">
-        <button
-          className={`kind-btn ${section === 'groups' ? 'is-active' : ''}`}
-          onClick={() => setSection('groups')}
-        >
-          <TabIcon k="groups" /> {t('groupsSection')}
-        </button>
-        <button
-          className={`kind-btn ${section === 'contacts' ? 'is-active' : ''}`}
-          onClick={() => setSection('contacts')}
-        >
-          <TabIcon k="contacts" /> {t('contactsSection')}
-        </button>
-      </nav>
+      {token && (
+        <nav className="kind-bar groups-tabs">
+          <button
+            className={`kind-btn ${section === 'groups' ? 'is-active' : ''}`}
+            onClick={() => setSection('groups')}
+          >
+            <TabIcon k="groups" /> {t('groupsSection')}
+          </button>
+          <button
+            className={`kind-btn ${section === 'contacts' ? 'is-active' : ''}`}
+            onClick={() => setSection('contacts')}
+          >
+            <TabIcon k="contacts" /> {t('contactsSection')}
+          </button>
+        </nav>
+      )}
       <div className="groups-head">
         <h2 className="groups-title">
           {t(section === 'groups' ? 'groupsSection' : 'contactsSection')}

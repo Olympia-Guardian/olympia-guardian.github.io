@@ -882,16 +882,22 @@ function RelicSummary({
   cdb,
   ready,
   ownedSets,
+  kinds,
+  avecReliques,
 }: {
   db: RelicDb
   /** Catalogues des collections : la page devient « Avancement du groupe ». */
   cdb?: Db
   ready: Ready[]
   ownedSets: Map<number, Set<number>>
+  kinds: Kind[]
+  avecReliques: boolean
 }) {
   const { lang, t } = useI18n()
   const totalAll = db.relics.length
-  const headerTotal = cdb ? totalAll + KINDS.reduce((s, k) => s + cdb[k].length, 0) : totalAll
+  const headerTotal = cdb
+    ? (avecReliques ? totalAll : 0) + kinds.reduce((s, k) => s + cdb[k].length, 0)
+    : totalAll
 
   // Reliques possedees, par joueur : la seule collection qui ne se lise pas
   // directement sur la fiche du personnage.
@@ -914,7 +920,7 @@ function RelicSummary({
       nom: nomCourt(m),
       avatar: m.data.avatar,
     })
-    const cols = ORDRE_PROGRESSION.map((k) => {
+    const cols = kinds.map((k) => {
       const rangs: Rang[] = ready.map((m) => {
         const [count, total] = compteKind(m.data, k)
         return { ...socle(m), count, total }
@@ -927,32 +933,35 @@ function RelicSummary({
       }
     })
     // Les reliques prennent la deuxième place, juste derrière les succès :
-    // ce sont les deux chantiers longs, ceux qui se mènent à plusieurs.
-    cols.splice(1, 0, {
-      key: 'relics',
-      label: t('progressRelics'),
-      total: totalAll,
-      rangs: ready
-        .map((m) => ({ ...socle(m), count: reliques.get(m.id) ?? 0, total: totalAll }))
-        .sort(parAvance),
-    })
+    // ce sont les deux chantiers longs, ceux qui se mènent à plusieurs. Sans
+    // compte elles n'ont pas lieu d'être : elles se cochent à la main.
+    if (avecReliques)
+      cols.splice(1, 0, {
+        key: 'relics',
+        label: t('progressRelics'),
+        total: totalAll,
+        rangs: ready
+          .map((m) => ({ ...socle(m), count: reliques.get(m.id) ?? 0, total: totalAll }))
+          .sort(parAvance),
+      })
     return cols
-  }, [ready, reliques, totalAll, lang, t])
+  }, [ready, reliques, totalAll, lang, t, kinds, avecReliques])
 
   // Classement general : tout ce qui se collectionne, reliques comprises.
   const general = useMemo(() => {
     return ready
       .map((m) => {
-        let count = reliques.get(m.id) ?? 0
-        let total = totalAll
+        let count = avecReliques ? (reliques.get(m.id) ?? 0) : 0
+        let total = avecReliques ? totalAll : 0
         for (const k of KINDS) {
+          if (!kinds.includes(k)) continue
           count += m.data[k].count
           total += m.data[k].total
         }
         return { id: m.id, nom: nomCourt(m), avatar: m.data.avatar, count, total }
       })
       .sort(parAvance)
-  }, [ready, reliques, totalAll])
+  }, [ready, reliques, totalAll, kinds, avecReliques])
 
   return (
     <div className="view">
@@ -991,6 +1000,8 @@ export function Relics({
   cdb,
   ready,
   detailed = false,
+  kinds = ORDRE_PROGRESSION,
+  avecReliques = true,
   onToggleRelic,
   onSetRelics,
 }: {
@@ -998,6 +1009,10 @@ export function Relics({
   /** Catalogues des collections : le résumé devient « Avancement du groupe ». */
   cdb?: Db
   ready: Ready[]
+  /** Collections comparées. Restreinte hors compte : les autres sont vides. */
+  kinds?: Kind[]
+  /** Les reliques se cochent à la main : sans compte, la section n'a pas lieu d'être. */
+  avecReliques?: boolean
   /** « Mon Journal » : paliers, matériaux et icônes. Sinon : avancement seul. */
   detailed?: boolean
   /** Fourni dans « Mon Journal » : chaque relique devient cochable. */
@@ -1085,7 +1100,14 @@ export function Relics({
 
   if (!detailed) {
     return (
-      <RelicSummary db={db} cdb={cdb} ready={ready} ownedSets={ownedSets} />
+      <RelicSummary
+        db={db}
+        cdb={cdb}
+        ready={ready}
+        ownedSets={ownedSets}
+        kinds={kinds}
+        avecReliques={avecReliques}
+      />
     )
   }
 

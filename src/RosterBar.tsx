@@ -19,12 +19,14 @@ function PlayerCard({
   focus,
   present,
   activeKind,
+  connecte,
   onTogglePresence,
 }: {
   member: Member
   focus?: boolean
   present: boolean
   activeKind?: Kind | 'fashion'
+  connecte: boolean
   onTogglePresence?: () => void
 }) {
   const { lang, t } = useI18n()
@@ -101,7 +103,7 @@ function PlayerCard({
       )}
       {(c.cards.count === 0 || c.fashions.count === 0) && (
         <p className="player-note" title={t('playerNoteTitle')}>
-          {t('playerNote')}
+          {t(connecte ? 'playerNote' : 'playerNoteAlone')}
         </p>
       )}
       {somePrivate && (
@@ -119,6 +121,7 @@ export function RosterBar({
   focusId,
   absent,
   activeKind,
+  connecte,
   collapsed,
   onToggleCollapsed,
   onTogglePresence,
@@ -131,6 +134,8 @@ export function RosterBar({
   absent: number[]
   /** Collection consultée : sa jauge s'ajoute aux cartes des joueurs. */
   activeKind?: Kind | 'fashion'
+  /** Sans compte, les cartes ne renvoient pas vers « Mon Journal », qui ne s'ouvre pas. */
+  connecte: boolean
   collapsed: boolean
   onToggleCollapsed: () => void
   onTogglePresence: (id: number) => void
@@ -221,6 +226,7 @@ export function RosterBar({
           focus={m.id === focusId}
           present={!absent.includes(m.id)}
           activeKind={activeKind}
+          connecte={connecte}
           onTogglePresence={members.length > 1 ? () => onTogglePresence(m.id) : undefined}
         />
       ))}

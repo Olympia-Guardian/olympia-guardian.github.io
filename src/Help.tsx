@@ -83,7 +83,12 @@ export function ActiveHelp({ topicKey }: { topicKey: string | null }) {
 }
 
 /** Page Guide : tous les sujets d'aide, plus le bouton de réinitialisation. */
-export function GuidePage() {
+/** Sujets atteignables sans compte. Les autres décrivent des écrans qu'on ne
+ *  peut pas ouvrir : un guide qui parle de ce qu'on ne voit pas donne
+ *  l'impression d'avoir raté quelque chose. */
+const SUJETS_HORS_COMPTE = ['link', 'planning', 'collections', 'groups']
+
+export function GuidePage({ connecte = true }: { connecte?: boolean }) {
   const { t } = useI18n()
   const [resetDone, setResetDone] = useState(false)
   return (
@@ -103,14 +108,20 @@ export function GuidePage() {
         </button>
       </div>
       <p className="modal-muted">{t('guideIntro')}</p>
-      {HELP_TOPICS.map((topic) => (
+      {HELP_TOPICS.filter((h) => connecte || SUJETS_HORS_COMPTE.includes(h.key)).map((topic) => (
         <section key={topic.key} className="relic-series group-card">
           <header className="relic-series-head">
             <h4 className="relic-series-name">
-              <TabIcon k={topic.icon} /> {t(topic.title)}
+              <TabIcon k={topic.icon} />{' '}
+            {t(!connecte && topic.key === 'groups' ? 'groupsTabAlone' : topic.title)}
             </h4>
           </header>
-          <p className="guide-body">{t(topic.body)}</p>
+          <p className="guide-body">
+            {t(!connecte && topic.key === 'groups' ? 'helpGroupsAloneBody' : topic.body)}
+          </p>
+          {!connecte && (topic.key === 'planning' || topic.key === 'collections') && (
+            <p className="guide-body muted">{t('guideAloneNote')}</p>
+          )}
         </section>
       ))}
     </div>

@@ -273,8 +273,19 @@ const STR = {
     en: 'Nothing available under {budget} gil. Raise the budget, or tick more collections.',
   },
   marketVsAverage: {
-    fr: 'Les dernières ventes tournaient autour de {moyenne}.',
-    en: 'Recent sales were around {moyenne}.',
+    fr: 'Les dernières ventes tournaient autour de {moyenne} gils.',
+    en: 'Recent sales were around {moyenne} gil.',
+  },
+  marketLastSale: {
+    fr: 'Dernière vente : {prix} gils, {quand}.',
+    en: 'Last sale: {prix} gil, {quand}.',
+  },
+  marketFalling: { fr: 'Elle est sous la moyenne : le prix redescend.', en: 'Below average: prices are coming down.' },
+  marketRising: { fr: 'Elle est au-dessus de la moyenne : le prix monte.', en: 'Above average: prices are going up.' },
+  marketPace: { fr: 'Il s’en vend environ {n} par jour.', en: 'About {n} sell per day.' },
+  marketPaceSlow: {
+    fr: 'Il s’en vend un tous les {n} jours : la moyenne repose sur peu de ventes.',
+    en: 'One sells every {n} days: the average rests on few sales.',
   },
   marketNoPrice: {
     fr: "Aucune offre en vente pour ces objets sur ton centre de données en ce moment.",

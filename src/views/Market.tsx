@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Character, Item, Kind } from '../api'
-import { kindLabel, useI18n } from '../i18n'
+import { kindLabel, useI18n, type I18n } from '../i18n'
 import {
   fetchPrices,
   centreDe,
@@ -11,6 +11,7 @@ import {
   type Achat,
   ecartMoyenne,
   type Prix,
+  type Repere,
 } from '../market'
 import type { Db, Member } from '../store'
 import { nomMembre } from '../store'
@@ -33,6 +34,35 @@ const ACHETABLES: Kind[] = [
 ]
 
 const BUDGETS = [100_000, 500_000, 1_000_000, 5_000_000, 20_000_000]
+
+/** Ce que le marche a fait, en toutes lettres : la moyenne, la derniere vente
+ *  et sa date, le sens dans lequel ca va, et a quelle frequence l'objet se
+ *  vend. Cette derniere ligne dit la solidite de tout le reste — un ecart
+ *  calcule sur une vente tous les quatre jours n'a pas le poids d'un ecart
+ *  calcule sur trente ventes par jour. */
+function infobulle(r: Repere, t: I18n['t'], lang: string): string {
+  const lignes = [t('marketVsAverage', { moyenne: gils(Math.round(r.moyenne), lang) })]
+  if (r.derniere) {
+    const jours = Math.floor((Date.now() - r.derniere.quand) / 86_400_000)
+    const quand = jours <= 0 ? t('today') : jours === 1 ? t('yesterday') : t('daysAgo', { n: jours })
+    lignes.push(
+      t('marketLastSale', { prix: gils(Math.round(r.derniere.prix), lang), quand: quand.toLowerCase() }),
+    )
+    // Sous la moyenne, le prix redescend ; au-dessus, il monte. Deux points
+    // suffisent a donner un sens, pas a tracer une courbe : on ne promet pas
+    // davantage.
+    const ecart = (r.derniere.prix - r.moyenne) / r.moyenne
+    if (Math.abs(ecart) >= 0.05) lignes.push(t(ecart < 0 ? 'marketFalling' : 'marketRising'))
+  }
+  if (r.parJour) {
+    lignes.push(
+      r.parJour >= 1
+        ? t('marketPace', { n: Math.round(r.parJour) })
+        : t('marketPaceSlow', { n: Math.max(1, Math.round(1 / r.parJour)) }),
+    )
+  }
+  return lignes.join('\n')
+}
 
 function gils(n: number, lang: string): string {
   return n.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US')
@@ -372,15 +402,13 @@ export function Market({
                             // La pastille est TOUJOURS posee, vide quand il n'y
                             // a rien a dire : sa largeur reservee est ce qui
                             // tient les prix alignes d'une ligne a l'autre.
-                            const moyenne = prix?.moyennes.get(a.itemId)
-                            const ecart = ecartMoyenne(a.price, moyenne)
+                            const repere = prix?.moyennes.get(a.itemId)
+                            const ecart = ecartMoyenne(a.price, repere)
                             if (ecart === null) return <i className="market-ecart" />
                             return (
                               <i
                                 className={`market-ecart ${ecart < 0 ? 'is-bon' : 'is-cher'}`}
-                                title={t('marketVsAverage', {
-                                  moyenne: gils(Math.round(moyenne!), lang),
-                                })}
+                                title={infobulle(repere!, t, lang)}
                               >
                                 {ecart > 0 ? '+' : ''}
                                 {ecart} %

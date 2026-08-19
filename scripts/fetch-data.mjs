@@ -96,16 +96,37 @@ const OUT = new URL('../public/data/', import.meta.url)
  *  entier pour lire un `.length` lui coûtait 6,3 Mo à chaque démarrage. */
 const TOTALS = {}
 
-// Objets de la boutique en ligne. Ils restent dans les collections, mais ne
-// comptent plus dans les totaux : personne ne doit avoir à payer en plus pour
-// atteindre 100 %. La liste est publiée à part pour que le worker puisse aussi
-// les retirer du nombre d'objets possédés, sinon on afficherait 148/143.
-const BOUTIQUE = {}
+// Objets HORS TOTAL : ce que personne n'a jamais pu obtenir en jouant. Ils
+// restent dans les collections mais sortent des compteurs, des deux côtés — les
+// retirer du total sans les retirer du nombre possédé donnerait des 148/143.
+//
+// Deux cas, et deux seulement :
+//
+//  - la BOUTIQUE en ligne, parce que personne ne doit avoir à payer pour
+//    atteindre 100 % ;
+//  - la VERSION 1.0, partie avec le serveur qui l'hébergeait.
+//
+// Tout le reste compte, y compris les événements terminés et le JcJ : ce
+// contenu a été obtenable en jouant. Ne pas y avoir été n'est pas une raison de
+// baisser la barre.
+const HORS_TOTAL = {}
 
 // Jalons de l'histoire principale, releves au passage des succes.
 const MSQ = []
 
-const vientDeLaBoutique = (it) => it.sources.some((s) => s.type === 'Premium')
+/** Boutique SEULEMENT. Un objet gagné à un événement puis revendu en boutique
+ *  garde une source de jeu : on pouvait l'avoir sans payer, donc il compte.
+ *  Ils sont 484 dans ce cas, et `some` les écartait tous — y compris du
+ *  compteur de ceux qui les avaient bel et bien gagnés.
+ *  Le test sur la longueur est indispensable : `every` répond vrai sur un
+ *  tableau vide, et 3 954 objets n'ont aucune source. */
+const boutiqueSeulement = (it) =>
+  it.sources.length > 0 && it.sources.every((s) => s.type === 'Premium')
+
+/** Contenu de la version 1.0 : 261 succès, et rien d'autre au catalogue. */
+const vientDeLaV1 = (it) => String(it.patch ?? '').startsWith('1.')
+
+const horsTotal = (it) => boutiqueSeulement(it) || vientDeLaV1(it)
 
 async function writeCatalog(kind, items) {
   const dest = new URL(`${kind}.json`, OUT)
@@ -126,12 +147,12 @@ async function writeCatalog(kind, items) {
     throw new Error(`${kind} : ${items.length} entrées contre ${avant} avant, écriture refusée`)
   }
   await writeFile(dest, JSON.stringify(items))
-  const boutique = items.filter(vientDeLaBoutique).map((it) => it.id)
-  if (boutique.length > 0) BOUTIQUE[kind] = boutique
-  TOTALS[kind] = items.length - boutique.length
+  const exclus = items.filter(horsTotal).map((it) => it.id)
+  if (exclus.length > 0) HORS_TOTAL[kind] = exclus
+  TOTALS[kind] = items.length - exclus.length
   console.log(
     `${kind}: ${items.length}${avant ? ` (avant ${avant})` : ''}` +
-      (boutique.length ? `, dont ${boutique.length} de la boutique hors total` : ''),
+      (exclus.length ? `, dont ${exclus.length} hors total (boutique seule ou 1.0)` : ''),
   )
 }
 
@@ -731,9 +752,15 @@ if (MSQ.length > 0) {
   console.log(`story: ${MSQ.length} jalons d'histoire, de ${MSQ[0].patch} a ${MSQ[MSQ.length - 1].patch}`)
 }
 
-await writeFile(new URL('premium.json', OUT), JSON.stringify(BOUTIQUE))
+// Le fichier s'appelait « premium » tant qu'il ne portait que la boutique. Il
+// porte aussi la 1.0 : le nom devait suivre, sinon on cherche un jour pourquoi
+// des succès traînent dans un fichier de boutique.
+await writeFile(new URL('horstotal.json', OUT), JSON.stringify(HORS_TOTAL))
 await writeFile(new URL('totals.json', OUT), JSON.stringify(TOTALS))
-console.log(`totals: ${Object.keys(TOTALS).length} collections`)
+console.log(
+  `hors total: ${Object.values(HORS_TOTAL).reduce((n, l) => n + l.length, 0)} objets ; ` +
+    `totals: ${Object.keys(TOTALS).length} collections`,
+)
 
 await writeFile(
   new URL('meta.json', OUT),

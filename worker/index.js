@@ -114,8 +114,12 @@ async function getJsonOrNull(url, ms = 8000) {
  *  totals.json, et seuls montures, mascottes et tenues sont téléchargés en
  *  entier (1,9 Mo au lieu de 8,2, et 4 sous-requêtes au lieu de 16). */
 async function loadCatalogs() {
-  const [totals, boutique, mounts, minions, outfits] = await Promise.all([
+  const [totals, horsTotalFichier, boutique, mounts, minions, outfits] = await Promise.all([
     getJsonOrNull(`${CATALOG_BASE}totals.json`),
+    getJsonOrNull(`${CATALOG_BASE}horstotal.json`),
+    // Repli sur l'ancien nom : worker et donnees peuvent partir dans n'importe
+    // quel ordre. Sans lui, un worker arrive avant ses donnees lirait le
+    // nouveau total sans la liste qui va avec, et afficherait des 148/143.
     getJsonOrNull(`${CATALOG_BASE}premium.json`),
     getJsonOrNull(`${CATALOG_BASE}mounts.json`),
     getJsonOrNull(`${CATALOG_BASE}minions.json`),
@@ -136,11 +140,18 @@ async function loadCatalogs() {
       outfits.map((it) => [it.id, (it.pieces ?? []).map((p) => p.id).filter(Boolean)]),
     )
   }
-  // Objets de la boutique en ligne : ils restent dans les listes mais sortent
-  // des compteurs, des deux côtés. Les retirer du total sans les retirer du
-  // nombre possédé aurait donné des 148/143.
+  // HORS TOTAL : ce que personne n'a jamais pu obtenir en jouant — la boutique
+  // seule, et la version 1.0 disparue. Ces objets restent dans les listes mais
+  // sortent des compteurs, des DEUX cotes : les retirer du total sans les
+  // retirer du nombre possede aurait donne des 148/143.
+  //
+  // Un objet gagne a un evenement puis revendu en boutique n'en fait PAS
+  // partie : on pouvait l'avoir sans payer, donc il compte. Voir la regle dans
+  // scripts/fetch-data.mjs.
   const horsTotal = {}
-  for (const [kind, ids] of Object.entries(boutique ?? {})) horsTotal[kind] = new Set(ids)
+  for (const [kind, ids] of Object.entries(horsTotalFichier ?? boutique ?? {})) {
+    horsTotal[kind] = new Set(ids)
+  }
   return { maps, totals: totals ?? {}, horsTotal }
 }
 

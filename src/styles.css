@@ -4977,6 +4977,25 @@ a.player-name:hover {
 .market-price {
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+/* Ecart au prix habituel : vert quand l'offre est sous la moyenne des ventes,
+   rouge au-dessus. Discret, parce que le prix reste l'information principale. */
+.market-ecart {
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.market-ecart.is-bon {
+  color: var(--good);
+}
+
+.market-ecart.is-cher {
+  color: var(--critical);
 }
 
 /* objet du marché déjà acheté : reste visible pour garder la trace du total */

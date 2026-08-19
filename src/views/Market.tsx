@@ -9,7 +9,8 @@ import {
   parMonde,
   plusDObjets,
   type Achat,
-  type PriceMap,
+  ecartMoyenne,
+  type Prix,
 } from '../market'
 import type { Db, Member } from '../store'
 import { nomMembre } from '../store'
@@ -63,7 +64,7 @@ export function Market({
   const [region, setRegion] = useState<string | null>(null)
   const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
-  const [prix, setPrix] = useState<PriceMap | null>(null)
+  const [prix, setPrix] = useState<Prix | null>(null)
   const [avancement, setAvancement] = useState<{ fait: number; total: number } | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   // Coché tout de suite pour que le geste réponde, sans attendre l'aller-retour
@@ -120,7 +121,7 @@ export function Market({
         (fait, total) => setAvancement({ fait, total }),
       )
       setPrix(p)
-      if (p.size === 0) setErreur(t('marketNoPrice'))
+      if (p.offres.size === 0) setErreur(t('marketNoPrice'))
     } catch {
       setErreur(t('marketError'))
     } finally {
@@ -131,8 +132,8 @@ export function Market({
   const selection: Achat[] = useMemo(() => {
     if (!prix) return []
     return strategie === 'objets'
-      ? plusDObjets(prix, budget, prixMax)
-      : moinsDeVoyages(prix, budget, prixMax)
+      ? plusDObjets(prix.offres, budget, prixMax)
+      : moinsDeVoyages(prix.offres, budget, prixMax)
   }, [prix, budget, prixMax, strategie])
 
   const groupes = useMemo(() => parMonde(selection), [selection])
@@ -358,7 +359,27 @@ export function Market({
                         <span className="market-name">
                           {lang === 'fr' ? it.name : it.nameEn}
                         </span>
-                        <span className="market-price">{gils(a.price, lang)}</span>
+                        <span className="market-price">
+                          {gils(a.price, lang)}
+                          {(() => {
+                            // Le prix seul ne dit rien : 6,5 M est une affaire
+                            // sur un objet qui part d'habitude a 7,2 M, et un
+                            // vol sur un objet a 2 M.
+                            const ecart = ecartMoyenne(a.price, prix?.moyennes.get(a.itemId))
+                            if (ecart === null) return null
+                            return (
+                              <i
+                                className={`market-ecart ${ecart < 0 ? 'is-bon' : 'is-cher'}`}
+                                title={t('marketVsAverage', {
+                                  moyenne: gils(Math.round(prix!.moyennes.get(a.itemId)!), lang),
+                                })}
+                              >
+                                {ecart > 0 ? '+' : ''}
+                                {ecart} %
+                              </i>
+                            )
+                          })()}
+                        </span>
                       </li>
                     )
                   })}

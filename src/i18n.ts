@@ -272,6 +272,10 @@ const STR = {
     fr: "Rien de disponible sous {budget} gils. Augmente le budget, ou coche d'autres collections.",
     en: 'Nothing available under {budget} gil. Raise the budget, or tick more collections.',
   },
+  marketVsAverage: {
+    fr: 'Les dernières ventes tournaient autour de {moyenne}.',
+    en: 'Recent sales were around {moyenne}.',
+  },
   marketNoPrice: {
     fr: "Aucune offre en vente pour ces objets sur ton centre de données en ce moment.",
     en: 'No listings for these items on your data centre right now.',

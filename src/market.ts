@@ -14,6 +14,16 @@ export interface Listing {
 
 export type PriceMap = Map<number, Listing[]>
 
+/** Prix moyen des dernieres ventes, par objet. C'est le repere qui manque
+ *  devant l'hotel des ventes : une offre a 6,5 M ne dit rien tant qu'on ignore
+ *  si l'objet se vend d'habitude 2 M ou 12 M. */
+export type MoyenneMap = Map<number, number>
+
+export interface Prix {
+  offres: PriceMap
+  moyennes: MoyenneMap
+}
+
 // Universalis accepte une centaine d'identifiants par requête.
 const LOT = 100
 // Les prix bougent, mais pas assez pour justifier de les redemander à chaque
@@ -24,6 +34,7 @@ interface Cache {
   at: number
   dc: string
   offres: Record<number, Listing[]>
+  moyenne?: number
 }
 
 const memoire = new Map<string, Cache>()
@@ -79,8 +90,9 @@ export async function fetchPrices(
   dc: string,
   itemIds: number[],
   onProgress?: (fait: number, total: number) => void,
-): Promise<PriceMap> {
+): Promise<Prix> {
   const out: PriceMap = new Map()
+  const moyennes: MoyenneMap = new Map()
   const aChercher: number[] = []
 
   for (const id of itemIds) {
@@ -88,6 +100,7 @@ export async function fetchPrices(
     if (c && Date.now() - c.at < TTL) {
       const l = c.offres[id]
       if (l) out.set(id, l)
+      if (c.moyenne) moyennes.set(id, c.moyenne)
     } else aChercher.push(id)
   }
 
@@ -97,9 +110,13 @@ export async function fetchPrices(
   let fait = 0
   for (const lot of lots) {
     try {
+      // `entries=20` ne ramene PAS l'historique : le filtre `fields` l'ecarte
+      // de la reponse. Il dit seulement sur combien de ventes Universalis
+      // calcule `averagePrice` — a 0, la moyenne vaut 0. Vingt ventes donnent
+      // un repere stable ; cinq couvraient parfois vingt-cinq minutes.
       const url =
         `https://universalis.app/api/v2/${encodeURIComponent(dc)}/${lot.join(',')}` +
-        `?listings=8&entries=0&fields=items.listings.pricePerUnit%2Citems.listings.worldName%2Citems.listings.quantity%2CitemID%2Clistings.pricePerUnit%2Clistings.worldName%2Clistings.quantity`
+        `?listings=8&entries=20&fields=items.listings.pricePerUnit%2Citems.listings.worldName%2Citems.listings.quantity%2Citems.averagePrice%2CitemID%2Clistings.pricePerUnit%2Clistings.worldName%2Clistings.quantity%2CaveragePrice`
       const res = await fetch(url, { signal: AbortSignal.timeout(20000) })
       if (res.ok) {
         const j = await res.json()
@@ -108,6 +125,7 @@ export async function fetchPrices(
           j.items ?? (j.itemID ? { [j.itemID]: j } : {})
         for (const [k, v] of Object.entries(items)) {
           const brut = (v as { listings?: unknown[] }).listings ?? []
+          const moyenne = (v as { averagePrice?: number }).averagePrice ?? 0
           const offres: Listing[] = brut
             .map((l) => {
               const o = l as { pricePerUnit?: number; worldName?: string; quantity?: number }
@@ -116,9 +134,15 @@ export async function fetchPrices(
             .filter((o) => o.price > 0)
             .sort((a, b) => a.price - b.price)
           const id = Number(k)
+          if (moyenne > 0) moyennes.set(id, moyenne)
           if (offres.length > 0) {
             out.set(id, offres)
-            memoire.set(`${dc}:${id}`, { at: Date.now(), dc, offres: { [id]: offres } })
+            memoire.set(`${dc}:${id}`, {
+              at: Date.now(),
+              dc,
+              offres: { [id]: offres },
+              moyenne: moyenne > 0 ? moyenne : undefined,
+            })
           }
         }
       }
@@ -129,7 +153,16 @@ export async function fetchPrices(
     fait += lot.length
     onProgress?.(Math.min(fait, aChercher.length), aChercher.length)
   }
-  return out
+  return { offres: out, moyennes }
+}
+
+/** Ecart d'un prix a la moyenne des ventes, en pourcentage. Null quand
+ *  Universalis n'a pas d'historique, ou quand l'ecart tient dans le bruit :
+ *  annoncer « +1 % » sur un objet qui se vend a la piece n'informe personne. */
+export function ecartMoyenne(prix: number, moyenne: number | undefined): number | null {
+  if (!moyenne || moyenne <= 0 || prix <= 0) return null
+  const pct = Math.round(((prix - moyenne) / moyenne) * 100)
+  return Math.abs(pct) < 5 ? null : pct
 }
 
 // ---------------------------------------------------------------------------

@@ -5027,7 +5027,14 @@ a.player-name:hover {
 }
 
 /* Bouton d'explication : discret dans la ligne, il ne prend la parole que si
-   on la lui donne. */
+   on la lui donne. Sa place est tenue meme quand il n'y a rien a expliquer,
+   sinon les prix des lignes sans bouton glissent vers la droite. */
+.market-infos,
+.market-infos-vide {
+  flex: 0 0 auto;
+  width: 28px;
+}
+
 .market-infos img.kind-icon {
   width: 16px;
   height: 16px;

@@ -440,8 +440,11 @@ export function Market({
                             // Trois phrases au survol ne se lisent pas, et sur
                             // telephone une infobulle ne s'affiche jamais : le
                             // detail s'ouvre sur demande.
+                            //Rien a dire ne veut pas dire rien a occuper : la
+                            // place est reservee, sinon les prix des lignes sans
+                            // bouton glissent vers la droite.
                             const repere = prix?.moyennes.get(a.itemId)
-                            if (!repere) return null
+                            if (!repere) return <span className="market-infos-vide" />
                             return (
                               <button
                                 className="icon-btn market-infos"

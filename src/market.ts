@@ -85,6 +85,27 @@ async function chargerCentres(): Promise<void> {
   }
 }
 
+// Objets rellement vendables a l'hotel des ventes, d'apres Universalis. Notre
+// drapeau `tradeable` vient de FFXIV Collect et ne dit pas la meme chose : sur
+// un lot de 57 objets, un seul non vendable faisait repondre 400 au point
+// d'entree agrege — et le lot entier repartait sans moyenne.
+let vendables: Set<number> | null = null
+
+async function chargerVendables(): Promise<void> {
+  if (vendables) return
+  try {
+    const res = await fetch('https://universalis.app/api/v2/marketable', {
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return
+    const liste = (await res.json()) as number[]
+    if (Array.isArray(liste) && liste.length > 0) vendables = new Set(liste)
+  } catch {
+    // Liste indisponible : on n'ecarte rien. Les offres passent quand meme,
+    // seules les moyennes risquent de manquer.
+  }
+}
+
 export async function fetchRegion(dc: string): Promise<string | null> {
   await chargerCentres()
   return regions?.get(dc) ?? null
@@ -166,8 +187,14 @@ export async function fetchPrices(
     } else aChercher.push(id)
   }
 
+  // Les objets qu'Universalis ne connait pas ne sont pas demandes : ils n'ont
+  // pas de prix a donner, et un seul d'entre eux suffisait a faire echouer tout
+  // un lot.
+  await chargerVendables()
+  const demandes = vendables ? aChercher.filter((id) => vendables!.has(id)) : aChercher
+
   const lots: number[][] = []
-  for (let i = 0; i < aChercher.length; i += LOT) lots.push(aChercher.slice(i, i + LOT))
+  for (let i = 0; i < demandes.length; i += LOT) lots.push(demandes.slice(i, i + LOT))
 
   let fait = 0
   for (const lot of lots) {
@@ -217,7 +244,7 @@ export async function fetchPrices(
       // simplement sans prix et n'apparaîtra pas dans les propositions.
     }
     fait += lot.length
-    onProgress?.(Math.min(fait, aChercher.length), aChercher.length)
+    onProgress?.(Math.min(fait, demandes.length), demandes.length)
   }
   return { offres: out, moyennes }
 }

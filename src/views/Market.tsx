@@ -22,11 +22,16 @@ type Ready = Member & { data: Character }
 // Collections dont une partie s'achète à l'hôtel des ventes. Les autres
 // (succès, portraits, reliques, magie bleue) ne se vendent pas : les proposer
 // donnerait des listes vides.
+//
+// Les TENUES en font partie depuis qu'on a compare nos catalogues a la liste
+// des objets vendables d'Universalis : les 161 marquees echangeables y sont
+// toutes inconnues. Une tenue est un ENSEMBLE, ce sont ses pieces qui se
+// vendent — l'identifiant que FFXIV Collect nous donne ne designe donc aucun
+// objet de l'hotel des ventes. La categorie promettait 161 achats impossibles.
 const ACHETABLES: Kind[] = [
   'mounts',
   'minions',
   'orchestrions',
-  'outfits',
   'bardings',
   'fashions',
   'hairstyles',

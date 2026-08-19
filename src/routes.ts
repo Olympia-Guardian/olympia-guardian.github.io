@@ -152,6 +152,16 @@ export function ecrireAncre(valeur: string | null): void {
   )
 }
 
+/** Lien destiné à quelqu'un d'autre : invitation (#j=) ou contact (#c=).
+ *  Toujours sur la RACINE du site, jamais sur `location.pathname`. Depuis que
+ *  chaque section a son chemin, le même lien d'invitation copié depuis
+ *  /collections, /journal ou /progress donnait trois adresses différentes ; il
+ *  changeait sous les yeux de celui qui venait de le partager. La racine, elle,
+ *  ne bouge pas, et c'est là que l'application lit ces paramètres. */
+export function lienPartage(cle: 'j' | 'c', code: string): string {
+  return `${location.origin}/#${cle}=${code}`
+}
+
 /** Traduit un ancien lien (#tab=…, #jtab=…, #gtab=…) vers la nouvelle adresse,
  *  AVANT le premier rendu. Rend true si l'adresse a changé. Ces liens ont été
  *  partagés et mis en favori : les casser serait perdre des visiteurs pour une

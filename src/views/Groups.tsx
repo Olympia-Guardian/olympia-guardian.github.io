@@ -6,7 +6,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { fetchCharacter, parseLodestoneId, KINDS, type Character } from '../api'
 import type { ContactsController } from '../contacts'
-import { ancre, ecrireAncre } from '../routes'
+import { ancre, ecrireAncre, lienPartage } from '../routes'
 import type { GroupsController, Group } from '../groups'
 import { apiGroupInvite, type ApiContact } from '../groupsApi'
 import { useI18n } from '../i18n'
@@ -653,7 +653,7 @@ function GroupCard({
         <div className="group-invite-block">
           <span className="group-invite-label">{t('inviteLinkLabel')}</span>
           <code className="group-invite-code">
-            {g.inviteCode ? `${location.origin}${location.pathname}#j=${g.inviteCode}` : '…'}
+            {g.inviteCode ? lienPartage('j', g.inviteCode) : '…'}
           </code>
           <button className="btn btn-ghost btn-mini" onClick={copyLink}>
             {copied ? t('copied') : <><TabIcon k="share" /> {t('copyShort')}</>}

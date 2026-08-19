@@ -16,6 +16,7 @@ import {
   type ContactStatus,
 } from './groupsApi'
 import { readHashParam, setHashParam } from './store'
+import { lienPartage } from './routes'
 
 export interface ContactsController {
   data: ApiContacts | null
@@ -31,7 +32,7 @@ export interface ContactsController {
 }
 
 export function contactLink(code: string): string {
-  return `${location.origin}${location.pathname}#c=${code}`
+  return lienPartage('c', code)
 }
 
 /** Lien de contact ouvert (#c=…) : pilote le bandeau « Ajouter X ? ». */

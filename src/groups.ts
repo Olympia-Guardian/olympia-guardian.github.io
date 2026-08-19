@@ -37,6 +37,7 @@ import {
 } from './groupsApi'
 import { WORKER_API } from './api'
 import { readHashParam, setHashParam } from './store'
+import { lienPartage } from './routes'
 
 export interface Group {
   id: string // « loc-… » (navigateur) ou « grp-… » (compte)
@@ -142,7 +143,7 @@ function newLocalId(): string {
 }
 
 function inviteLink(code: string): string {
-  return `${location.origin}${location.pathname}#j=${code}`
+  return lienPartage('j', code)
 }
 
 // ------------------------------------------------------ migration des legacy

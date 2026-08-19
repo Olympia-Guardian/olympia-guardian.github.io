@@ -2610,10 +2610,14 @@ a.player-name:hover {
    du marché : elle dit « tu le veux », pas « tu l'as ». */
 /* ------------------------------------------------------ butin de raid */
 
-/* La reponse du static : quatre cartes, une par etage, lisibles sans defiler. */
+/* La reponse du static : quatre cartes, une par etage, lisibles sans defiler.
+   align-items: start, sinon une carte depliee etire les trois autres a sa
+   hauteur : elles paraissaient vides alors qu'elles etaient simplement
+   repliees. */
 .kills-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
   gap: 12px;
   margin: 14px 0 20px;
 }
@@ -2622,12 +2626,19 @@ a.player-name:hover {
    avant d'avoir lu son nom. Elle passe sous un voile, faute de quoi les
    chiffres, qui sont le sujet de la carte, deviendraient illisibles dessus. */
 .kills-card {
-  position: relative;
   overflow: hidden;
-  padding: 12px 14px;
   background: var(--surface);
   border: 1px solid rgba(214, 178, 107, 0.45);
   border-radius: var(--radius);
+}
+
+/* La banniere vit ICI, et pas dans la carte entiere : depliee, la liste des
+   pieces l'aurait etiree sur toute la hauteur. Elle tient donc du haut de la
+   carte au separateur, et l'ouverture ne la deforme plus. */
+.kills-tete {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 14px;
 }
 
 /* Trois plans, et il faut les NUMEROTER : sans z-index, un ::after est le
@@ -2646,7 +2657,7 @@ a.player-name:hover {
 
 /* Opaque a gauche, ou se lisent les chiffres ; transparent a droite, ou
    l'image a le droit de se montrer. */
-.kills-card::after {
+.kills-tete::after {
   content: '';
   position: absolute;
   z-index: 1;
@@ -2721,8 +2732,8 @@ a.player-name:hover {
    savait plus ou commencer. */
 .kills-besoins {
   list-style: none;
-  margin: 6px 0 0;
-  padding: 8px 0 0;
+  margin: 0;
+  padding: 8px 14px 12px;
   border-top: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;

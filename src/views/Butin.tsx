@@ -141,47 +141,52 @@ export function Butin({
           return (
             <section key={e.etage} className={`kills-card ${e.kills === 0 ? 'is-done' : ''}`}>
               {/* La bannière que le jeu affiche dans sa recherche de mission :
-                  on reconnaît l'étage à son image avant d'avoir lu son nom. */}
-              {etage && (
-                <img
-                  className="kills-fond"
-                  src={iconeObjet(etage.image, false)}
-                  alt=""
-                  loading="lazy"
-                  onError={onFondImgError}
-                />
-              )}
-              <div className="kills-contenu">
-                <header>
-                  <b>{nomEtage(e.etage)}</b>
-                  <span className="kills-n">{e.kills}</span>
-                </header>
+                  on reconnaît l'étage à son image avant d'avoir lu son nom.
+                  Elle ne couvre que la TÊTE de la carte : dépliée, la liste des
+                  pièces l'aurait étirée sur toute la hauteur. */}
+              <div className="kills-tete">
                 {etage && (
-                  <p className="kills-mission" title={lang === 'fr' ? etage.fr : etage.en}>
-                    {lang === 'fr' ? etage.fr : etage.en}
+                  <img
+                    className="kills-fond"
+                    src={iconeObjet(etage.image, false)}
+                    alt=""
+                    loading="lazy"
+                    onError={onFondImgError}
+                  />
+                )}
+                <div className="kills-contenu">
+                  <header>
+                    <b>{nomEtage(e.etage)}</b>
+                    <span className="kills-n">{e.kills}</span>
+                  </header>
+                  {etage && (
+                    <p className="kills-mission" title={lang === 'fr' ? etage.fr : etage.en}>
+                      {lang === 'fr' ? etage.fr : etage.en}
+                    </p>
+                  )}
+                  <p className="kills-label">
+                    {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
                   </p>
-                )}
-                <p className="kills-label">
-                  {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
-                </p>
-                {e.parJoueur.length > 0 && (
-                  <button
-                    type="button"
-                    className="icon-btn kills-plier"
-                    aria-expanded={ouverts.has(e.etage)}
-                    title={ouverts.has(e.etage) ? t('butinPlier') : t('butinDeplier')}
-                    onClick={() => basculerEtage(e.etage)}
-                  >
-                    <TabIcon k="infos" />
-                  </button>
-                )}
-                {/* Ce qui manque, en images : l'icone de la case du jeu UNE
-                    fois, et derriere elle les visages de ceux qui l'attendent.
-                    Les deux bagues s'y confondent, le jeu n'ayant qu'une
-                    categorie « bague » et un anneau ne se distinguant pas de
-                    l'autre sur une vignette. */}
-                {e.parJoueur.length > 0 && ouverts.has(e.etage) && (
-                  <ul className="kills-besoins">
+                  {e.parJoueur.length > 0 && (
+                    <button
+                      type="button"
+                      className="icon-btn kills-plier"
+                      aria-expanded={ouverts.has(e.etage)}
+                      title={ouverts.has(e.etage) ? t('butinPlier') : t('butinDeplier')}
+                      onClick={() => basculerEtage(e.etage)}
+                    >
+                      <TabIcon k="infos" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Ce qui manque, une ligne par emplacement : l'icône de la case
+                  du jeu, et au bout de la ligne les visages de ceux qui
+                  l'attendent. Les deux bagues s'y confondent, le jeu n'ayant
+                  qu'une catégorie « bague ». */}
+              {e.parJoueur.length > 0 && ouverts.has(e.etage) && (
+                <ul className="kills-besoins">
                     {regrouper(e.parJoueur).map((b) => (
                       <li
                         key={b.cle}
@@ -225,7 +230,6 @@ export function Butin({
                     ))}
                   </ul>
                 )}
-              </div>
             </section>
           )
         })}

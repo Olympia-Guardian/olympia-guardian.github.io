@@ -4930,6 +4930,13 @@ a.player-name:hover {
   color: var(--muted);
 }
 
+/* La recherche par nom appartient au bloc « dans quelles collections » : elle
+   repond a la meme question, en plus precis. */
+.market-recherche {
+  margin-top: 4px;
+  max-width: 420px;
+}
+
 .market-legende:not(:first-child) {
   margin-top: 8px;
   padding-top: 14px;

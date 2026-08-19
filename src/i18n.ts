@@ -263,6 +263,7 @@ const STR = {
     fr: 'Pour {total} gils, {n} objets répartis sur {worlds} monde(s). Il te resterait {reste} gils.',
     en: 'For {total} gil, {n} items across {worlds} world(s). You would have {reste} gil left.',
   },
+  marketSearchName: { fr: 'Chercher un objet par son nom…', en: 'Search an item by name…' },
   marketPieces: { fr: 'Pièces de tenue', en: 'Outfit pieces' },
   marketBudgetLegend: { fr: 'Combien dépenser', en: 'How much to spend' },
   marketKindsLegend: { fr: 'Dans quelles collections', en: 'In which collections' },

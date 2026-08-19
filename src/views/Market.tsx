@@ -113,6 +113,10 @@ export function Market({
   )
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
   const [prix, setPrix] = useState<Prix | null>(null)
+  // Recherche par nom. Elle retrecit ce qu'on demande a Universalis AUTANT que
+  // ce qu'on affiche : chercher « Todoroki » ne doit pas interroger mille prix
+  // pour n'en montrer qu'un.
+  const [recherche, setRecherche] = useState('')
   // La liste des objets qu'Universalis sait vendre : elle sert aux compteurs
   // autant qu'aux appels. Sans elle, les categories annoncent des achats qui
   // n'existent pas.
@@ -201,6 +205,9 @@ export function Market({
   /** Ce qui manque au personnage ET qui a un prix possible. */
   const manquants = useMemo(() => {
     if (!perso) return []
+    const q = recherche.trim().toLowerCase()
+    const correspond = (it: Item) =>
+      !q || it.name.toLowerCase().includes(q) || it.nameEn.toLowerCase().includes(q)
     const out: { item: Item; kind: Achetable }[] = []
     for (const k of kinds) {
       const possedes = k === 'outfitpieces' ? piecesPossedees : new Set(perso.data[k].ids)
@@ -208,11 +215,12 @@ export function Market({
       for (const it of liste) {
         if (!it.itemId || !it.tradeable || possedes.has(it.id)) continue
         if (vendables && !vendables.has(it.itemId)) continue
+        if (!correspond(it)) continue
         out.push({ item: it, kind: k })
       }
     }
     return out
-  }, [perso, kinds, db, pieces, vendables, piecesPossedees])
+  }, [perso, kinds, db, pieces, vendables, piecesPossedees, recherche])
 
   const parItemId = useMemo(
     () => new Map(manquants.map((m) => [m.item.itemId!, m])),
@@ -241,10 +249,15 @@ export function Market({
 
   const selection: Achat[] = useMemo(() => {
     if (!prix) return []
-    return strategie === 'objets'
-      ? plusDObjets(prix.offres, budget, prixMax)
-      : moinsDeVoyages(prix.offres, budget, prixMax)
-  }, [prix, budget, prixMax, strategie])
+    const plan =
+      strategie === 'objets'
+        ? plusDObjets(prix.offres, budget, prixMax)
+        : moinsDeVoyages(prix.offres, budget, prixMax)
+    // Les prix restent en memoire apres une recherche : sans ce filtre, affiner
+    // le texte ne changerait rien a la liste deja affichee.
+    const gardes = new Set(manquants.map((m) => m.item.itemId!))
+    return plan.filter((a) => gardes.has(a.itemId))
+  }, [prix, budget, prixMax, strategie, manquants])
 
   const groupes = useMemo(() => parMonde(selection), [selection])
   const total = selection.reduce((s, a) => s + a.price, 0)
@@ -358,6 +371,13 @@ export function Market({
         </div>
 
         <span className="market-legende">{t('marketKindsLegend')}</span>
+        <input
+          className="search market-recherche"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder={t('marketSearchName')}
+          spellCheck={false}
+        />
         <div className="market-kinds">
           <button
             className={`cat-chip cat-chip-action ${kinds.size === ACHETABLES.length ? 'is-active' : ''}`}

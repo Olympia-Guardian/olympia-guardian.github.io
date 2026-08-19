@@ -73,7 +73,7 @@ function PlayerCard({
               title={t(vu ? 'seeOn' : 'seeOff')}
               onClick={onToggleVu}
             >
-              <TabIcon k="inspect" />
+              <TabIcon k="vu" />
             </button>
           )}
         </span>

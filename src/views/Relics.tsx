@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import {
+  EXPANSIONS as EXPANSION_NAMES,
   KINDS,
   type Character,
   type Kind,
@@ -25,12 +26,13 @@ type Ready = Member & { data: Character }
 // Classement par extension, la plus récente d'abord. Les séries sans extension
 // (donjons sans fond, ultimates) ont leur propre section en bas.
 const EXPANSIONS: { num: number; fr: string; en: string }[] = [
-  { num: 7, fr: 'Dawntrail (7.x)', en: 'Dawntrail (7.x)' },
-  { num: 6, fr: 'Endwalker (6.x)', en: 'Endwalker (6.x)' },
-  { num: 5, fr: 'Shadowbringers (5.x)', en: 'Shadowbringers (5.x)' },
-  { num: 4, fr: 'Stormblood (4.x)', en: 'Stormblood (4.x)' },
-  { num: 3, fr: 'Heavensward (3.x)', en: 'Heavensward (3.x)' },
-  { num: 2, fr: 'A Realm Reborn (2.x)', en: 'A Realm Reborn (2.x)' },
+  // Les noms viennent de la liste commune ; ici on numérote les séries par leur
+  // champ `expansion`, et le 0 rassemble ce qui n'appartient à aucune.
+  ...EXPANSION_NAMES.map((e) => ({
+    num: e.major,
+    fr: `${e.fr} (${e.major}.x)`,
+    en: `${e.en} (${e.major}.x)`,
+  })),
   { num: 0, fr: 'Donjons spéciaux & Ultimates', en: 'Special dungeons & Ultimates' },
 ]
 

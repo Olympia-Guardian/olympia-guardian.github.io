@@ -623,6 +623,7 @@ const STR = {
   scopeLongterm: { fr: 'Solo / long terme', en: 'Solo / long-term' },
   scopeAll: { fr: 'Tout', en: 'Everything' },
   allCollections: { fr: 'Toutes les collections', en: 'All collections' },
+  allExpansions: { fr: 'Toutes les extensions', en: 'All expansions' },
   compoAll: { fr: 'Solo + groupe', en: 'Solo + group' },
   compoGroup: { fr: 'Nécessite un groupe', en: 'Needs a group' },
   compoSolo: { fr: 'Faisable en solo', en: 'Soloable' },
@@ -937,8 +938,8 @@ const STR = {
   },
   helpPlanningTitle: { fr: 'Planning', en: 'Planning' },
   helpPlanningBody: {
-    fr: 'Le Planning répond à « on farme quoi ce soir ? » : une carte par contenu (donjon, défi, raid…) listant ce qui manque encore, classées par nombre d’objets à looter. Filtre par collection, par composition (solo / groupe conseillé) ou par périmètre, et clique un objet pour sa fiche.',
-    en: 'Planning answers “what do we farm tonight?”: one card per duty (dungeon, trial, raid…) listing what is still missing, sorted by loot impact. Filter by collection, party need (solo / group advised) or scope, and click any item for its details.',
+    fr: 'Le Planning répond à « on farme quoi ce soir ? » : une carte par contenu (donjon, défi, raid…) listant ce qui manque encore, classées par nombre d’objets à looter. Filtre par extension, par collection, par composition (solo / groupe conseillé) ou par périmètre, et clique un objet pour sa fiche.',
+    en: 'Planning answers “what do we farm tonight?”: one card per duty (dungeon, trial, raid…) listing what is still missing, sorted by loot impact. Filter by expansion, collection, party need (solo / group advised) or scope, and click any item for its details.',
   },
   helpCollectionsTitle: { fr: 'Collections', en: 'Collections' },
   helpCollectionsBody: {

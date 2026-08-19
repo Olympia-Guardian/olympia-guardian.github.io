@@ -66,6 +66,29 @@ export const PLANNING_KINDS: Kind[] = KINDS.filter(
   (k) => k !== 'frames' && k !== 'outfits' && k !== 'armoires' && k !== 'achievements',
 )
 
+/** Les extensions, la plus récente d'abord. `major` est le numéro majeur des
+ *  patchs qui en relèvent : 7.1 et 7.55 sont Dawntrail. A Realm Reborn couvre
+ *  aussi le 1.x d'avant la refonte, qui ne laisse presque rien à collectionner.
+ *  Source unique des noms : le planning filtre par patch, les reliques par leur
+ *  champ `expansion`, mais tout le monde écrit « Shadowbringers » pareil. */
+export const EXPANSIONS: { major: number; fr: string; en: string }[] = [
+  { major: 7, fr: 'Dawntrail', en: 'Dawntrail' },
+  { major: 6, fr: 'Endwalker', en: 'Endwalker' },
+  { major: 5, fr: 'Shadowbringers', en: 'Shadowbringers' },
+  { major: 4, fr: 'Stormblood', en: 'Stormblood' },
+  { major: 3, fr: 'Heavensward', en: 'Heavensward' },
+  { major: 2, fr: 'A Realm Reborn', en: 'A Realm Reborn' },
+]
+
+/** Extension d'un objet, lue sur son patch. Null quand le patch manque ou ne
+ *  ressemble à rien : on ne devine pas, on laisse l'objet hors des filtres. */
+export function expansionDe(patch: string | undefined): number | null {
+  if (!patch) return null
+  const v = parseFloat(patch)
+  if (!Number.isFinite(v) || v < 1) return null
+  return Math.max(2, Math.floor(v))
+}
+
 /** Ce qu'on sait d'un personnage SANS compte : le Lodestone, et rien d'autre.
  *  Les douze autres collections ne se remplissent qu'en les cochant dans « Mon
  *  Journal », ce qui demande un compte — les afficher à zéro ne renseigne

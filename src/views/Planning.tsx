@@ -1,6 +1,14 @@
 import { accesDe, useStory } from '../access'
 import { useEffect, useMemo, useState } from 'react'
-import { PLANNING_KINDS, type Character, type Item, type Kind, type Source } from '../api'
+import {
+  EXPANSIONS,
+  PLANNING_KINDS,
+  expansionDe,
+  type Character,
+  type Item,
+  type Kind,
+  type Source,
+} from '../api'
 import { kindLabel, localName, localSource, useI18n, type StrKey } from '../i18n'
 import {
   PER_DUTY_TYPES,
@@ -175,6 +183,9 @@ export function Planning({
     [ready, jalons],
   )
   const [compo, setCompo] = useState<CompoFilter>('all')
+  // Filtre par extension : « je remonte mes vieilles montures d'A Realm Reborn »
+  // est une soirée en soi, et rien ne permettait de la préparer.
+  const [expansion, setExpansion] = useState<number | 'all'>('all')
   const [search, setSearch] = useState('')
 
   const runs = useMemo(() => {
@@ -187,6 +198,9 @@ export function Planning({
         // Plus obtenable du tout : rien à planifier, même si une source a
         // un type encore « actif » (ex. monture Goobbue, vendeur disparu).
         if (item.unobtainable && !includeUnavailable) continue
+        // Un objet sans patch lisible sort dès qu'on demande une extension
+        // précise : on ne le range pas au hasard.
+        if (expansion !== 'all' && expansionDe(item.patch) !== expansion) continue
         const missing = ready.filter((m) => {
           if (!m.data[kind].isPublic) return false
           // Contenu qu'il ne peut pas encore débloquer : le lui proposer à
@@ -265,7 +279,19 @@ export function Planning({
     }
     result.sort((a, b) => b.impact - a.impact)
     return result
-  }, [db, ready, ownedSets, scope, kindFilter, minMissing, includeUnavailable, compo, acces])
+  }, [
+    db,
+    ready,
+    ownedSets,
+    scope,
+    kindFilter,
+    minMissing,
+    includeUnavailable,
+    compo,
+    expansion,
+    acces,
+    KINDS_VUS,
+  ])
 
   const filteredRuns = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -315,6 +341,19 @@ export function Planning({
           <option value="instances">{t('scopeInstances')}</option>
           <option value="longterm">{t('scopeLongterm')}</option>
           <option value="all">{t('scopeAll')}</option>
+        </select>
+        <select
+          value={expansion}
+          onChange={(e) =>
+            setExpansion(e.target.value === 'all' ? 'all' : Number(e.target.value))
+          }
+        >
+          <option value="all">{t('allExpansions')}</option>
+          {EXPANSIONS.map((e) => (
+            <option key={e.major} value={e.major}>
+              {lang === 'fr' ? e.fr : e.en}
+            </option>
+          ))}
         </select>
         <select
           value={kindFilter}

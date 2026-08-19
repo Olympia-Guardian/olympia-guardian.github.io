@@ -638,10 +638,6 @@ const STR = {
   achReward: { fr: 'Récompense', en: 'Reward' },
   achPointsChip: { fr: '{a} / {b} pts', en: '{a} / {b} pts' },
   allCategories: { fr: 'Toutes les catégories', en: 'All categories' },
-  collectImportTitle: {
-    fr: 'Importer ce qui est coché sur FFXIV Collect (fusion, ne retire jamais rien)',
-    en: 'Import what is checked on FFXIV Collect (merge, never removes anything)',
-  },
   collectNone: {
     fr: 'Aucune fiche FFXIV Collect trouvée pour ce perso.',
     en: 'No FFXIV Collect profile found for this character.',
@@ -729,10 +725,6 @@ const STR = {
   syncDays: { fr: 'il y a {n} j', en: '{n} d ago' },
   syncRunning: { fr: 'Synchronisation…', en: 'Syncing…' },
   charMore: { fr: 'Autres actions', en: 'More actions' },
-  collectImport: {
-    fr: 'Relire mon profil FFXIV Collect',
-    en: 'Re-read my FFXIV Collect profile',
-  },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },

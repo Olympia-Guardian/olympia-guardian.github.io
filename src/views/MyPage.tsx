@@ -1294,7 +1294,6 @@ export function MyPage({
   // Synchro Lodestone forcée (déclaré ici : MyPage a des retours anticipés).
   const [syncing, setSyncing] = useState(false)
   // Import FFXIV Collect à la demande (même contrainte de déclaration).
-  const [importing, setImporting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [char, setChar] = useState<Character | null>(null)
   // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
@@ -1462,23 +1461,6 @@ export function MyPage({
   // Import FFXIV Collect à la demande : rapatrie ce qui est coché là-bas
   // (union côté worker, ne retire jamais rien). Utile après coup — p. ex.
   // récupérer ses succès sur un perso vérifié avant leur arrivée ici.
-  async function collectImport() {
-    if (!verified || !auth.token) return
-    setImporting(true)
-    try {
-      const found = await fetchCollectDoc(verified.charId)
-      if (!found || found.total === 0) {
-        showToast(t('collectNone'))
-      } else {
-        const added = await pushCollectSync(verified.charId, found.doc, auth.token)
-        showToast(added > 0 ? t('collectSynced', { n: added }) : t('collectNothingNew'))
-        if (added > 0) setChar(await fetchCharacter(verified.charId))
-      }
-    } catch {
-      setNotice(t('saveError'))
-    }
-    setImporting(false)
-  }
 
   async function doUnbind(charId: number, name: string) {
     if (!confirm(t('unbindConfirm', { name }))) return
@@ -1845,16 +1827,6 @@ export function MyPage({
                             >
                               <TabIcon k="lodestone" /> {t('viewOnLodestone')}
                             </a>
-                            <button
-                              className="account-menu-item"
-                              disabled={importing}
-                              onClick={() => {
-                                setMenuOuvert(false)
-                                void collectImport()
-                              }}
-                            >
-                              <TabIcon k="collect" /> {t('collectImport')}
-                            </button>
                             <button
                               className="account-menu-item is-danger"
                               onClick={() => {

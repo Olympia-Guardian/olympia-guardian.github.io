@@ -21,7 +21,6 @@ import { sourceIcon, typeLabel } from '../sources'
 import { readHashParam, setHashParam, type Db, type Member } from '../store'
 import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError, xivIconUrl } from '../ui'
 import { useFlushOnHide } from '../useFlushOnHide'
-import { useMasque, useMasqueur } from '../spoilers'
 import { localSource } from '../i18n'
 import { Relics } from './Relics'
 
@@ -486,15 +485,12 @@ function CardAlbum({
 /** Grille de vignettes. Si la collection a des catégories (armoire), le rail
  *  de gauche évite de dérouler des milliers d'icônes d'un bloc. */
 function IconGrid({
-  kind,
   items,
   ids,
   onItemClick,
   sectionOf,
   sectionOrder,
 }: {
-  /** Collection affichée : le masquage en dépend. */
-  kind: string
   items: Item[]
   ids: Set<number>
   onItemClick: (it: Item) => void
@@ -532,7 +528,7 @@ function IconGrid({
             title={`${localName(it, lang)}${has ? ' ✓' : ''}`}
             onClick={() => onItemClick(it)}
           >
-            <IconeObjet it={it} kind={kind} taille={40} />
+            <img src={it.icon} alt="" width={40} height={40} loading="lazy" onError={onItemImgError} />
             {has && <span className="relic-badge">✓</span>}
           </button>
         )
@@ -624,50 +620,7 @@ function pieceCellsOf(it: Item): (Piece | null)[] | null {
   return cells
 }
 
-/** Nom d'un objet, remplace quand il revelerait un contenu non atteint. */
-function NomObjet({ it, kind }: { it: Item; kind: string }) {
-  const { lang, t } = useI18n()
-  const masque = useMasque(it, kind)
-  if (masque === 'tout') return <>{t('spoilerHidden', { patch: it.patch })}</>
-  return <>{localName(it, lang)}</>
-}
-
-/** Icone d'un objet, remplacee par le point d'interrogation si elle trahit. */
-function IconeObjet({
-  it,
-  kind,
-  className = '',
-  taille,
-}: {
-  it: Item
-  kind: string
-  className?: string
-  taille?: number
-}) {
-  const { t } = useI18n()
-  const masque = useMasque(it, kind)
-  if (masque === 'tout') {
-    return (
-      <span className={`spoiler-icon ${className}`} style={taille ? { width: taille, height: taille } : undefined} title={t('spoilerWhy')}>
-        <TabIcon k="unknown" />
-      </span>
-    )
-  }
-  return (
-    <img
-      className={className}
-      src={it.icon}
-      alt=""
-      width={taille}
-      height={taille}
-      loading="lazy"
-      onError={onItemImgError}
-    />
-  )
-}
-
 function GroupedChecklist({
-  kind,
   items,
   ids,
   onItemClick,
@@ -676,8 +629,6 @@ function GroupedChecklist({
   pieceOwned,
   onPieceToggle,
 }: {
-  /** Collection affichée : le masquage en dépend (le nom d'un succès trahit). */
-  kind: string
   items: Item[]
   ids: Set<number>
   onItemClick: (it: Item) => void
@@ -765,11 +716,14 @@ function GroupedChecklist({
                         {has ? '✓' : ''}
                       </span>
                       {variant === 'icon' && (
-                        <IconeObjet
-                          it={it}
-                          kind={kind}
+                        <img
                           className={`checklist-icon ${has ? '' : 'is-missing'}`}
-                          taille={28}
+                          src={it.icon}
+                          alt=""
+                          width={28}
+                          height={28}
+                          loading="lazy"
+                          onError={onItemImgError}
                         />
                       )}
                       {variant === 'orchestrion' && it.num !== undefined && (
@@ -781,7 +735,7 @@ function GroupedChecklist({
                         className="checklist-name"
                         title={it.itemName ? localItemName(it, lang) : undefined}
                       >
-                        <NomObjet it={it} kind={kind} />
+                        {localName(it, lang)}
                       </span>
                       {cells && (
                         <span className="piece-strip">
@@ -979,7 +933,6 @@ function FashionEditor({
       <div className="editor-layout">
         <div className="editor-body">
           <GroupedChecklist
-            kind="fashions"
             items={items}
             ids={ids}
             onItemClick={handleItem}
@@ -1007,7 +960,6 @@ function CollectionEditor({
   owned,
   pieceOwned,
   readOnly,
-  onRevealAll,
   onSave,
   onSavePieces,
 }: {
@@ -1018,8 +970,6 @@ function CollectionEditor({
   /** Tenues : pièces possédées (suivi individuel). */
   pieceOwned?: number[]
   readOnly?: boolean
-  /** Tout révéler d'un geste, depuis la liste elle-même. */
-  onRevealAll?: () => void
   onSave: (kind: Kind, ids: number[]) => void
   onSavePieces?: (ids: number[]) => void
 }) {
@@ -1163,19 +1113,10 @@ function CollectionEditor({
     return s
   }, [ids, pieceIds, db, kind])
 
-  const masquer = useMasqueur()
-  // Contenu non atteint : retire de la liste plutot qu'affiche en cases
-  // muettes. Compte a part pour le dire — rien ne doit sembler perdu.
-  const caches = useMemo(
-    () => db[kind].filter((it) => !shownIds.has(it.id) && masquer(it, kind) === 'tout').length,
-    [db, kind, masquer, shownIds],
-  )
   const items = useMemo(() => {
     const q = search.trim().toLowerCase()
     const base = db[kind].filter(
       (it) =>
-        // Deja coche : il l'a vu, et le cacher l'empecherait de le decocher.
-        (shownIds.has(it.id) || masquer(it, kind) !== 'tout') &&
         (!q ||
           it.name.toLowerCase().includes(q) ||
           it.nameEn.toLowerCase().includes(q) ||
@@ -1206,7 +1147,7 @@ function CollectionEditor({
         groupEn: it.achTypeEn ?? 'Other',
       }))
     return base
-  }, [db, kind, search, onlyMissing, shownIds, masquer])
+  }, [db, kind, search, onlyMissing, shownIds])
 
   // Points de succès : possédés / total, calculés depuis le catalogue.
   const achPts = useMemo(() => {
@@ -1262,25 +1203,16 @@ function CollectionEditor({
           </div>
         )}
       </div>
-      {caches > 0 && (
-        <p className="notice notice-filter">
-          <span>{t('spoilerHiddenCount', { n: caches })}</span>
-          <button className="btn btn-mini btn-ghost" onClick={onRevealAll}>
-            {t('spoilerRevealAll')}
-          </button>
-        </p>
-      )}
       <div className="editor-layout">
         <div className="editor-body">
           {kind === 'cards' ? (
             <CardAlbum allItems={db[kind]} visible={visible} ids={shownIds} onItemClick={handleItem} />
           ) : kind === 'orchestrions' ? (
-            <GroupedChecklist kind={kind} items={items} ids={shownIds} onItemClick={handleItem} />
+            <GroupedChecklist items={items} ids={shownIds} onItemClick={handleItem} />
           ) : kind === 'spells' ? (
             <SpellBook items={items} ids={shownIds} onItemClick={handleItem} />
           ) : LIST_KINDS.includes(kind) ? (
             <GroupedChecklist
-              kind={kind}
               items={items}
               ids={shownIds}
               onItemClick={handleItem}
@@ -1290,7 +1222,6 @@ function CollectionEditor({
             />
           ) : (
             <IconGrid
-              kind={kind}
               items={items}
               ids={shownIds}
               onItemClick={handleItem}
@@ -1326,12 +1257,9 @@ export function MyPage({
   dbPending,
   relicDb,
   auth,
-  onRevealAll,
   members,
   onCharacterUpdated,
 }: {
-  /** Tout révéler d'un geste depuis les listes du journal. */
-  onRevealAll?: () => void
   db: Db
   /** Collections encore en cours de téléchargement (les trois gros catalogues
    *  arrivent après les autres) : l'onglet concerné dit qu'il charge au lieu
@@ -2013,7 +1941,6 @@ export function MyPage({
               owned={char[kind].ids}
               pieceOwned={kind === 'outfits' ? char.outfitPieceIds : undefined}
               readOnly={!EDITABLE.includes(kind)}
-              onRevealAll={onRevealAll}
               onSave={save}
               onSavePieces={kind === 'outfits' ? (ids) => save('outfitpieces', ids) : undefined}
             />

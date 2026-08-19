@@ -5,7 +5,6 @@ import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
 import { TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import type { Wishes } from '../wishlist'
-import { masqueDe, useMasqueur, type ModeSpoiler } from '../spoilers'
 
 type Ready = Member & { data: Character }
 
@@ -57,9 +56,6 @@ export function Matrix({
   onShowItem,
   titleLabel,
   wishes,
-  msq,
-  spoilMode,
-  onRevealAll,
   only,
   suggest,
   ownAdd,
@@ -73,13 +69,6 @@ export function Matrix({
   titleLabel?: string
   /** Liste de souhaits : marque les objets voulus et permet de s'y limiter. */
   wishes?: Wishes
-  /** Avancement dans l'histoire, pour masquer ce qui la revelerait. null =
-   *  inconnu, et on ne masque alors rien. */
-  msq?: number | null
-  /** Niveau de masquage choisi par le joueur. */
-  spoilMode?: ModeSpoiler
-  /** Tout révéler d'un geste depuis la liste elle-même. */
-  onRevealAll?: () => void
   /** Restriction venue d'ailleurs (la cloche, pour les nouveautés d'un patch) :
    *  la vue ne montre que ces objets, en le disant et en offrant d'en sortir.
    *  Les clés valent « collection:id » — dans la vue « Mode » deux collections
@@ -101,7 +90,6 @@ export function Matrix({
   }
 }) {
   const { lang, t } = useI18n()
-  const masquer = useMasqueur()
   // Vue fusionnée : chaque objet connaît sa collection d'origine.
   const kindFor = (item: Item): Kind => item.kindOf ?? kind
   // Ajouts directs sur mes persos pendant la session (clé perso:collection:objet).
@@ -139,7 +127,6 @@ export function Matrix({
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1], lang))
   }, [items, presentTypes, lang])
 
-  let caches = 0
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = items
@@ -170,18 +157,6 @@ export function Matrix({
         if (onlyMissing && missing.length === 0) return false
         return true
       })
-    // Contenu que ce joueur n'a pas encore atteint : on le retire de la liste
-    // plutot que d'aligner des cases muettes, et on le compte pour le dire.
-    const avant = list.length
-    const visibles = list.filter(({ item, missing }) => {
-      // Possede par quelqu'un d'affiche : il l'a forcement vu, le cacher
-      // serait absurde et ferait disparaitre sa propre collection.
-      if (missing.length < activeMembers.length) return true
-      return masquer(item, kindFor(item)) !== 'tout'
-    })
-    caches = avant - visibles.length
-    list.length = 0
-    list.push(...visibles)
     switch (sort) {
       case 'missing':
         list.sort((a, b) => b.missing.length - a.missing.length || a.item.order - b.item.order)
@@ -194,7 +169,7 @@ export function Matrix({
         break
     }
     return list
-  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, onlyWished, wishes, masquer, suggest?.sentKeys])
+  }, [items, activeMembers, ownedSets, kind, search, typeFilter, groupFilter, onlyMissing, includeUnavailable, sort, only, onlyWished, wishes, suggest?.sentKeys])
 
   return (
     <div className="view">
@@ -269,15 +244,6 @@ export function Matrix({
         </p>
       )}
 
-      {caches > 0 && (
-        <p className="notice notice-filter">
-          <span>{t('spoilerHiddenCount', { n: caches })}</span>
-          <button className="btn btn-mini btn-ghost" onClick={onRevealAll}>
-            {t('spoilerRevealAll')}
-          </button>
-        </p>
-      )}
-
       {HIDDEN_KINDS.includes(kind) && <p className="notice">{t('matrixNotice')}</p>}
 
       <div className="matrix-wrap">
@@ -300,11 +266,6 @@ export function Matrix({
             {rows.slice(0, visible).map(({ item, missing }) => {
               const primary = item.sources[0]
               const name = localName(item, lang)
-              // Recompense d'histoire que ce joueur n'a pas encore atteinte :
-              // nom, image et source revelent chacun quelque chose. Un clic
-              // ouvre la fiche, qui laisse le choix de regarder quand meme.
-              const masque = masqueDe(item, kindFor(item), msq ?? null, spoilMode ?? 'histoire')
-              const cache = masque === 'tout'
               return (
                 <tr key={`${kindFor(item)}-${item.id}`}>
                   <td className="col-item">
@@ -316,22 +277,10 @@ export function Matrix({
                       onClick={() => onShowItem(item, kindFor(item))}
                       onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(item, kindFor(item))}
                     >
-                      {cache ? (
-                        <span className="item-icon spoiler-icon" title={t('spoilerWhy')}>
-                          <TabIcon k="unknown" />
-                        </span>
-                      ) : (
-                        <img
-                          className="item-icon"
-                          src={item.icon}
-                          alt=""
-                          loading="lazy"
-                          onError={onItemImgError}
-                        />
-                      )}
+                      <img className="item-icon" src={item.icon} alt="" loading="lazy" onError={onItemImgError} />
                       <div className="item-text">
                         <span className="item-name">
-                          {cache ? t('spoilerHidden', { patch: item.patch }) : name}
+                          {name}
                           {(wishes?.[kindFor(item)] ?? []).includes(item.id) && (
                             <span className="wish-mark" title={t('wishMark')}>
                               <TabIcon k="wish" />
@@ -362,13 +311,7 @@ export function Matrix({
                             </span>
                           )}
                         </span>
-                        {cache ? (
-                          <span className="item-source">{t('spoilerWhy')}</span>
-                        ) : masque === 'source' ? (
-                          <span className="item-source">
-                            {t('spoilerSource', { patch: item.patch })}
-                          </span>
-                        ) : primary ? (
+                        {primary ? (
                           <span className="item-source">
                             <TypeChip type={primary.type} /> {localSource(primary, lang)}
                             {item.sources.length > 1 && <SourcesTip sources={item.sources} />}

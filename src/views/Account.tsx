@@ -3,7 +3,6 @@ import { fetchCharacter, KINDS, WORKER_API, type Kind } from '../api'
 import { authHeaders } from '../auth'
 import { kindLabel, useI18n, type Lang } from '../i18n'
 import type { Db } from '../store'
-import type { ModeSpoiler } from '../spoilers'
 import { TabIcon } from '../ui'
 
 // Page de compte : tout ce qui se règle, par opposition à Mon Journal, qui
@@ -49,7 +48,6 @@ export function AccountPage({
   onImport,
   onLogout,
   onManageChars,
-  spoil,
 }: {
   user: Utilisateur
   token: string
@@ -61,15 +59,6 @@ export function AccountPage({
   onImport: (charId: number, par: Partial<Record<Kind, number[]>>) => Promise<void>
   onLogout: () => void
   onManageChars: () => void
-  /** Anti-révélation : le niveau courant et de quoi le changer. */
-  spoil: {
-    mode: ModeSpoiler
-    choisir: (m: ModeSpoiler) => void
-    msq: number | null
-    simule: number | null
-    simuler: (v: number | null) => void
-    patchs: { id: number; patch: string }[]
-  }
 }) {
   const { t } = useI18n()
   const fichier = useRef<HTMLInputElement>(null)
@@ -201,46 +190,6 @@ export function AccountPage({
         <button className="btn btn-ghost btn-mini" onClick={onManageChars}>
           <TabIcon k="journal" /> {t('accountCharsManage')}
         </button>
-      </section>
-
-      <section className="group-card account-block">
-        <h3>{t('spoilerSection')}</h3>
-        <p className="muted">{t('spoilerToggleHint')}</p>
-        <p className="muted">
-          {spoil.msq === null ? t('spoilerUnknown') : t('spoilerState', { patch: spoil.msq })}
-        </p>
-        <h4 className="account-h4">{t('spoilSimTitle')}</h4>
-        <p className="muted">{t('spoilSimHint')}</p>
-        <select
-          value={spoil.simule ?? ''}
-          onChange={(e) => spoil.simuler(e.target.value === '' ? null : Number(e.target.value))}
-        >
-          <option value="">{t('spoilSimNone')}</option>
-          {[...new Set(spoil.patchs.map((j) => j.patch))]
-            .sort((a, b) => parseFloat(a) - parseFloat(b))
-            .map((p) => (
-              <option key={p} value={parseFloat(p)}>
-                {t('spoilSimPatch', { patch: p })}
-              </option>
-            ))}
-        </select>
-
-        <div className="spoil-modes">
-          {(['decouverte', 'histoire', 'aucun'] as ModeSpoiler[]).map((m) => (
-            <label key={m} className={`spoil-mode ${spoil.mode === m ? 'is-active' : ''}`}>
-              <input
-                type="radio"
-                name="spoil"
-                checked={spoil.mode === m}
-                onChange={() => spoil.choisir(m)}
-              />
-              <span>
-                <b>{t(`spoilMode_${m}` as 'spoilMode_aucun')}</b>
-                <small>{t(`spoilWhy_${m}` as 'spoilWhy_aucun')}</small>
-              </span>
-            </label>
-          ))}
-        </div>
       </section>
 
       <section className="group-card account-block">

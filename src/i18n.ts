@@ -722,62 +722,6 @@ const STR = {
     fr: 'La lecture sur le Lodestone a echoue ou pris trop de temps. Relancer.',
     en: 'Reading from the Lodestone failed or took too long. Try again.',
   },
-  spoilerSection: { fr: 'Révélations de l’histoire', en: 'Story spoilers' },
-  spoilerHidden: { fr: 'Contenu du patch {patch}', en: 'Patch {patch} content' },
-  spoilerWhy: {
-    fr: 'Masqué : tu n’en es pas encore là dans l’histoire. Clique pour voir quand même.',
-    en: 'Hidden: you have not reached this point in the story. Click to look anyway.',
-  },
-  spoilMode_decouverte: { fr: 'Découverte', en: 'Discovery' },
-  spoilWhy_decouverte: {
-    fr: 'Tout ce qui vient d’après ton avancement voit sa provenance masquée : tu vois l’objet, pas le contenu d’où il sort. Les récompenses d’histoire et les succès, dont le nom trahit à lui seul, sont masqués en entier.',
-    en: 'Anything past your progress has its source hidden: you see the item, not the content it comes from. Story rewards and achievements, whose very names give it away, are hidden entirely.',
-  },
-  spoilMode_histoire: { fr: 'Histoire', en: 'Story' },
-  spoilWhy_histoire: {
-    fr: 'Seules les récompenses de quête postérieures à ton avancement sont masquées. Le reste s’affiche normalement.',
-    en: 'Only quest rewards beyond your progress are hidden. Everything else shows normally.',
-  },
-  spoilMode_aucun: { fr: 'Aucun', en: 'None' },
-  spoilWhy_aucun: {
-    fr: 'Je me moque d’être spoilé, montre-moi tout.',
-    en: 'I do not mind spoilers, show me everything.',
-  },
-  spoilSimBanner: {
-    fr: 'Aperçu : joueur arrivé au patch {patch}, masquage « {mode} ».',
-    en: 'Preview: player at patch {patch}, hiding set to “{mode}”.',
-  },
-  spoilSimNothing: {
-    fr: 'Ce niveau ne masque rien ici : les succès n’ont pas de source de quête, il faut « Découverte ».',
-    en: 'This level hides nothing here: achievements have no quest source, you need “Discovery”.',
-  },
-  spoilSimStop: { fr: 'Revenir au réel', en: 'Back to reality' },
-  spoilSimTitle: { fr: 'Essayer un avancement', en: 'Try a progress point' },
-  spoilSimHint: {
-    fr: 'Pour voir ce que masquerait chaque niveau sans changer ton compte. L’aperçu ne dure que le temps de l’onglet.',
-    en: 'To see what each level would hide without changing your account. The preview lasts only for this tab.',
-  },
-  spoilSimNone: { fr: 'Mon avancement réel', en: 'My real progress' },
-  spoilSimPatch: { fr: 'Un joueur au patch {patch}', en: 'A player at patch {patch}' },
-  spoilerHiddenCount: {
-    fr: '{n} objets cachés : du contenu que tu n’as pas encore atteint. Les compteurs, eux, comptent tout.',
-    en: '{n} items hidden: content you have not reached yet. The counters still count everything.',
-  },
-  spoilerRevealAll: { fr: 'Tout montrer', en: 'Show everything' },
-  spoilerSource: { fr: 'Récompense patch {patch}', en: 'Patch {patch} reward' },
-  spoilerToggle: { fr: 'Je me moque d’être spoilé', en: 'I do not mind spoilers' },
-  spoilerToggleHint: {
-    fr: 'Par défaut, les récompenses de quête postérieures à ton avancement dans l’histoire sont masquées : nom, image et source. Ton avancement est lu dans tes succès d’histoire, et il ne bouge qu’à la synchronisation d’un personnage.',
-    en: 'By default, quest rewards beyond your point in the story are hidden: name, image and source. Your progress is read from your story achievements, and only changes when a character is synced.',
-  },
-  spoilerState: {
-    fr: 'Histoire suivie jusqu’au patch {patch}.',
-    en: 'Story followed up to patch {patch}.',
-  },
-  spoilerUnknown: {
-    fr: 'Avancement inconnu : rien n’est masqué. Il se déduit de tes succès d’histoire, ou à défaut du niveau de tes métiers.',
-    en: 'Progress unknown: nothing is hidden. It comes from your story achievements, or failing that from your job levels.',
-  },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },

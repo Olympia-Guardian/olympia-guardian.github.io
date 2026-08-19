@@ -25,7 +25,6 @@ import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
 import { useWishlist } from './wishlist'
-import { avancementMsq, SpoilerCtx, useModeSpoiler, useStory } from './spoilers'
 import { AccountPage } from './views/Account'
 import { LoginPage } from './views/Login'
 import { NewsPage } from './views/News'
@@ -161,9 +160,6 @@ export default function App() {
   )
   // Liste de souhaits : ce que tu vises, par opposition à ce que tu as.
   const wish = useWishlist()
-  // Protection anti-révélation : où en est le joueur dans l'histoire.
-  const jalons = useStory()
-  const spoil = useModeSpoiler()
   // Persos à moi et vérifiés : la seule base honnête pour dire « il te manque ».
   const myChars = useMemo(
     () => ready.filter((m) => verifiedIds.includes(m.id)),
@@ -172,13 +168,6 @@ export default function App() {
   // Nouveautés du dernier patch, lues dans les catalogues déjà chargés. Sert au
   // rappel de l'accueil ; la page « Notes de patch » refait le calcul pour le
   // patch qu'on y choisit.
-  // Sur MES persos vérifiés : c'est mon avancement qui décide, pas celui d'un
-  // membre du groupe. Sans repère, on ne masque rien.
-  const msqReel = useMemo(() => avancementMsq(myChars, jalons), [myChars, jalons])
-  // L'aperçu prime sur le réel, y compris en mode « aucun » : on simule pour
-  // voir, il serait absurde que le réglage personnel neutralise l'essai.
-  const msq = spoil.simule ?? (spoil.mode === 'aucun' ? null : msqReel)
-  const spoilValue = useMemo(() => ({ msq, mode: spoil.mode }), [msq, spoil.mode])
   const news = useMemo(() => patchNews(db, myChars), [db, myChars])
   const [newsSeen, setNewsSeen] = useState<string | null>(() => lsGet('ogs.newsseen.v1'))
   const newsCard = news && news.patch !== newsSeen ? news : null
@@ -453,8 +442,6 @@ export default function App() {
 
   return (
     <LangContext.Provider value={langValue}>
-      {/* Le masquage vaut partout, pas seulement dans la grille des collections. */}
-      <SpoilerCtx.Provider value={spoilValue}>
       {/* Ce qui fait vraiment attendre : les catalogues au demarrage, les gros
           en seconde vague, et la lecture des fiches sur le Lodestone. Le reste
           repond trop vite pour meriter une barre. */}
@@ -889,23 +876,6 @@ export default function App() {
             {/* Fiche de secours : elle ignore les collections cochées à la
                 main et se lirait comme une perte. On le dit, et on propose de
                 réessayer plutôt que de laisser quelqu'un croire au pire. */}
-            {spoil.simule !== null && (
-              <p className="notice notice-filter">
-                <span>
-                  {t('spoilSimBanner', {
-                    patch: spoil.simule,
-                    mode: t(`spoilMode_${spoil.mode}` as 'spoilMode_aucun'),
-                  })}
-                  {/* Le piege : simuler un avancement sans changer le niveau de
-                      masquage ne montre rien sur les succes, et on en conclut
-                      que la fonction est cassee. */}
-                  {spoil.mode !== 'decouverte' && ` ${t('spoilSimNothing')}`}
-                </span>
-                <button className="btn btn-mini btn-ghost" onClick={() => spoil.simuler(null)}>
-                  {t('spoilSimStop')}
-                </button>
-              </p>
-            )}
             {ready.some((m) => m.data.partial) && (
               <p className="notice notice-stale">
                 {t('charPartial')}{' '}
@@ -983,9 +953,6 @@ export default function App() {
                 ready={activeReady}
                 ownedSets={ownedSets}
                 wishes={wish.wishes}
-                msq={msq}
-                spoilMode={spoil.mode}
-                onRevealAll={() => spoil.choisir('aucun')}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1057,9 +1024,6 @@ export default function App() {
                 ready={activeReady}
                 ownedSets={ownedSets}
                 wishes={wish.wishes}
-                msq={msq}
-                spoilMode={spoil.mode}
-                onRevealAll={() => spoil.choisir('aucun')}
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
@@ -1142,7 +1106,6 @@ export default function App() {
                 }}
                 onLogout={deconnexion}
                 onManageChars={() => setTab('mypage')}
-                spoil={{ ...spoil, msq: msqReel, patchs: jalons }}
               />
             )}
             {tab === 'login' && !auth.user && (
@@ -1175,7 +1138,6 @@ export default function App() {
 
             {db && tab === 'mypage' && (
               <MyPage
-                onRevealAll={() => spoil.choisir('aucun')}
                 db={db}
                 dbPending={dbPending}
                 relicDb={relicDb}
@@ -1264,7 +1226,6 @@ export default function App() {
           <p className="footer-legal">FINAL FANTASY XIV © SQUARE ENIX</p>
         </footer>
       </div>
-      </SpoilerCtx.Provider>
     </LangContext.Provider>
   )
 }

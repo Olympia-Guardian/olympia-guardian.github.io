@@ -198,6 +198,28 @@ export const TAB_ICONS: Record<string, string> = {
   purge: '000029',
 }
 
+/** Les silhouettes de cases vides de la fenêtre d'équipement du jeu. Elles
+ *  disent un emplacement sans montrer d'objet en particulier : exactement ce
+ *  qu'il faut pour annoncer « il manque une bague à quelqu'un ». */
+const SLOT_ICONS: Record<string, string> = {
+  weapon: '062001',
+  head: '062003',
+  body: '062004',
+  hands: '062005',
+  legs: '062007',
+  feet: '062008',
+  earring: '062009',
+  necklace: '062010',
+  bracelet: '062011',
+  ring1: '062012',
+  ring2: '062012',
+}
+
+export function slotIconUrl(cle: string): string | null {
+  const id = SLOT_ICONS[cle]
+  return id ? xivIconUrl(id) : null
+}
+
 /** URL d'un asset d'icône du jeu (planche ui/icon) via XIVAPI. */
 export function xivIconUrl(id: string): string {
   return `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(`ui/icon/${id.slice(0, 3)}000/${id}_hr1.tex`)}`

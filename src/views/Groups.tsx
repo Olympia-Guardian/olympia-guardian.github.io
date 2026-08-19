@@ -33,7 +33,16 @@ function useChar(charId: number): Character | null {
   return char
 }
 
-/** Formulaire « Nouveau groupe » : nom, type (online/offline), perso fondateur. */
+/** « Nouveau groupe », une question à la fois.
+ *
+ *  Le formulaire posait tout d'un coup : nom, ce que le groupe suit, le palier,
+ *  les membres à reprendre, en ligne ou non, le personnage fondateur. Six
+ *  sections empilées dans une petite fenêtre, dont la moitié ne servait pas au
+ *  choix qu'on venait de faire.
+ *
+ *  Il avance donc par étapes, et chacune ne montre que ce qui reste à décider :
+ *  un groupe de collection ne voit jamais de palier, et qui n'a qu'un seul
+ *  personnage vérifié ne choisit pas lequel. */
 export function GroupCreateDialog({
   verifiedIds,
   canOnline,
@@ -61,6 +70,7 @@ export function GroupCreateDialog({
   onClose: () => void
 }) {
   const { t, lang } = useI18n()
+  const [etape, setEtape] = useState<'suit' | 'palier' | 'groupe'>('suit')
   const [name, setName] = useState('')
   const [online, setOnline] = useState(false)
   const [type, setType] = useState<TypeGroupe>('collection')
@@ -68,9 +78,6 @@ export function GroupCreateDialog({
   // Un palier qui vient de sortir interesse plus que celui d'il y a trois ans :
   // la liste arrive du plus recent au plus ancien.
   const listePaliers = useMemo(() => [...(paliers ?? [])].reverse(), [paliers])
-  useEffect(() => {
-    if (!tier && listePaliers.length > 0) setTier(listePaliers[0].cle)
-  }, [tier, listePaliers])
   // Reprise : tout le monde est coche au depart, on decoche qui ne suit pas.
   const [repris, setRepris] = useState<Set<number>>(() => new Set(repriseIds ?? []))
   const [charId, setCharId] = useState<number | null>(verifiedIds[0] ?? null)
@@ -87,6 +94,8 @@ export function GroupCreateDialog({
     }
   }, [verifiedIds])
 
+  const palierChoisi = listePaliers.find((p) => p.cle === tier)
+
   function submit(e: FormEvent) {
     e.preventDefault()
     const n = name.trim()
@@ -96,6 +105,24 @@ export function GroupCreateDialog({
     const membres = [...new Set([...(charId !== null ? [charId] : []), ...repris])]
     onCreate(n, membres, online, type, type === 'raid' ? tier : undefined)
   }
+
+  /** Ce qui est deja decide, en une ligne, avec de quoi y revenir. Sans elle,
+   *  avancer par etapes ferait perdre de vue ce qu'on a choisi. */
+  const fil = etape !== 'suit' && (
+    <p className="group-fil">
+      <button type="button" className="lien" onClick={() => setEtape('suit')}>
+        {type === 'raid' ? t('followRaid') : t('followCollections')}
+      </button>
+      {type === 'raid' && palierChoisi && (
+        <>
+          <span aria-hidden="true">›</span>
+          <button type="button" className="lien" onClick={() => setEtape('palier')}>
+            {lang === 'fr' ? palierChoisi.fr : palierChoisi.en}
+          </button>
+        </>
+      )}
+    </p>
+  )
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -107,131 +134,167 @@ export function GroupCreateDialog({
         onSubmit={submit}
       >
         <h2 className="modal-title">{t('createGroupTitle')}</h2>
-        <label className="group-create-field">
-          {t('createGroupName')}
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t('createGroupNamePh')}
-            spellCheck={false}
-          />
-        </label>
-        <div className="group-create-field">
-          {t('groupFollows')}
-          <label className="group-type-opt">
-            <input
-              type="radio"
-              name="groupfollows"
-              checked={type === 'collection'}
-              onChange={() => setType('collection')}
-            />
-            <span>
+        {fil}
+
+        {/* 1. Ce que le groupe suit. Un clic, et la suite en decoule. */}
+        {etape === 'suit' && (
+          <div className="group-create-field">
+            {t('groupFollows')}
+            <button
+              type="button"
+              className="group-choix"
+              onClick={() => {
+                setType('collection')
+                setEtape('groupe')
+              }}
+            >
               <b>
                 <TabIcon k="collections" /> {t('followCollections')}
               </b>
               <small>{t('followCollectionsDesc')}</small>
-            </span>
-          </label>
-          <label className="group-type-opt">
-            <input
-              type="radio"
-              name="groupfollows"
-              checked={type === 'raid'}
-              onChange={() => setType('raid')}
-            />
-            <span>
+            </button>
+            <button
+              type="button"
+              className="group-choix"
+              onClick={() => {
+                setType('raid')
+                setEtape(tier ? 'groupe' : 'palier')
+              }}
+            >
               <b>
                 <TabIcon k="raid" /> {t('followRaid')}
               </b>
               <small>{t('followRaidDesc')}</small>
-            </span>
-          </label>
-        </div>
-        {type === 'raid' && (
-          <label className="group-create-field">
-            {t('raidTier')}
-            <select value={tier} onChange={(e) => setTier(e.target.value)}>
-              {listePaliers.map((p) => (
-                <option key={p.cle} value={p.cle}>
-                  {lang === 'fr' ? p.fr : p.en}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {(repriseIds?.length ?? 0) > 0 && (
-          <div className="group-create-field">
-            {t('raidCarryOver', { nom: repriseNom ?? '' })}
-            <div className="group-reprise">
-              {repriseIds!.map((id) => (
-                <label key={id} className="check">
-                  <input
-                    type="checkbox"
-                    checked={repris.has(id)}
-                    onChange={(e) =>
-                      setRepris((prev) => {
-                        const next = new Set(prev)
-                        if (e.target.checked) next.add(id)
-                        else next.delete(id)
-                        return next
-                      })
-                    }
-                  />
-                  {charNames[id] ?? `#${id}`}
-                </label>
-              ))}
-            </div>
+            </button>
           </div>
         )}
-        <div className="group-create-field">
-          {t('createGroupType')}
-          <label className="group-type-opt">
-            <input type="radio" name="grouptype" checked={!online} onChange={() => setOnline(false)} />
-            <span>
-              <b>📁 {t('typeOffline')}</b>
-              <small>{t('typeOfflineDesc')}</small>
-            </span>
-          </label>
-          <label className={`group-type-opt ${canOnline ? '' : 'is-disabled'}`}>
-            <input
-              type="radio"
-              name="grouptype"
-              checked={online}
-              disabled={!canOnline}
-              onChange={() => setOnline(true)}
-            />
-            <span>
-              <b>🔗 {t('typeOnline')}</b>
-              <small>{canOnline ? t('typeOnlineDesc') : t('typeOnlineNeedLogin')}</small>
-            </span>
-          </label>
-        </div>
-        {verifiedIds.length > 0 ? (
-          <label className="group-create-field">
-            {t('createGroupChar')}
-            <select
-              value={charId ?? ''}
-              onChange={(e) => setCharId(e.target.value ? Number(e.target.value) : null)}
-            >
-              {verifiedIds.map((id) => (
-                <option key={id} value={id}>
-                  {charNames[id] ?? `#${id}`}
-                </option>
-              ))}
-              <option value="">{t('createGroupNoFounder')}</option>
-            </select>
-          </label>
-        ) : (
-          <p className="group-create-hint">{t('createGroupNoChar')}</p>
+
+        {/* 2. Le palier, pour le raid seulement. */}
+        {etape === 'palier' && (
+          <div className="group-create-field">
+            {t('raidTier')}
+            {listePaliers.length === 0 && <p className="group-create-hint">{t('relicsLoading')}</p>}
+            {listePaliers.map((p) => (
+              <button
+                key={p.cle}
+                type="button"
+                className="group-choix"
+                onClick={() => {
+                  setTier(p.cle)
+                  setEtape('groupe')
+                }}
+              >
+                <b>{lang === 'fr' ? p.fr : p.en}</b>
+                <small>{p.etages.map((e) => e.court).join(' · ')}</small>
+              </button>
+            ))}
+          </div>
         )}
+
+        {/* 3. Le groupe lui-meme. Chaque champ ne parait que s'il y a un choix
+            a faire : un seul perso verifie ne se choisit pas, et hors compte il
+            n'y a pas de groupe en ligne a proposer. */}
+        {etape === 'groupe' && (
+          <>
+            <label className="group-create-field">
+              {t('createGroupName')}
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('createGroupNamePh')}
+                spellCheck={false}
+              />
+            </label>
+
+            {(repriseIds?.length ?? 0) > 0 && (
+              <div className="group-create-field">
+                {t('raidCarryOver', { nom: repriseNom ?? '' })}
+                <div className="group-reprise">
+                  {repriseIds!.map((id) => (
+                    <label key={id} className="check">
+                      <input
+                        type="checkbox"
+                        checked={repris.has(id)}
+                        onChange={(e) =>
+                          setRepris((prev) => {
+                            const next = new Set(prev)
+                            if (e.target.checked) next.add(id)
+                            else next.delete(id)
+                            return next
+                          })
+                        }
+                      />
+                      {charNames[id] ?? `#${id}`}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {canOnline ? (
+              <div className="group-create-field">
+                {t('createGroupType')}
+                <label className="group-type-opt">
+                  <input
+                    type="radio"
+                    name="grouptype"
+                    checked={!online}
+                    onChange={() => setOnline(false)}
+                  />
+                  <span>
+                    <b>{t('typeOffline')}</b>
+                    <small>{t('typeOfflineDesc')}</small>
+                  </span>
+                </label>
+                <label className="group-type-opt">
+                  <input
+                    type="radio"
+                    name="grouptype"
+                    checked={online}
+                    onChange={() => setOnline(true)}
+                  />
+                  <span>
+                    <b>{t('typeOnline')}</b>
+                    <small>{t('typeOnlineDesc')}</small>
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <p className="group-create-hint">{t('typeOnlineNeedLogin')}</p>
+            )}
+
+            {verifiedIds.length > 1 && (
+              <label className="group-create-field">
+                {t('createGroupChar')}
+                <select
+                  value={charId ?? ''}
+                  onChange={(e) => setCharId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  {verifiedIds.map((id) => (
+                    <option key={id} value={id}>
+                      {charNames[id] ?? `#${id}`}
+                    </option>
+                  ))}
+                  <option value="">{t('createGroupNoFounder')}</option>
+                </select>
+              </label>
+            )}
+            {verifiedIds.length === 0 && (
+              <p className="group-create-hint">{t('createGroupNoChar')}</p>
+            )}
+          </>
+        )}
+
         <div className="group-create-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             {t('cancel')}
           </button>
-          <button type="submit" className="btn btn-primary" disabled={!name.trim()}>
-            {t('createGroupGo')}
-          </button>
+          {etape === 'groupe' && (
+            <button type="submit" className="btn btn-primary" disabled={!name.trim()}>
+              {t('createGroupGo')}
+            </button>
+          )}
         </div>
       </form>
     </div>

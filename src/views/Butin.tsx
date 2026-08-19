@@ -16,7 +16,7 @@ import {
   type Vise,
 } from '../raid'
 import { nomCourt, type Member } from '../store'
-import { onAvatarImgError, onItemImgError } from '../ui'
+import { onAvatarImgError, onItemImgError, slotIconUrl } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -83,9 +83,10 @@ export function Butin({
   const etageDe = (n: number) => palier.etages?.[n - 1]
   const nomEtage = (n: number) => etageDe(n)?.court ?? t('butinFloor', { n })
 
+  const membreDe = (charId: number) => cartes.find((x) => x.membre.id === charId)?.membre
   const nomDe = (charId: number) => {
-    const c = cartes.find((x) => x.membre.id === charId)
-    return c ? nomCourt(c.membre) : ''
+    const m = membreDe(charId)
+    return m ? nomCourt(m) : ''
   }
 
   return (
@@ -122,14 +123,41 @@ export function Butin({
                 <p className="kills-label">
                   {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
                 </p>
+                {/* Ce qui manque, en images : la silhouette de la case du jeu,
+                    et devant elle le visage de celui qui l'attend. Le meme
+                    contenu que la liste de noms d'avant, en un coup d'oeil. */}
                 {e.parJoueur.length > 0 && (
-                  <ul className="kills-detail">
-                    {e.parJoueur.map((j) => (
-                      <li key={j.charId}>
-                        <b>{nomDe(j.charId)}</b>{' '}
-                        {j.emplacements.map((x) => (lang === 'fr' ? x.fr : x.en)).join(', ')}
-                      </li>
-                    ))}
+                  <ul className="kills-besoins">
+                    {e.parJoueur.flatMap((j) => {
+                      const membre = membreDe(j.charId)
+                      return j.emplacements.map((emp) => (
+                        <li
+                          key={`${j.charId}.${emp.cle}`}
+                          title={`${nomDe(j.charId)} · ${lang === 'fr' ? emp.fr : emp.en}`}
+                        >
+                          <img
+                            className="besoin-case"
+                            src={slotIconUrl(emp.cle) ?? emp.icon}
+                            alt=""
+                            width={34}
+                            height={34}
+                            loading="lazy"
+                            onError={onItemImgError}
+                          />
+                          {membre && (
+                            <img
+                              className="besoin-avatar"
+                              src={membre.data.avatar}
+                              alt=""
+                              width={20}
+                              height={20}
+                              loading="lazy"
+                              onError={onAvatarImgError}
+                            />
+                          )}
+                        </li>
+                      ))
+                    })}
                   </ul>
                 )}
               </div>

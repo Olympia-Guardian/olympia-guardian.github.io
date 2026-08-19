@@ -2708,16 +2708,40 @@ a.player-name:hover {
   color: var(--good);
 }
 
-.kills-detail {
+/* Ce qui manque a l'etage, en images : la silhouette de la case du jeu, et
+   devant elle le visage de celui qui l'attend. */
+.kills-besoins {
   list-style: none;
   margin: 10px 0 0;
   padding: 8px 0 0;
   border-top: 1px solid var(--hairline);
-  font-size: 12px;
-  color: var(--ink-2);
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.kills-besoins li {
+  position: relative;
+  line-height: 0;
+}
+
+.besoin-case {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: var(--radius-s);
+  opacity: 0.75;
+}
+
+.besoin-avatar {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid var(--surface);
 }
 
 /* Une carte par joueur. Le tableau croise disait la meme chose, mais il fallait
@@ -3122,6 +3146,59 @@ a.player-name:hover {
 
 .bis-vide {
   margin-top: 12px;
+}
+
+/* La creation de groupe avance par etapes : un choix par ecran, et le fil
+   rappelle ce qui est deja decide avec de quoi y revenir. */
+/* Le fil se clique pour revenir sur un choix : un bouton qui a l'air d'un
+   lien, la classe n'existait nulle part ailleurs. */
+.group-fil .lien {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--gold);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.group-fil {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.group-choix {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.group-choix:hover {
+  border-color: var(--gold);
+}
+
+.group-choix b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-choix small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-2);
 }
 
 /* ------------------------------------------------ catalogue des icones */

@@ -23,6 +23,7 @@ import { ancre, ecrireAncre } from '../routes'
 import {
   Meter,
   ROLL_ICON,
+  itemIcon,
   TabIcon,
   TypeChip,
   onAvatarImgError,
@@ -168,6 +169,7 @@ function SourceIcon({ s }: { s: { type: string; text: string; textEn: string } }
 
 function ItemPanel({
   item,
+  kind,
   owned,
   readOnly,
   onToggle,
@@ -176,6 +178,8 @@ function ItemPanel({
   onTogglePiece,
 }: {
   item: Item
+  /** Collection d'ou vient l'objet : l'orchestrion n'a pas de vignette propre. */
+  kind?: Kind
   owned: boolean
   readOnly?: boolean
   onToggle: () => void
@@ -191,7 +195,13 @@ function ItemPanel({
       <button className="icon-btn item-panel-close" title={t('close')} onClick={onClose}>
         ×
       </button>
-      <img className="item-panel-image" src={item.image} alt="" loading="lazy" onError={onItemImgError} />
+      <img
+        className="item-panel-image"
+        src={itemIcon(kind ?? '', item.image)}
+        alt=""
+        loading="lazy"
+        onError={onItemImgError}
+      />
       <h3 className="item-panel-name">{localName(item, lang)}</h3>
       {item.itemName && <p className="modal-en">{localItemName(item, lang)}</p>}
       {item.nameEn !== localName(item, lang) && <p className="modal-en">{item.nameEn}</p>}
@@ -1306,6 +1316,7 @@ function CollectionEditor({
         {selected && (
           <ItemPanel
             item={selected}
+            kind={kind}
             owned={shownIds.has(selected.id)}
             readOnly={readOnly}
             onToggle={() => toggleShown(selected)}

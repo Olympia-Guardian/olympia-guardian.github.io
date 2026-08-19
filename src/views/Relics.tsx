@@ -897,9 +897,6 @@ function RelicSummary({
 }) {
   const { lang, t } = useI18n()
   const totalAll = db.relics.length
-  const headerTotal = cdb
-    ? (avecReliques ? totalAll : 0) + kinds.reduce((s, k) => s + cdb[k].length, 0)
-    : totalAll
 
   // Reliques possedees, par joueur : la seule collection qui ne se lise pas
   // directement sur la fiche du personnage.
@@ -948,6 +945,16 @@ function RelicSummary({
       })
     return cols
   }, [ready, reliques, totalAll, lang, t, kinds, avecReliques])
+
+  // Le nombre du bandeau se DEDUIT des sections. Il comptait auparavant le
+  // catalogue entier, boutique et version 1.0 comprises : depuis que ces
+  // 1 171 objets sont sortis des compteurs, il annoncait 14 091 au-dessus de
+  // barres qui en totalisaient 12 920. Un chiffre qui contredit l'ecran qu'il
+  // coiffe vaut moins que pas de chiffre du tout.
+  const headerTotal = useMemo(
+    () => (cdb ? sections.reduce((n, sec) => n + sec.total, 0) : totalAll),
+    [cdb, sections, totalAll],
+  )
 
   // Classement general : tout ce qui se collectionne, reliques comprises.
   const general = useMemo(() => {

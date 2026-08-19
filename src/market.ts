@@ -86,6 +86,38 @@ export function centreDe(monde: string): string | null {
 /** Offres les moins chères de chaque objet sur un centre de données.
  *  `onProgress` permet d'afficher l'avancement : une recherche large peut
  *  demander une dizaine de requêtes. */
+/** Prix moyen de vente, lu sur le point d'entree AGREGE d'Universalis. Il le
+ *  precalcule : cent objets reviennent en une seconde, la ou le meme calcul
+ *  demande au vol expirait des vingt objets.
+ *
+ *  En portee « centre », la valeur est dans `dc` ; en portee « region », dans
+ *  `region`. Un echec ne fait rien perdre : la liste des offres reste juste,
+ *  seule la comparaison manque. */
+async function moyennesAgregees(dc: string, ids: number[]): Promise<MoyenneMap> {
+  const out: MoyenneMap = new Map()
+  try {
+    const res = await fetch(
+      `https://universalis.app/api/v2/aggregated/${encodeURIComponent(dc)}/${ids.join(',')}`,
+      { signal: AbortSignal.timeout(20000) },
+    )
+    if (!res.ok) return out
+    const j = (await res.json()) as {
+      results?: {
+        itemId?: number
+        nq?: { averageSalePrice?: { dc?: { price?: number }; region?: { price?: number } } }
+      }[]
+    }
+    for (const r of j.results ?? []) {
+      const a = r.nq?.averageSalePrice
+      const prix = a?.dc?.price ?? a?.region?.price ?? 0
+      if (r.itemId && prix > 0) out.set(r.itemId, prix)
+    }
+  } catch {
+    // sans moyenne, on affiche simplement le prix sans commentaire
+  }
+  return out
+}
+
 export async function fetchPrices(
   dc: string,
   itemIds: number[],
@@ -109,23 +141,28 @@ export async function fetchPrices(
 
   let fait = 0
   for (const lot of lots) {
+    // `entries=0` : surtout ne pas demander l'historique ici. Universalis le
+    // recalcule objet par objet et sa passerelle coupe a dix secondes — vingt
+    // objets suffisaient a la faire expirer. Et comme une erreur de leur cote
+    // ne porte pas d'en-tetes CORS, le navigateur annoncait un probleme de
+    // CORS la ou il n'y avait qu'un delai depasse.
+    const url =
+      `https://universalis.app/api/v2/${encodeURIComponent(dc)}/${lot.join(',')}` +
+      `?listings=8&entries=0&fields=items.listings.pricePerUnit%2Citems.listings.worldName%2Citems.listings.quantity%2CitemID%2Clistings.pricePerUnit%2Clistings.worldName%2Clistings.quantity`
+    // Les deux partent ensemble : la moyenne n'allonge pas l'attente.
+    const [reponse, moyennesDuLot] = await Promise.all([
+      fetch(url, { signal: AbortSignal.timeout(20000) }).catch(() => null),
+      moyennesAgregees(dc, lot),
+    ])
+    for (const [id, m] of moyennesDuLot) moyennes.set(id, m)
     try {
-      // `entries=20` ne ramene PAS l'historique : le filtre `fields` l'ecarte
-      // de la reponse. Il dit seulement sur combien de ventes Universalis
-      // calcule `averagePrice` — a 0, la moyenne vaut 0. Vingt ventes donnent
-      // un repere stable ; cinq couvraient parfois vingt-cinq minutes.
-      const url =
-        `https://universalis.app/api/v2/${encodeURIComponent(dc)}/${lot.join(',')}` +
-        `?listings=8&entries=20&fields=items.listings.pricePerUnit%2Citems.listings.worldName%2Citems.listings.quantity%2Citems.averagePrice%2CitemID%2Clistings.pricePerUnit%2Clistings.worldName%2Clistings.quantity%2CaveragePrice`
-      const res = await fetch(url, { signal: AbortSignal.timeout(20000) })
-      if (res.ok) {
-        const j = await res.json()
+      if (reponse?.ok) {
+        const j = await reponse.json()
         // Un seul identifiant demandé : la réponse n'est pas enveloppée.
         const items: Record<string, unknown> =
           j.items ?? (j.itemID ? { [j.itemID]: j } : {})
         for (const [k, v] of Object.entries(items)) {
           const brut = (v as { listings?: unknown[] }).listings ?? []
-          const moyenne = (v as { averagePrice?: number }).averagePrice ?? 0
           const offres: Listing[] = brut
             .map((l) => {
               const o = l as { pricePerUnit?: number; worldName?: string; quantity?: number }
@@ -134,14 +171,13 @@ export async function fetchPrices(
             .filter((o) => o.price > 0)
             .sort((a, b) => a.price - b.price)
           const id = Number(k)
-          if (moyenne > 0) moyennes.set(id, moyenne)
           if (offres.length > 0) {
             out.set(id, offres)
             memoire.set(`${dc}:${id}`, {
               at: Date.now(),
               dc,
               offres: { [id]: offres },
-              moyenne: moyenne > 0 ? moyenne : undefined,
+              moyenne: moyennesDuLot.get(id),
             })
           }
         }

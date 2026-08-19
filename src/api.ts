@@ -236,6 +236,8 @@ export type Character = { [K in Kind]: CharCollection } & {
   relicIds: number[]
   /** Pièces de tenues possédées (un ensemble complet devient possédé tout seul). */
   outfitPieceIds: number[]
+  /** Coffres de raid deja pris, par identifiant d'emplacement. */
+  raidIds: number[]
   /** Profil Lodestone étendu (absent tant que la fiche n'a pas été re-scrapée). */
   profile: CharProfile | null
   /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
@@ -276,6 +278,7 @@ const CACHE_MAX_CHARS = 300_000
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
+const RAID_V = 'v1'
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
@@ -441,6 +444,7 @@ function mapCharacter(r: any): Character {
     profile: r.profile ?? null,
     nextForceAt: r.next_force_at ?? 0,
     outfitPieceIds: (r.outfit_piece_ids as number[] | undefined) ?? [],
+    raidIds: (r.raid_ids as number[] | undefined) ?? [],
     ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??
@@ -603,6 +607,52 @@ export interface RelicSeriesInfo {
 export interface RelicDb {
   series: RelicSeriesInfo[]
   relics: Relic[]
+}
+
+// ---------------------------------------------------------------------------
+// Équipement de raid
+// ---------------------------------------------------------------------------
+
+/** Un emplacement qui tombe dans un palier. C'est le COFFRE qui se distribue le
+ *  soir du raid, pas la variante par job : dix emplacements suffisent à suivre
+ *  un joueur, là où le palier compte 88 objets. */
+export interface RaidEmplacement {
+  cle: string
+  /** Étage qui le lâche, de 1 à 4. */
+  etage: number
+  /** Identifiant du coffre dans les données du jeu. */
+  id: number
+  fr: string
+  en: string
+  objetFr: string
+  objetEn: string
+  icon: string
+}
+
+export interface RaidPalier {
+  cle: string
+  fr: string
+  en: string
+  ilvl: number
+  emplacements: RaidEmplacement[]
+}
+
+export interface RaidDb {
+  paliers: RaidPalier[]
+}
+
+export async function fetchRaidDb(): Promise<RaidDb> {
+  const cacheKey = `ogs.db.raid.${RAID_V}`
+  const cached = readCache<RaidDb>(cacheKey, DB_TTL)
+  if (cached) return cached
+  const res = await fetch(`${import.meta.env.BASE_URL}data/raid.json`, {
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!res.ok) throw new Error(`raid ${res.status}`)
+  const db = (await res.json()) as RaidDb
+  if (!db?.paliers?.length) throw new Error('raid: catalogue vide')
+  writeCache(cacheKey, db)
+  return db
 }
 
 export async function fetchRelicDb(force = false): Promise<RelicDb> {

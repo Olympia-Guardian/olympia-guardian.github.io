@@ -3,10 +3,12 @@ import {
   KINDS,
   fetchCharacter,
   fetchDb,
+  fetchRaidDb,
   fetchRelicDb,
   type Character,
   type Item,
   type Kind,
+  type RaidDb,
   type RelicDb,
 } from './api'
 
@@ -100,6 +102,26 @@ export function useDataAge(): number | null {
 }
 
 /** Base des reliques (chargée en parallèle, la vue Reliques attend son arrivée). */
+/** Paliers de raid. Chargés à la demande : seuls les groupes de raid les
+ *  lisent, inutile de les descendre à tout le monde au démarrage. */
+export function useRaidDb() {
+  const [raidDb, setRaidDb] = useState<RaidDb | null>(null)
+  useEffect(() => {
+    let annule = false
+    fetchRaidDb()
+      .then((db) => {
+        if (!annule) setRaidDb(db)
+      })
+      .catch(() => {
+        // la vue affichera l'état de chargement ; un rechargement réessaie
+      })
+    return () => {
+      annule = true
+    }
+  }, [])
+  return raidDb
+}
+
 export function useRelicDb() {
   const [relicDb, setRelicDb] = useState<RelicDb | null>(null)
   useEffect(() => {

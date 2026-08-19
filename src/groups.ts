@@ -33,6 +33,7 @@ import {
   apiRotateInvite,
   type ApiGroup,
   type ApiGroupRequest,
+  type TypeGroupe,
   type InviteStatus,
 } from './groupsApi'
 import { WORKER_API } from './api'
@@ -42,6 +43,10 @@ import { lienPartage } from './routes'
 export interface Group {
   id: string // « loc-… » (navigateur) ou « grp-… » (compte)
   name: string
+  /** Ce que le groupe suit : les collections, ou l'equipement d'un palier. */
+  type: TypeGroupe
+  /** Palier suivi — groupes de raid seulement. */
+  tier?: string
   shared: boolean
   mine: 'owner' | 'member' | 'guest'
   members: number[]
@@ -97,6 +102,8 @@ function writeJson(key: string, value: unknown): void {
 type LocalGroup = {
   id: string
   name: string
+  type?: TypeGroupe
+  tier?: string
   members: number[]
   aliases?: Record<number, string>
 }
@@ -117,6 +124,10 @@ function localToGroup(g: LocalGroup): Group {
   return {
     id: g.id,
     name: g.name,
+    // Les groupes enregistres avant les groupes de raid n'ont pas de type :
+    // ce sont tous des groupes de collection.
+    type: g.type ?? 'collection',
+    tier: g.tier,
     shared: false,
     mine: 'owner',
     members: g.members,
@@ -128,6 +139,8 @@ function apiToGroup(g: ApiGroup): Group {
   return {
     id: g.id,
     name: g.name,
+    type: g.type ?? 'collection',
+    tier: g.tier,
     shared: g.shared,
     mine: g.mine,
     members: g.members,
@@ -428,15 +441,21 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
   /** Crée un groupe. Offline (défaut) : compte si connecté, navigateur sinon.
    *  Online (shared) : en base avec code d'invitation — connexion requise. */
   const create = useCallback(
-    async (name: string, members: number[] = [], online = false): Promise<string> => {
+    async (
+      name: string,
+      members: number[] = [],
+      online = false,
+      type: TypeGroupe = 'collection',
+      tier?: string,
+    ): Promise<string> => {
       if (online && !tokenRef.current) throw new Error('login required')
       if (tokenRef.current) {
-        const g = await apiCreateGroup(tokenRef.current, name, members, online)
+        const g = await apiCreateGroup(tokenRef.current, name, members, online, type, tier)
         setServer((prev) => [...prev, g])
         setActive(g.id)
         return g.id
       }
-      const g: LocalGroup = { id: newLocalId(), name, members }
+      const g: LocalGroup = { id: newLocalId(), name, members, type, tier }
       persistLocals([...readLocalGroups(), g])
       setActive(g.id)
       return g.id

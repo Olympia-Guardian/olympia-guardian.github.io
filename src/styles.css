@@ -2608,6 +2608,53 @@ a.player-name:hover {
 
 /* L'étoile suit le nom de l'objet, dans les grilles comme dans les résultats
    du marché : elle dit « tu le veux », pas « tu l'as ». */
+/* ------------------------------------------------------ butin de raid */
+
+/* Une table par etage : c'est ainsi qu'on farme, on ne fait pas « les bottes »,
+   on fait le deuxieme etage et on regarde ce qu'il lache. */
+.butin-etage {
+  border-left: 3px solid var(--gold);
+}
+
+.butin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.butin-table th,
+.butin-table td {
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.butin-table tbody tr {
+  border-top: 1px solid var(--hairline);
+}
+
+/* L'emplacement tient la colonne de gauche, avec l'image du coffre : on
+   reconnait un coffre a sa vignette bien avant d'avoir lu son nom. */
+.butin-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.butin-slot img {
+  border-radius: var(--radius-s);
+  flex-shrink: 0;
+}
+
+.butin-reste {
+  text-align: right;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* ------------------------------------------------ catalogue des icones */
 
 .admin-icons {

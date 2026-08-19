@@ -11,9 +11,17 @@ export interface ApiGroupRequest {
   created: number
 }
 
+/** Ce que suit un groupe. « collection » croise les collections cosmetiques ;
+ *  « raid » suit l'equipement d'UN palier savage et n'a ni planning, ni
+ *  collections, ni avancement. */
+export type TypeGroupe = 'collection' | 'raid'
+
 export interface ApiGroup {
   id: string
   name: string
+  type: TypeGroupe
+  /** Cle du palier suivi, presente sur les groupes de raid seulement. */
+  tier?: string
   shared: boolean
   updated: number
   mine: 'owner' | 'member' | 'guest'
@@ -70,8 +78,13 @@ export function apiCreateGroup(
   name: string,
   members: number[],
   shared = false,
+  type: TypeGroupe = 'collection',
+  tier?: string,
 ): Promise<ApiGroup> {
-  return call('/groups', token, { method: 'POST', body: { name, members, shared } })
+  return call('/groups', token, {
+    method: 'POST',
+    body: { name, members, shared, type, ...(tier ? { tier } : {}) },
+  })
 }
 
 export function apiGetGroup(id: string, token: string | null): Promise<ApiGroup> {

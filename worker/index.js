@@ -661,6 +661,10 @@ async function getCharacter(env, id, force, connecte = true) {
     minions: block('minions', !!char.public_minions),
     ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),
     relicIds: byKind.relics ?? [],
+    // Butin de raid deja pris. Volontairement absent de missingKinds : cette
+    // liste ne vient d'aucune source exterieure, donc son absence ne doit pas
+    // declencher un amorcage FFXIV Collect qui n'aurait rien a apporter.
+    raid_ids: byKind.raid ?? [],
     outfit_piece_ids: byKind.outfitpieces ?? [],
     needsSeed,
   }
@@ -1176,8 +1180,9 @@ async function putCollections(env, user, charId, raw) {
   // synchro Lodestone réécrit ces deux collections (source lodestone).
   // outfitpieces : pièces de tenues possédées (stockage auxiliaire, comme
   // relics — un ensemble dont toutes les pièces sont là devient possédé).
+  // raid : coffres deja pris dans un palier savage, meme nature auxiliaire.
   const deltas = []
-  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces']) {
+  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raid']) {
     const v = doc?.[kind]
     if (v === undefined) continue
     if (Array.isArray(v)) {
@@ -1448,7 +1453,7 @@ function validCharId(id) {
 
 async function groupRow(env, id) {
   return env.DB.prepare(
-    'SELECT id, name, owner_user_id, shared, invite_code, updated FROM groups WHERE id = ?1',
+    'SELECT id, name, owner_user_id, shared, type, tier, invite_code, updated FROM groups WHERE id = ?1',
   )
     .bind(id)
     .first()
@@ -1512,6 +1517,11 @@ function groupJson(row, members, userId) {
     shared: !!row.shared,
     updated: row.updated,
     mine: userId ? (owner ? 'owner' : 'member') : 'guest',
+    // 'collection' par defaut : les groupes crees avant les groupes de raid
+    // n'ont pas la colonne renseignee, et ils sont tous des groupes de
+    // collection.
+    type: row.type === 'raid' ? 'raid' : 'collection',
+    ...(row.tier ? { tier: row.tier } : {}),
     members: ids,
     ...(Object.keys(aliases).length > 0 ? { aliases } : {}),
     // Le code d'invitation ne sort que pour le propriétaire.
@@ -1523,7 +1533,7 @@ function groupJson(row, members, userId) {
  *  mes groupes, les demandes d'adhésion en attente. */
 async function listGroups(env, user) {
   const groups = await env.DB.prepare(
-    'SELECT g.id, g.name, g.owner_user_id, g.shared, g.invite_code, g.updated FROM group_links l ' +
+    'SELECT g.id, g.name, g.owner_user_id, g.shared, g.type, g.tier, g.invite_code, g.updated FROM group_links l ' +
       'JOIN groups g ON g.id = l.group_id WHERE l.user_id = ?1 ORDER BY l.added',
   )
     .bind(user.id)
@@ -1611,10 +1621,16 @@ async function createGroup(env, user, raw) {
   const now = Date.now()
   const shared = body?.shared ? 1 : 0
   const inviteCode = shared ? newInviteCode() : null
+  // Un groupe de raid suit un palier ; un groupe de collection n'en suit aucun.
+  // On refuse la combinaison inverse plutot que de la corriger en silence.
+  const type = body?.type === 'raid' ? 'raid' : 'collection'
+  const tier = type === 'raid' && typeof body?.tier === 'string' ? body.tier.slice(0, 40) : null
+  if (type === 'raid' && !tier) return response('{"error":"missing tier"}', 422)
   const stmts = [
     env.DB.prepare(
-      'INSERT INTO groups (id, name, owner_user_id, shared, invite_code, created, updated) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)',
-    ).bind(id, body.name.trim(), user.id, shared, inviteCode, now),
+      'INSERT INTO groups (id, name, owner_user_id, shared, type, tier, invite_code, created, updated) ' +
+        'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)',
+    ).bind(id, body.name.trim(), user.id, shared, type, tier, inviteCode, now),
     env.DB.prepare('INSERT INTO group_links (user_id, group_id, added) VALUES (?1, ?2, ?3)').bind(
       user.id,
       id,
@@ -1629,7 +1645,16 @@ async function createGroup(env, user, raw) {
   return response(
     JSON.stringify(
       groupJson(
-        { id, name: body.name.trim(), owner_user_id: user.id, shared, invite_code: inviteCode, updated: now },
+        {
+          id,
+          name: body.name.trim(),
+          owner_user_id: user.id,
+          shared,
+          type,
+          tier,
+          invite_code: inviteCode,
+          updated: now,
+        },
         members,
         user.id,
       ),

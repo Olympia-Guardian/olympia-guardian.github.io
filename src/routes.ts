@@ -37,6 +37,8 @@ export type Tab =
   | 'news'
   | 'account'
   | 'login'
+  /** Groupes de raid : le butin d'un palier, emplacement par emplacement. */
+  | 'butin'
 
 /** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
 export const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
@@ -54,6 +56,7 @@ const CHEMINS: Record<string, Tab> = {
   account: 'account',
   login: 'login',
   admin: 'admin',
+  butin: 'butin',
 }
 
 /** Section → chemin, pour écrire l'adresse. */

@@ -18,6 +18,7 @@ import {
   useMembers,
   useOwnedSets,
   useReadyMembers,
+  useRaidDb,
   useRelicDb,
 } from './store'
 import { apiSuggest } from './groupsApi'
@@ -45,6 +46,7 @@ import { GroupCreateDialog, GroupsPage } from './views/Groups'
 import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
+import { Butin } from './views/Butin'
 import { Relics } from './views/Relics'
 
 /** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
@@ -96,6 +98,7 @@ export default function App() {
   const langValue = useMemo(() => ({ lang, setLang, t }), [lang, t])
 
   const relicDb = useRelicDb()
+  const raidDb = useRaidDb()
 
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
   const auth = useAuth()
@@ -370,6 +373,40 @@ export default function App() {
     if (horsCompte && tab === 'fashion') setTab('collections')
   }, [horsCompte, tab])
 
+  /** Coffres deja pris, par personnage. */
+  const butinPris = useMemo(
+    () => new Map(ready.map((m) => [m.id, new Set(m.data.raidIds)])),
+    [ready],
+  )
+
+  /** Cocher un coffre : seul le proprietaire verifie du perso peut le faire,
+   *  le worker le verifie de son cote. */
+  async function basculerButin(charId: number, coffreId: number) {
+    if (!verifiedIds.includes(charId)) return
+    const pris = butinPris.get(charId)?.has(coffreId) ?? false
+    try {
+      await auth.saveCollections(charId, {
+        raid: pris ? { remove: [coffreId] } : { add: [coffreId] },
+      })
+      invalidateCharacter(charId)
+      reload(charId)
+    } catch {
+      // le worker a refuse : rien n'est ecrit, la case reste comme elle etait
+    }
+  }
+
+  // Un groupe de raid ne parle pas de cosmetique : ni planning, ni collections,
+  // ni avancement. Il montre le butin du palier qu'il suit, et rien d'autre.
+  const enRaid = grp.active?.type === 'raid'
+
+  // Changer de groupe change les ecrans disponibles : rester sur le planning
+  // d'un groupe de raid, ou sur le butin d'un groupe de collection, laisserait
+  // un ecran vide sans onglet pour en sortir.
+  useEffect(() => {
+    if (enRaid && tab !== 'butin' && tab !== 'groups' && tab !== 'mypage') setTab('butin')
+    if (!enRaid && tab === 'butin') setTab('planning')
+  }, [enRaid, tab])
+
   // « Avancement » disparaît quand on se retrouve seul (groupe quitté, membre
   // retiré, lien partagé). Sans ce garde-fou, l'écran resterait affiché sans
   // onglet pour y revenir ni pour en sortir.
@@ -433,13 +470,15 @@ export default function App() {
   // contre qui se mesurer, et la page se resume a un podium a une marche.
   const enGroupe = (grp.active?.members.length ?? 0) > 1
 
-  const TABS: { id: Tab; label: string; icon: string }[] = [
-    { id: 'planning', label: t('planning'), icon: 'planning' },
-    { id: 'collections', label: t('collections'), icon: 'collections' },
-    ...(enGroupe
-      ? [{ id: 'relics' as Tab, label: t('groupProgressTab'), icon: 'avancement' }]
-      : []),
-  ]
+  const TABS: { id: Tab; label: string; icon: string }[] = enRaid
+    ? [{ id: 'butin', label: t('butinTab'), icon: 'raid' }]
+    : [
+        { id: 'planning', label: t('planning'), icon: 'planning' },
+        { id: 'collections', label: t('collections'), icon: 'collections' },
+        ...(enGroupe
+          ? [{ id: 'relics' as Tab, label: t('groupProgressTab'), icon: 'avancement' }]
+          : []),
+      ]
 
   return (
     <LangContext.Provider value={langValue}>
@@ -1004,6 +1043,7 @@ export default function App() {
               tab !== 'login' &&
               tab !== 'fashion' &&
               tab !== 'collections' &&
+              tab !== 'butin' &&
               dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
             {db &&
               activeReady.length > 0 &&
@@ -1019,6 +1059,7 @@ export default function App() {
               tab !== 'login' &&
               tab !== 'fashion' &&
               tab !== 'collections' &&
+              tab !== 'butin' &&
               !dbPending.has(tab) && (
               <Matrix
                 key={tab}
@@ -1074,9 +1115,27 @@ export default function App() {
               ) : (
                 <p className="empty">{t('relicsLoading')}</p>
               ))}
+            {tab === 'butin' &&
+              (() => {
+                const palier = raidDb?.paliers.find((p) => p.cle === grp.active?.tier)
+                if (!raidDb) return <p className="empty">{t('relicsLoading')}</p>
+                if (!palier) return <p className="empty">{t('butinNoTier')}</p>
+                return (
+                  <Butin
+                    palier={palier}
+                    ready={activeReady}
+                    obtenus={butinPris}
+                    // On ne coche que POUR SOI : le butin d'un autre est le
+                    // sien, et l'application n'a jamais laisse personne cocher
+                    // a la place d'un tiers.
+                    onToggle={auth.token ? basculerButin : undefined}
+                  />
+                )
+              })()}
             {tab === 'groups' && (
               <GroupsPage
                 grp={grp}
+                paliers={raidDb?.paliers ?? null}
                 verifiedIds={verifiedIds}
                 canOnline={!!auth.token}
                 contacts={contacts}
@@ -1162,9 +1221,12 @@ export default function App() {
           <GroupCreateDialog
             verifiedIds={verifiedIds}
             canOnline={!!auth.token}
-            onCreate={(name, members, online) => {
+            paliers={raidDb?.paliers ?? null}
+            repriseNom={grp.active?.name}
+            repriseIds={grp.active?.members}
+            onCreate={(name, members, online, type, tier) => {
               setCreatingGroup(false)
-              void grp.create(name, members, online).catch((e) =>
+              void grp.create(name, members, online, type, tier).catch((e) =>
                 alert(e instanceof Error ? e.message : String(e)),
               )
             }}

@@ -3,12 +3,18 @@
 // renommage, rotation du lien, suppression. Le panneau latéral ne garde que
 // la bascule rapide ; tout le reste se gère ici.
 
-import { useEffect, useState, type FormEvent } from 'react'
-import { fetchCharacter, parseLodestoneId, KINDS, type Character } from '../api'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  fetchCharacter,
+  parseLodestoneId,
+  KINDS,
+  type Character,
+  type RaidPalier,
+} from '../api'
 import type { ContactsController } from '../contacts'
 import { ancre, ecrireAncre, lienPartage } from '../routes'
 import type { GroupsController, Group } from '../groups'
-import { apiGroupInvite, type ApiContact } from '../groupsApi'
+import { apiGroupInvite, type ApiContact, type TypeGroupe } from '../groupsApi'
 import { useI18n } from '../i18n'
 import { TabIcon, onAvatarImgError } from '../ui'
 
@@ -31,23 +37,47 @@ function useChar(charId: number): Character | null {
 export function GroupCreateDialog({
   verifiedIds,
   canOnline,
+  paliers,
+  repriseNom,
+  repriseIds,
   onCreate,
   onClose,
 }: {
   verifiedIds: number[]
   /** Connecté : les groupes en ligne (invitations) sont possibles. */
   canOnline: boolean
-  onCreate: (name: string, members: number[], online: boolean) => void
+  /** Paliers de raid disponibles, null tant qu'ils chargent. */
+  paliers: RaidPalier[] | null
+  /** Groupe dont on peut reprendre les membres, s'il y en a un. */
+  repriseNom?: string
+  repriseIds?: number[]
+  onCreate: (
+    name: string,
+    members: number[],
+    online: boolean,
+    type: TypeGroupe,
+    tier?: string,
+  ) => void
   onClose: () => void
 }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [name, setName] = useState('')
   const [online, setOnline] = useState(false)
+  const [type, setType] = useState<TypeGroupe>('collection')
+  const [tier, setTier] = useState('')
+  // Un palier qui vient de sortir interesse plus que celui d'il y a trois ans :
+  // la liste arrive du plus recent au plus ancien.
+  const listePaliers = useMemo(() => [...(paliers ?? [])].reverse(), [paliers])
+  useEffect(() => {
+    if (!tier && listePaliers.length > 0) setTier(listePaliers[0].cle)
+  }, [tier, listePaliers])
+  // Reprise : tout le monde est coche au depart, on decoche qui ne suit pas.
+  const [repris, setRepris] = useState<Set<number>>(() => new Set(repriseIds ?? []))
   const [charId, setCharId] = useState<number | null>(verifiedIds[0] ?? null)
   const [charNames, setCharNames] = useState<Record<number, string>>({})
   useEffect(() => {
     let alive = true
-    for (const id of verifiedIds) {
+    for (const id of [...verifiedIds, ...(repriseIds ?? [])]) {
       fetchCharacter(id)
         .then((c) => alive && setCharNames((prev) => ({ ...prev, [id]: c.name })))
         .catch(() => alive && setCharNames((prev) => ({ ...prev, [id]: `#${id}` })))
@@ -61,7 +91,10 @@ export function GroupCreateDialog({
     e.preventDefault()
     const n = name.trim()
     if (!n) return
-    onCreate(n, charId !== null ? [charId] : [], online)
+    // Le perso fondateur et les membres repris forment une seule liste, sans
+    // doublon si le fondateur faisait deja partie du groupe d'origine.
+    const membres = [...new Set([...(charId !== null ? [charId] : []), ...repris])]
+    onCreate(n, membres, online, type, type === 'raid' ? tier : undefined)
   }
 
   return (
@@ -84,6 +117,73 @@ export function GroupCreateDialog({
             spellCheck={false}
           />
         </label>
+        <div className="group-create-field">
+          {t('groupFollows')}
+          <label className="group-type-opt">
+            <input
+              type="radio"
+              name="groupfollows"
+              checked={type === 'collection'}
+              onChange={() => setType('collection')}
+            />
+            <span>
+              <b>
+                <TabIcon k="collections" /> {t('followCollections')}
+              </b>
+              <small>{t('followCollectionsDesc')}</small>
+            </span>
+          </label>
+          <label className="group-type-opt">
+            <input
+              type="radio"
+              name="groupfollows"
+              checked={type === 'raid'}
+              onChange={() => setType('raid')}
+            />
+            <span>
+              <b>
+                <TabIcon k="raid" /> {t('followRaid')}
+              </b>
+              <small>{t('followRaidDesc')}</small>
+            </span>
+          </label>
+        </div>
+        {type === 'raid' && (
+          <label className="group-create-field">
+            {t('raidTier')}
+            <select value={tier} onChange={(e) => setTier(e.target.value)}>
+              {listePaliers.map((p) => (
+                <option key={p.cle} value={p.cle}>
+                  {lang === 'fr' ? p.fr : p.en}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {(repriseIds?.length ?? 0) > 0 && (
+          <div className="group-create-field">
+            {t('raidCarryOver', { nom: repriseNom ?? '' })}
+            <div className="group-reprise">
+              {repriseIds!.map((id) => (
+                <label key={id} className="check">
+                  <input
+                    type="checkbox"
+                    checked={repris.has(id)}
+                    onChange={(e) =>
+                      setRepris((prev) => {
+                        const next = new Set(prev)
+                        if (e.target.checked) next.add(id)
+                        else next.delete(id)
+                        return next
+                      })
+                    }
+                  />
+                  {charNames[id] ?? `#${id}`}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="group-create-field">
           {t('createGroupType')}
           <label className="group-type-opt">
@@ -682,6 +782,7 @@ function GroupCard({
 
 export function GroupsPage({
   grp,
+  paliers,
   verifiedIds,
   canOnline,
   contacts,
@@ -689,6 +790,7 @@ export function GroupsPage({
   myUserId,
 }: {
   grp: GroupsController
+  paliers: RaidPalier[] | null
   verifiedIds: number[]
   canOnline: boolean
   contacts: ContactsController
@@ -776,9 +878,12 @@ export function GroupsPage({
         <GroupCreateDialog
           verifiedIds={verifiedIds}
           canOnline={canOnline}
-          onCreate={(name, members, online) => {
+          paliers={paliers}
+          repriseNom={grp.active?.name}
+          repriseIds={grp.active?.members}
+          onCreate={(name, members, online, type, tier) => {
             setCreating(false)
-            void grp.create(name, members, online).catch((e) =>
+            void grp.create(name, members, online, type, tier).catch((e) =>
               alert(e instanceof Error ? e.message : String(e)),
             )
           }}

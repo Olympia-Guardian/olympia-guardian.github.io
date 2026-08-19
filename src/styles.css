@@ -2862,7 +2862,10 @@ a.player-name:hover {
   line-height: 0;
 }
 
-.bis-vignette img {
+/* La piece porte sa propre classe : viser « .bis-vignette img » attrapait
+   aussi le badge, et avec plus de poids que sa propre regle, ce qui le
+   gonflait a la taille de l'objet. */
+.bis-objet {
   width: 40px;
   height: 40px;
   object-fit: contain;
@@ -2874,26 +2877,26 @@ a.player-name:hover {
    l'etage, lui, est passe sous l'objet, ou il se lit vraiment. */
 .bis-marque {
   position: absolute;
-  right: -5px;
-  bottom: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 3px;
+  right: -3px;
+  bottom: -3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 2px;
   border-radius: 999px;
   border: 1px solid var(--surface-2);
   background: var(--good);
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 16px;
+  line-height: 13px;
   text-align: center;
 }
 
 /* Pour le memoquartz, la marque est le COMPOSANT lui-meme : voir la fibre sur
    la vignette dit ce qu'elle coute mieux que le mot « memoquartz ». */
 .bis-marque-img {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   background: none;
   border-radius: 4px;

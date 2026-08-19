@@ -364,6 +364,7 @@ function Pastille({
       >
         <span className="bis-vignette">
           <img
+            className="bis-objet"
             src={piece ? iconeObjet(piece.icone) : emplacement.icon}
             alt=""
             width={40}

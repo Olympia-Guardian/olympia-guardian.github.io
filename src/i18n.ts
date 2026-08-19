@@ -157,6 +157,23 @@ const STR = {
   },
   adminTabAccounts: { fr: 'Comptes', en: 'Accounts' },
   adminTabGroups: { fr: 'Groupes', en: 'Groups' },
+  adminTabIcons: { fr: 'Icônes', en: 'Icons' },
+  adminIconsNote: {
+    fr: 'Les icônes du jeu, servies par XIVAPI. Clique pour copier le numéro : c’est lui qui s’écrit dans TAB_ICONS. Les feuilles donnent un nom ; le parcours par numéro sert pour tout le reste, où le jeu n’en donne aucun.',
+    en: 'The game icons, served by XIVAPI. Click to copy the number: that is what goes into TAB_ICONS. Sheets carry names; browsing by number covers everything else, where the game gives none.',
+  },
+  adminIconsByNumber: { fr: 'Parcourir par numéro', en: 'Browse by number' },
+  adminIconsSearch: { fr: 'Chercher un nom ou un numéro…', en: 'Search a name or number…' },
+  adminIconsCopy: { fr: 'Copier le numéro', en: 'Copy the number' },
+  adminIconsMore: {
+    fr: '{n} autres icônes correspondent. Affine la recherche pour les voir.',
+    en: '{n} more icons match. Narrow the search to see them.',
+  },
+  adminIconsCopied: { fr: 'Numéro {id} copié.', en: 'Number {id} copied.' },
+  adminIconsError: {
+    fr: 'XIVAPI n’a pas répondu. Le parcours par numéro fonctionne quand même, il ne demande rien à personne.',
+    en: 'XIVAPI did not answer. Browsing by number still works, it asks no one.',
+  },
   adminNoReport: { fr: 'Aucun signalement pour le moment.', en: 'No reports yet.' },
   adminMarkDone: { fr: 'Marquer traité', en: 'Mark handled' },
   adminReopen: { fr: 'Rouvrir', en: 'Reopen' },

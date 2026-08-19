@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { WORKER_API } from '../api'
 import { useI18n } from '../i18n'
+import { AdminIcons } from './AdminIcons'
 import { StatTile, TabIcon } from '../ui'
 import { DayChart, serieParJour } from './Chart'
 
@@ -130,7 +131,9 @@ export function AdminPage({ token }: { token: string }) {
   const [pin, setPin] = useState(lirePin)
   const [saisie, setSaisie] = useState('')
   const [verrouille, setVerrouille] = useState(false)
-  const [onglet, setOnglet] = useState<'apercu' | 'sante' | 'adoption' | 'couts' | 'reports' | 'comptes' | 'groupes'>(
+  const [onglet, setOnglet] = useState<
+    'apercu' | 'sante' | 'adoption' | 'couts' | 'reports' | 'comptes' | 'groupes' | 'icones'
+  >(
     'apercu',
   )
   const [reports, setReports] = useState<Report[] | null>(null)
@@ -354,6 +357,7 @@ export function AdminPage({ token }: { token: string }) {
             ['reports', t('adminTabReports')],
             ['comptes', t('adminTabAccounts')],
             ['groupes', t('adminTabGroups')],
+            ['icones', t('adminTabIcons')],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -368,6 +372,8 @@ export function AdminPage({ token }: { token: string }) {
           </button>
         ))}
       </div>
+
+      {onglet === 'icones' && <AdminIcons />}
 
       {onglet === 'sante' && (
         <section className="relic-series group-card">

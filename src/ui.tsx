@@ -141,7 +141,7 @@ export function StatTile({ value, label }: { value: number | string; label: stri
 /** Icônes officielles des menus du jeu (feuille MainCommand) pour les onglets
  *  des collections — carte Triple Triad, enveloppe d'esthétique moderne et
  *  épée pour les onglets sans menu dédié. */
-const TAB_ICONS: Record<string, string> = {
+export const TAB_ICONS: Record<string, string> = {
   mounts: '000058',
   minions: '000059',
   cards: '027661',

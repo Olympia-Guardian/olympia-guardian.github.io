@@ -729,7 +729,10 @@ const STR = {
   syncDays: { fr: 'il y a {n} j', en: '{n} d ago' },
   syncRunning: { fr: 'Synchronisation…', en: 'Syncing…' },
   charMore: { fr: 'Autres actions', en: 'More actions' },
-  collectImport: { fr: 'Importer depuis FFXIV Collect', en: 'Import from FFXIV Collect' },
+  collectImport: {
+    fr: 'Relire mon profil FFXIV Collect',
+    en: 'Re-read my FFXIV Collect profile',
+  },
   // Page de compte
   accountTitle: { fr: 'Mon compte', en: 'My account' },
   accountIdentity: { fr: 'Identité et connexion', en: 'Identity and sign-in' },
@@ -746,7 +749,10 @@ const STR = {
     en: 'We keep your Discord account (id, name, avatar), your linked characters, your hand-ticked collections, your groups and your contacts. Nothing else.',
   },
   accountExport: { fr: 'Tout télécharger', en: 'Download everything' },
-  accountImport: { fr: 'Importer depuis FFXIV Collect', en: 'Import from FFXIV Collect' },
+  accountImport: {
+    fr: 'Importer un fichier FFXIV Collect',
+    en: 'Import an FFXIV Collect file',
+  },
   accountImportHint: {
     fr: 'FFXIV Collect permet d’exporter tes collections dans un fichier. Dépose-le ici : les identifiants sont les mêmes que les nôtres, tout se retrouve d’un coup, y compris ce que le Lodestone ne publie pas.',
     en: 'FFXIV Collect can export your collections to a file. Drop it here: the ids match ours, so everything comes across at once, including what the Lodestone does not publish.',

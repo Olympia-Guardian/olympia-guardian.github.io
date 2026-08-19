@@ -11,11 +11,9 @@ import {
   type Achat,
   type PriceMap,
 } from '../market'
-import { ROLL_ICON } from './MyPage'
 import type { Db, Member } from '../store'
 import { nomMembre } from '../store'
-import { onItemImgError, TabIcon } from '../ui'
-import type { Wishes } from '../wishlist'
+import { ROLL_ICON, onItemImgError, TabIcon } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -42,13 +40,10 @@ function gils(n: number, lang: string): string {
 export function Market({
   db,
   chars,
-  wishes,
   onBuy,
 }: {
   db: Db
   chars: Ready[]
-  /** Liste de souhaits : sert de portée de recherche et marque les résultats. */
-  wishes: Wishes
   /** Coche « acheté » : verse l'objet dans la collection du personnage. */
   onBuy: (charId: number, kind: Kind, id: number) => Promise<void>
 }) {
@@ -68,9 +63,6 @@ export function Market({
   const [region, setRegion] = useState<string | null>(null)
   const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
-  // Ne chercher que ce qui est sur la liste de souhaits : « combien pour ma
-  // liste ? » est la question qu'on se pose une fois la liste faite.
-  const [souhaitsSeuls, setSouhaitsSeuls] = useState(false)
   const [prix, setPrix] = useState<PriceMap | null>(null)
   const [avancement, setAvancement] = useState<{ fait: number; total: number } | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -104,26 +96,12 @@ export function Market({
     const out: { item: Item; kind: Kind }[] = []
     for (const k of kinds) {
       const possedes = new Set(perso.data[k].ids)
-      const voulus = souhaitsSeuls ? new Set(wishes[k] ?? []) : null
       for (const it of db[k]) {
-        if (voulus && !voulus.has(it.id)) continue
         if (it.itemId && it.tradeable && !possedes.has(it.id)) out.push({ item: it, kind: k })
       }
     }
     return out
-  }, [perso, kinds, db, souhaitsSeuls, wishes])
-
-  /** Combien d'objets souhaités sont achetables : sans ça, la pastille
-   *  « ma liste » proposerait une recherche vide sans le dire. */
-  const souhaitsAchetables = useMemo(
-    () =>
-      ACHETABLES.reduce(
-        (n, k) =>
-          n + db[k].filter((it) => it.itemId && it.tradeable && (wishes[k] ?? []).includes(it.id)).length,
-        0,
-      ),
-    [db, wishes],
-  )
+  }, [perso, kinds, db])
 
   const parItemId = useMemo(
     () => new Map(manquants.map((m) => [m.item.itemId!, m])),
@@ -259,15 +237,6 @@ export function Market({
         >
           {kinds.size === ACHETABLES.length ? t('marketNone') : t('marketAll')}
         </button>
-        {souhaitsAchetables > 0 && (
-          <button
-            className={`cat-chip ${souhaitsSeuls ? 'is-active' : ''}`}
-            title={t('wishOnlyTitle')}
-            onClick={() => setSouhaitsSeuls((v) => !v)}
-          >
-            <TabIcon k="wish" /> {t('wishOnly')} <i className="market-count">{souhaitsAchetables}</i>
-          </button>
-        )}
         {ACHETABLES.map((k) => {
           const actif = kinds.has(k)
           const dispo = db[k].filter((it) => it.itemId && it.tradeable).length
@@ -388,11 +357,6 @@ export function Market({
                         />
                         <span className="market-name">
                           {lang === 'fr' ? it.name : it.nameEn}
-                          {(wishes[kind] ?? []).includes(it.id) && (
-                            <span className="wish-mark" title={t('wishMark')}>
-                              <TabIcon k="wish" />
-                            </span>
-                          )}
                         </span>
                         <span className="market-price">{gils(a.price, lang)}</span>
                       </li>

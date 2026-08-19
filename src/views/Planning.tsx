@@ -23,7 +23,7 @@ import {
   type Scope,
 } from '../sources'
 import type { Db, Member } from '../store'
-import { AvatarStack, KindChip, StatTile, TypeChip, onItemImgError } from '../ui'
+import { AvatarStack, KindChip, StatTile, TypeChip, itemIcon, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
@@ -117,7 +117,13 @@ function RunCard({
               onClick={() => onShowItem(e.item, e.kind)}
               onKeyDown={(ev) => ev.key === 'Enter' && onShowItem(e.item, e.kind)}
             >
-              <img className="item-icon" src={e.item.icon} alt="" loading="lazy" onError={onItemImgError} />
+              <img
+                className="item-icon"
+                src={itemIcon(e.kind, e.item.icon)}
+                alt=""
+                loading="lazy"
+                onError={onItemImgError}
+              />
               <span className="item-name">{localName(e.item, lang)}</span>
             </span>
             <KindChip kind={e.kind} />
@@ -176,7 +182,6 @@ export function Planning({
   const [scope, setScope] = useState<Scope>('instances')
   const [kindFilter, setKindFilter] = useState<KindFilter>('all')
   const [minMissing, setMinMissing] = useState(1)
-  const [includeUnavailable, setIncludeUnavailable] = useState(false)
   const jalons = useStory()
   const acces = useMemo(
     () => new Map(ready.map((m) => [m.id, accesDe(m.data, jalons)])),
@@ -197,7 +202,10 @@ export function Planning({
       for (const item of db[kind]) {
         // Plus obtenable du tout : rien à planifier, même si une source a
         // un type encore « actif » (ex. monture Goobbue, vendeur disparu).
-        if (item.unobtainable && !includeUnavailable) continue
+        // Aucun réglage ne les ramène ici : le planning répond à « on farme
+        // quoi ce soir », et un objet qu'on ne peut plus obtenir n'est pas une
+        // réponse. Les Collections, elles, gardent la case : là on inventorie.
+        if (item.unobtainable) continue
         // Un objet sans patch lisible sort dès qu'on demande une extension
         // précise : on ne le range pas au hasard.
         if (expansion !== 'all' && expansionDe(item.patch) !== expansion) continue
@@ -228,7 +236,7 @@ export function Planning({
         // Sources regroupées par type, dans le périmètre des filtres
         const byType = new Map<string, Source[]>()
         for (const s of item.sources) {
-          if (!sourceInScope(s.type, scope, includeUnavailable)) continue
+          if (!sourceInScope(s.type, scope, false)) continue
           const arr = byType.get(s.type) ?? []
           arr.push(s)
           byType.set(s.type, arr)
@@ -286,7 +294,6 @@ export function Planning({
     scope,
     kindFilter,
     minMissing,
-    includeUnavailable,
     compo,
     expansion,
     acces,
@@ -387,14 +394,6 @@ export function Planning({
             ))}
           </select>
         )}
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={includeUnavailable}
-            onChange={(e) => setIncludeUnavailable(e.target.checked)}
-          />
-          {t('includeUnavailable')}
-        </label>
         <input
           className="search"
           value={search}

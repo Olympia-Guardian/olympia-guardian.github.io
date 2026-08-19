@@ -10,6 +10,17 @@ export const ITEM_FALLBACK =
 export const AVATAR_FALLBACK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23232322'/%3E%3Ccircle cx='20' cy='16' r='7' fill='%23585856'/%3E%3Cpath d='M6 38a14 14 0 0 1 28 0Z' fill='%23585856'/%3E%3C/svg%3E"
 
+/** Les rouleaux d'orchestrion partagent tous la meme vignette. Celle de FFXIV
+ *  Collect, servie dans nos catalogues, redirige vers leur page d'accueil
+ *  depuis un moment : l'image ne charge jamais. On garde donc la notre, en
+ *  local, plutot que d'afficher 883 cases vides. */
+export const ROLL_ICON = `${import.meta.env.BASE_URL}assets/orchestrion_roll.jpg`
+
+/** Vignette d'un objet : celle du catalogue, sauf pour l'orchestrion. */
+export function itemIcon(kind: string, icon: string): string {
+  return kind === 'orchestrions' ? ROLL_ICON : icon
+}
+
 /** onError d'<img> : remplace par l'image de repli (une seule fois). */
 export function fallbackTo(fallback: string) {
   return (e: SyntheticEvent<HTMLImageElement>) => {
@@ -177,7 +188,6 @@ const TAB_ICONS: Record<string, string> = {
   newgroup: '000017',
   quick: '000025',
   news: '000080',
-  wish: '000004',
   account: '000015',
   inspect: '000046',
   purge: '000029',

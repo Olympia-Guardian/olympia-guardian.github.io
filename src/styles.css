@@ -1300,27 +1300,6 @@ a.player-name:hover {
   padding: 20px 22px;
 }
 
-.modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 20px;
-}
-
-.modal-head {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.modal-image {
-  width: 104px;
-  height: auto;
-  border-radius: var(--radius-s);
-  border: 1px solid var(--ring);
-  flex-shrink: 0;
-}
-
 .modal-title {
   margin: 0;
   font-size: 20px;
@@ -1381,12 +1360,6 @@ a.player-name:hover {
   font-size: 13px;
   color: var(--muted);
   min-width: 110px;
-}
-
-.modal-link {
-  display: inline-block;
-  margin-top: 16px;
-  font-size: 13px;
 }
 
 .modal-solo-missing {
@@ -2600,27 +2573,6 @@ a.player-name:hover {
 
 /* L'étoile suit le nom de l'objet, dans les grilles comme dans les résultats
    du marché : elle dit « tu le veux », pas « tu l'as ». */
-.wish-mark {
-  display: inline-flex;
-  vertical-align: -3px;
-  margin-left: 5px;
-}
-
-.wish-mark .kind-icon {
-  width: 15px;
-  height: 15px;
-}
-
-.modal-wish {
-  margin-top: 8px;
-  align-self: flex-start;
-}
-
-.modal-wish.is-active {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-
 /* ------------------------------------------------- courbes (administration) */
 
 .chart-grid {

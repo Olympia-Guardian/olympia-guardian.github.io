@@ -190,6 +190,7 @@ export const TAB_ICONS: Record<string, string> = {
   news: '000080',
   account: '000015',
   inspect: '000046',
+  infos: '000033',
   // Voir / ne pas voir un membre du groupe (choisie par Vincent).
   vu: '000076',
   purge: '000029',

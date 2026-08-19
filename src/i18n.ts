@@ -272,6 +272,8 @@ const STR = {
     fr: "Rien de disponible sous {budget} gils. Augmente le budget, ou coche d'autres collections.",
     en: 'Nothing available under {budget} gil. Raise the budget, or tick more collections.',
   },
+  marketInfos: { fr: 'Ce que fait le marché', en: 'What the market is doing' },
+  marketInfosOpen: { fr: 'Voir ce que fait le marché', en: 'See what the market is doing' },
   marketVsAverage: {
     fr: 'Les dernières ventes tournaient autour de {moyenne} gils.',
     en: 'Recent sales were around {moyenne} gil.',

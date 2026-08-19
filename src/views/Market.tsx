@@ -40,7 +40,7 @@ const BUDGETS = [100_000, 500_000, 1_000_000, 5_000_000, 20_000_000]
  *  vend. Cette derniere ligne dit la solidite de tout le reste — un ecart
  *  calcule sur une vente tous les quatre jours n'a pas le poids d'un ecart
  *  calcule sur trente ventes par jour. */
-function infobulle(r: Repere, t: I18n['t'], lang: string): string {
+function lignesMarche(r: Repere, t: I18n['t'], lang: string): string[] {
   const lignes = [t('marketVsAverage', { moyenne: gils(Math.round(r.moyenne), lang) })]
   if (r.derniere) {
     const jours = Math.floor((Date.now() - r.derniere.quand) / 86_400_000)
@@ -61,7 +61,7 @@ function infobulle(r: Repere, t: I18n['t'], lang: string): string {
         : t('marketPaceSlow', { n: Math.max(1, Math.round(1 / r.parJour)) }),
     )
   }
-  return lignes.join('\n')
+  return lignes
 }
 
 function gils(n: number, lang: string): string {
@@ -95,6 +95,8 @@ export function Market({
   const [kinds, setKinds] = useState<Set<Kind>>(() => new Set<Kind>(['mounts', 'minions']))
   const [strategie, setStrategie] = useState<'objets' | 'voyages'>('objets')
   const [prix, setPrix] = useState<Prix | null>(null)
+  // Fenetre d'explication d'un ecart : l'objet regarde, ou rien.
+  const [infos, setInfos] = useState<{ nom: string; repere: Repere } | null>(null)
   const [avancement, setAvancement] = useState<{ fait: number; total: number } | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   // Coché tout de suite pour que le geste réponde, sans attendre l'aller-retour
@@ -320,6 +322,28 @@ export function Market({
 
       {erreur && <p className="notice">{erreur}</p>}
 
+      {infos && (
+        <div className="modal-backdrop" onClick={() => setInfos(null)}>
+          <div
+            className="modal modal-gold"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="icon-btn modal-close" title={t('close')} onClick={() => setInfos(null)}>
+              ×
+            </button>
+            <h3 className="modal-h">{t('marketInfos')}</h3>
+            <p className="modal-muted">{infos.nom}</p>
+            <ul className="market-infos-lignes">
+              {lignesMarche(infos.repere, t, lang).map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {prix && selection.length === 0 && !erreur && (
         <p className="empty">
           {t(prixMax > 0 ? 'marketNothingCap' : 'marketNothing', {
@@ -406,13 +430,28 @@ export function Market({
                             const ecart = ecartMoyenne(a.price, repere)
                             if (ecart === null) return <i className="market-ecart" />
                             return (
-                              <i
-                                className={`market-ecart ${ecart < 0 ? 'is-bon' : 'is-cher'}`}
-                                title={infobulle(repere!, t, lang)}
-                              >
+                              <i className={`market-ecart ${ecart < 0 ? 'is-bon' : 'is-cher'}`}>
                                 {ecart > 0 ? '+' : ''}
                                 {ecart} %
                               </i>
+                            )
+                          })()}
+                          {(() => {
+                            // Trois phrases au survol ne se lisent pas, et sur
+                            // telephone une infobulle ne s'affiche jamais : le
+                            // detail s'ouvre sur demande.
+                            const repere = prix?.moyennes.get(a.itemId)
+                            if (!repere) return null
+                            return (
+                              <button
+                                className="icon-btn market-infos"
+                                title={t('marketInfosOpen')}
+                                onClick={() =>
+                                  setInfos({ nom: lang === 'fr' ? it.name : it.nameEn, repere })
+                                }
+                              >
+                                <TabIcon k="infos" />
+                              </button>
                             )
                           })()}
                         </span>

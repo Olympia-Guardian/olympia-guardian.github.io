@@ -360,18 +360,26 @@ export function Market({
                           {lang === 'fr' ? it.name : it.nameEn}
                         </span>
                         <span className="market-price">
-                          {gils(a.price, lang)}
+                          <span>
+                            {gils(a.price, lang)}
+                            <TabIcon k="market" />
+                          </span>
                           {(() => {
                             // Le prix seul ne dit rien : 6,5 M est une affaire
                             // sur un objet qui part d'habitude a 7,2 M, et un
                             // vol sur un objet a 2 M.
-                            const ecart = ecartMoyenne(a.price, prix?.moyennes.get(a.itemId))
-                            if (ecart === null) return null
+                            //
+                            // La pastille est TOUJOURS posee, vide quand il n'y
+                            // a rien a dire : sa largeur reservee est ce qui
+                            // tient les prix alignes d'une ligne a l'autre.
+                            const moyenne = prix?.moyennes.get(a.itemId)
+                            const ecart = ecartMoyenne(a.price, moyenne)
+                            if (ecart === null) return <i className="market-ecart" />
                             return (
                               <i
                                 className={`market-ecart ${ecart < 0 ? 'is-bon' : 'is-cher'}`}
                                 title={t('marketVsAverage', {
-                                  moyenne: gils(Math.round(prix!.moyennes.get(a.itemId)!), lang),
+                                  moyenne: gils(Math.round(moyenne!), lang),
                                 })}
                               >
                                 {ecart > 0 ? '+' : ''}

@@ -4974,20 +4974,48 @@ a.player-name:hover {
   white-space: nowrap;
 }
 
+/* Prix et ecart forment deux colonnes de largeur fixe, alignees a droite pour
+   l'un et a gauche pour l'autre. Sans largeur fixe, chaque prix se decalait
+   selon que sa ligne portait un ecart et selon le nombre de chiffres : une
+   colonne de nombres qui ne s'alignent pas ne se compare pas. */
 .market-price {
   color: var(--gold);
   font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: baseline;
-  gap: 7px;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.market-price > span:first-child {
+  min-width: 10ch;
+  text-align: right;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* La piece de gil, a la taille du chiffre : elle dit l'unite sans prendre la
+   place d'un mot. */
+.market-price img.kind-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
 }
 
 /* Ecart au prix habituel : vert quand l'offre est sous la moyenne des ventes,
-   rouge au-dessus. Discret, parce que le prix reste l'information principale. */
+   rouge au-dessus. Discret, parce que le prix reste l'information principale.
+   La largeur est reservee meme quand il n'y a rien a dire, sinon les prix
+   danseraient d'une ligne a l'autre. */
 .market-ecart {
   font-size: 11px;
   font-style: normal;
   font-weight: 600;
+  min-width: 5ch;
+  text-align: left;
+  flex: 0 0 auto;
 }
 
 .market-ecart.is-bon {

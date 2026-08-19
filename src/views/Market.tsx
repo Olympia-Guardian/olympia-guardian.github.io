@@ -185,54 +185,72 @@ export function Market({
   return (
     <div className="view market">
       <header className="market-head">
-        <h2>
-          <TabIcon k="market" /> {t('market')}
-        </h2>
-        <p className="muted">{t('marketIntro', { dc: perso.data.dataCenter })}</p>
-        {region && (
-          <div className="mode-switch market-scope">
-            <button
-              className={`mode-btn ${portee === 'dc' ? 'is-active' : ''}`}
-              onClick={() => setPortee('dc')}
-            >
-              {t('marketScopeDc', { dc: perso.data.dataCenter })}
-            </button>
-            <button
-              className={`mode-btn ${portee === 'region' ? 'is-active' : ''}`}
-              title={t('marketScopeRegionHint')}
-              onClick={() => setPortee('region')}
-            >
-              {t('marketScopeRegion', { region })}
-            </button>
-          </div>
-        )}
+        <div className="market-titre">
+          <h2>
+            <TabIcon k="market" /> {t('market')}
+          </h2>
+          {region && (
+            <div className="mode-switch market-scope">
+              <button
+                className={`mode-btn ${portee === 'dc' ? 'is-active' : ''}`}
+                onClick={() => setPortee('dc')}
+              >
+                {t('marketScopeDc', { dc: perso.data.dataCenter })}
+              </button>
+              <button
+                className={`mode-btn ${portee === 'region' ? 'is-active' : ''}`}
+                title={t('marketScopeRegionHint')}
+                onClick={() => setPortee('region')}
+              >
+                {t('marketScopeRegion', { region })}
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
-      <div className="market-form">
-        {chars.length > 1 && (
-          <label className="market-field">
-            <span>{t('marketChar')}</span>
-            <select value={perso.id} onChange={(e) => setCharId(Number(e.target.value))}>
-              {chars.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {nomMembre(c)} ({c.data.dataCenter})
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+      <section className="market-panneau">
+        <span className="market-legende">{t('marketBudgetLegend')}</span>
+        <div className="market-form">
+          {chars.length > 1 && (
+            <label className="market-field">
+              <span>{t('marketChar')}</span>
+              <select value={perso.id} onChange={(e) => setCharId(Number(e.target.value))}>
+                {chars.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {nomMembre(c)} ({c.data.dataCenter})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
-        <label className="market-field">
-          <span>{t('marketBudget')}</span>
-          <input
-            type="number"
-            min={0}
-            step={10_000}
-            value={budget || ''}
-            placeholder={t('marketNoCap')}
-            onChange={(e) => setBudget(Math.max(0, Number(e.target.value)))}
-          />
-        </label>
+          <div className="market-field-groupe">
+            <label className="market-field">
+              <span>{t('marketBudget')}</span>
+              <input
+                type="number"
+                min={0}
+                step={10_000}
+                value={budget || ''}
+                placeholder={t('marketNoCap')}
+                onChange={(e) => setBudget(Math.max(0, Number(e.target.value)))}
+              />
+            </label>
+            {/* Ces montants remplissent le BUDGET. Poses apres « prix maximum »,
+                ils avaient l'air d'appartenir a l'autre champ. */}
+            <div className="market-presets">
+              {BUDGETS.map((b) => (
+                <button
+                  key={b}
+                  className={`cat-chip ${budget === b ? 'is-active' : ''}`}
+                  onClick={() => setBudget(b)}
+                >
+                  {gils(b, lang)}
+                </button>
+              ))}
+          </div>
+        </div>
 
         <label className="market-field">
           <span>{t('marketMaxPrice')}</span>
@@ -246,51 +264,42 @@ export function Market({
           />
         </label>
 
-        <div className="market-presets">
-          {BUDGETS.map((b) => (
-            <button
-              key={b}
-              className={`cat-chip ${budget === b ? 'is-active' : ''}`}
-              onClick={() => setBudget(b)}
-            >
-              {gils(b, lang)}
-            </button>
-          ))}
         </div>
-      </div>
 
-      <div className="market-kinds">
-        <button
-          className={`cat-chip ${kinds.size === ACHETABLES.length ? 'is-active' : ''}`}
-          onClick={() =>
-            setKinds((prev) =>
-              prev.size === ACHETABLES.length ? new Set() : new Set(ACHETABLES),
+        <span className="market-legende">{t('marketKindsLegend')}</span>
+        <div className="market-kinds">
+          <button
+            className={`cat-chip cat-chip-action ${kinds.size === ACHETABLES.length ? 'is-active' : ''}`}
+            onClick={() =>
+              setKinds((prev) =>
+                prev.size === ACHETABLES.length ? new Set() : new Set(ACHETABLES),
+              )
+            }
+          >
+            {kinds.size === ACHETABLES.length ? t('marketNone') : t('marketAll')}
+          </button>
+          {ACHETABLES.map((k) => {
+            const actif = kinds.has(k)
+            const dispo = db[k].filter((it) => it.itemId && it.tradeable).length
+            return (
+              <button
+                key={k}
+                className={`cat-chip ${actif ? 'is-active' : ''}`}
+                onClick={() =>
+                  setKinds((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(k)) next.delete(k)
+                    else next.add(k)
+                    return next
+                  })
+                }
+              >
+                {kindLabel(lang, k)} <i className="market-count">{dispo}</i>
+              </button>
             )
-          }
-        >
-          {kinds.size === ACHETABLES.length ? t('marketNone') : t('marketAll')}
-        </button>
-        {ACHETABLES.map((k) => {
-          const actif = kinds.has(k)
-          const dispo = db[k].filter((it) => it.itemId && it.tradeable).length
-          return (
-            <button
-              key={k}
-              className={`cat-chip ${actif ? 'is-active' : ''}`}
-              onClick={() =>
-                setKinds((prev) => {
-                  const next = new Set(prev)
-                  if (next.has(k)) next.delete(k)
-                  else next.add(k)
-                  return next
-                })
-              }
-            >
-              {kindLabel(lang, k)} <i className="market-count">{dispo}</i>
-            </button>
-          )
-        })}
-      </div>
+          })}
+        </div>
+      </section>
 
       <div className="market-actions">
         <button
@@ -368,6 +377,18 @@ export function Market({
                   worlds: groupes.length,
                   total: gils(total, lang),
                 })}
+          </p>
+          {/* D'ou viennent ces prix, et jusqu'ou les croire. « Le moins de
+              voyages » choisit sciemment des offres plus cheres pour eviter un
+              deplacement : l'annoncer evite de prendre la liste pour le
+              classement des meilleurs prix, ce qu'elle n'est pas dans ce mode. */}
+          <p className="notice market-provenance">
+            {t(strategie === 'objets' ? 'marketFromCheapest' : 'marketFromTrips', {
+              ou:
+                portee === 'region' && region
+                  ? t('marketOnRegion', { region })
+                  : t('marketOnDc', { dc: perso?.data.dataCenter ?? '' }),
+            })}
           </p>
           <div className="market-worlds">
             {groupes.map((g) => (

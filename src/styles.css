@@ -4890,12 +4890,55 @@ a.player-name:hover {
   margin: 0 0 6px;
 }
 
+/* Titre et portee sur la meme ligne : la portee est un reglage du titre,
+   « mon centre » ou « toute la region », pas une etape de plus. */
+.market-titre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Les reglages tiennent dans un cadre plutot que de flotter en rangees : sans
+   lui, quatre lignes d'elements sans rapport se lisaient comme un tas. */
+.market-panneau {
+  margin: 16px 0;
+  padding: 16px 18px 18px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.market-legende {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.market-legende:not(:first-child) {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
 .market-form {
   display: flex;
   align-items: flex-end;
   gap: 16px;
   flex-wrap: wrap;
-  margin: 18px 0 12px;
+}
+
+/* Le champ et ses montants rapides forment un bloc : ils se remplissent l'un
+   l'autre, ils doivent se toucher. */
+.market-field-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .market-field {
@@ -4919,8 +4962,10 @@ a.player-name:hover {
   flex-wrap: wrap;
 }
 
-.market-kinds {
-  margin-bottom: 16px;
+/* « Tout selectionner » est une action, pas une collection : le cadre en
+   pointilles le sort de la liste qu'il commande. */
+.cat-chip-action {
+  border-style: dashed;
 }
 
 .market-count {

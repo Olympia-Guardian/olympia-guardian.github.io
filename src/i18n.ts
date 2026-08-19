@@ -227,10 +227,6 @@ const STR = {
     en: '100% is reachable by playing: store items can still be ticked, but are left out of the totals. In brackets, the figures including store items.',
   },
   market: { fr: 'Mon Marché', en: 'My Market' },
-  marketIntro: {
-    fr: "Ce qui te manque et qui s'achète à l'hôtel des ventes, sur ton centre de données {dc}. Les prix viennent d'Universalis.",
-    en: 'What you are missing and can buy on the market board, across your {dc} data centre. Prices come from Universalis.',
-  },
   marketNeedChar: {
     fr: 'Lie et vérifie un personnage dans Mon Journal : le marché a besoin de savoir ce qui te manque et sur quel centre de données tu joues.',
     en: 'Link and verify a character in My Journal: the market needs to know what you are missing and which data centre you play on.',
@@ -267,7 +263,19 @@ const STR = {
     fr: 'Pour {total} gils, {n} objets répartis sur {worlds} monde(s). Il te resterait {reste} gils.',
     en: 'For {total} gil, {n} items across {worlds} world(s). You would have {reste} gil left.',
   },
+  marketBudgetLegend: { fr: 'Combien dépenser', en: 'How much to spend' },
+  marketKindsLegend: { fr: 'Dans quelles collections', en: 'In which collections' },
   marketWorldLine: { fr: '{n} objets · {total} gils', en: '{n} items · {total} gil' },
+  marketFromCheapest: {
+    fr: 'Ce sont les offres les moins chères trouvées sur Universalis, {ou}. Les prix bougent : vérifie en jeu avant d’acheter.',
+    en: 'These are the cheapest listings found on Universalis, {ou}. Prices move: check in game before buying.',
+  },
+  marketFromTrips: {
+    fr: 'Les offres sont regroupées pour limiter les voyages, {ou} : ce ne sont donc pas toujours les moins chères. « Le plus d’objets » les prend au prix le plus bas.',
+    en: 'Listings are grouped to cut down on travel, {ou}: so they are not always the cheapest. “Most items” picks the lowest price instead.',
+  },
+  marketOnDc: { fr: 'sur ton centre {dc}', en: 'on your {dc} data centre' },
+  marketOnRegion: { fr: 'sur toute la région {region}', en: 'across the whole {region} region' },
   marketNothing: {
     fr: "Rien de disponible sous {budget} gils. Augmente le budget, ou coche d'autres collections.",
     en: 'Nothing available under {budget} gil. Raise the budget, or tick more collections.',

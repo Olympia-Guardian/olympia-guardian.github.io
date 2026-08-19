@@ -130,6 +130,48 @@ export function apiSetAlias(
   return call(`/group/${id}/member/${charId}`, token, { method: 'PATCH', body: { alias } })
 }
 
+// ------------------------------------------------------- équipement de raid
+//
+// Ces routes passent par le GROUPE et non par le perso : le chef d'un static
+// tient souvent le tableau à une seule main, il peut donc importer et cocher
+// pour ses membres — ce que la route des collections refuse à juste titre.
+
+export interface ApiBis {
+  job: string
+  nom: string
+  url: string
+  /** { case Etro : identifiant d'objet }. */
+  pieces: Record<string, number>
+  updated: number
+}
+
+/** Les BiS du groupe sur le palier qu'il suit, par identifiant de perso. */
+export function apiGetBis(
+  token: string,
+  id: string,
+): Promise<{ tier: string | null; bis: Record<number, ApiBis> }> {
+  return call(`/group/${id}/bis`, token)
+}
+
+export function apiSetBis(
+  token: string,
+  id: string,
+  charId: number,
+  bis: { job: string; nom: string; url: string; pieces: Record<string, number> },
+): Promise<{ ok: true; updated: number }> {
+  return call(`/group/${id}/bis/${charId}`, token, { method: 'PUT', body: bis })
+}
+
+/** Coche ou décoche des emplacements obtenus. */
+export function apiSetRaidFait(
+  token: string,
+  id: string,
+  charId: number,
+  delta: { add?: number[]; remove?: number[] },
+): Promise<{ ok: true; ids: number[] }> {
+  return call(`/group/${id}/raid/${charId}`, token, { method: 'PUT', body: delta })
+}
+
 /** Ce que voit un porteur du lien : le nom du groupe et son propre statut. */
 export function apiGetInvite(
   code: string,

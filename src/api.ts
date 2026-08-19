@@ -236,10 +236,10 @@ export type Character = { [K in Kind]: CharCollection } & {
   relicIds: number[]
   /** Pièces de tenues possédées (un ensemble complet devient possédé tout seul). */
   outfitPieceIds: number[]
-  /** Emplacements de raid obtenus, par identifiant de `raid.json`. */
+  /** Emplacements de raid obtenus, par identifiant de `raid.json`. Ce qui vient
+   *  du raid et ce qui vient d'ailleurs ne se stocke pas : le BiS importé le
+   *  dit déjà, emplacement par emplacement. */
   raidFait: number[]
-  /** Emplacements qu'on ne prendra pas en savage. Le reste est attendu. */
-  raidAilleurs: number[]
   /** Profil Lodestone étendu (absent tant que la fiche n'a pas été re-scrapée). */
   profile: CharProfile | null
   /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
@@ -280,7 +280,7 @@ const CACHE_MAX_CHARS = 300_000
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
-const RAID_V = 'v2'
+const RAID_V = 'v3'
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
@@ -447,7 +447,6 @@ function mapCharacter(r: any): Character {
     nextForceAt: r.next_force_at ?? 0,
     outfitPieceIds: (r.outfit_piece_ids as number[] | undefined) ?? [],
     raidFait: (r.raid_fait as number[] | undefined) ?? [],
-    raidAilleurs: (r.raid_ailleurs as number[] | undefined) ?? [],
     ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??
@@ -616,8 +615,18 @@ export interface RelicDb {
 // Équipement de raid
 // ---------------------------------------------------------------------------
 
+/** Icône d'un objet à partir de son numéro. Le catalogue des pièces n'en
+ *  stocke que le nombre : mille adresses complètes pesaient 80 Ko pour une
+ *  information qui se recalcule d'une ligne. */
+export function iconeObjet(id: number): string {
+  const n = String(id).padStart(6, '0')
+  const dossier = n.slice(0, 3) + '000'
+  const chemin = `ui/icon/${dossier}/${n}_hr1.tex`
+  return `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(chemin)}`
+}
+
 /** Un emplacement qui tombe dans un palier. C'est le COFFRE qui se distribue le
- *  soir du raid, pas la variante par job : dix emplacements suffisent à suivre
+ *  soir du raid, pas la variante par job : onze emplacements suffisent à suivre
  *  un joueur, là où le palier compte 88 objets. */
 export interface RaidEmplacement {
   cle: string
@@ -635,12 +644,28 @@ export interface RaidEmplacement {
   icon: string
 }
 
+/** Une pièce d'équipement du palier. C'est cette table qui range un BiS collé :
+ *  un identifiant d'objet y donne son emplacement et sa provenance, donc ce
+ *  qu'on attend du raid, sans une question au joueur. */
+export interface RaidPiece {
+  id: number
+  /** Clé d'emplacement au sens du jeu : weapon, head, ring… Les deux bagues ne
+   *  s'y distinguent pas, c'est le BiS qui dit laquelle est laquelle. */
+  emplacement: string
+  provenance: 'savage' | 'tome'
+  fr: string
+  en: string
+  /** Numéro d'icône, à passer à `iconeObjet`. */
+  icone: number
+}
+
 export interface RaidPalier {
   cle: string
   fr: string
   en: string
   ilvl: number
   emplacements: RaidEmplacement[]
+  pieces: RaidPiece[]
 }
 
 export interface RaidDb {

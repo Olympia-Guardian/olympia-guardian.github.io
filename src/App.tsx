@@ -21,7 +21,7 @@ import {
   useRaidDb,
   useRelicDb,
 } from './store'
-import { apiSuggest } from './groupsApi'
+import { apiGetBis, apiSetBis, apiSetRaidFait, apiSuggest } from './groupsApi'
 import {
   convertirAncienLien,
   ecrireEmplacement,
@@ -46,7 +46,8 @@ import { GroupCreateDialog, GroupsPage } from './views/Groups'
 import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
-import { Butin, type Etat as EtatRaid } from './views/Butin'
+import { Butin } from './views/Butin'
+import type { Bis } from './raid'
 import { Relics } from './views/Relics'
 
 /** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
@@ -375,25 +376,56 @@ export default function App() {
 
   /** Qui peut toucher a l'equipement de qui. Le proprietaire verifie du
    *  personnage, evidemment, mais aussi le CHEF du groupe : un static tient
-   *  souvent son tableau a une seule main. Meme regle que les alias. */
+   *  souvent son tableau a une seule main. Meme regle que les alias, et le
+   *  worker la revalide de son cote. */
   const peutModifierRaid = (charId: number) =>
     verifiedIds.includes(charId) || grp.active?.mine === 'owner'
 
-  /** Fait tourner l'etat d'un emplacement. Les trois etats tiennent dans deux
-   *  listes : ce qui est fait, ce qu'on prend ailleurs, et le reste — attendu
-   *  du raid — qui n'est ecrit nulle part puisque c'est le defaut. */
-  async function cyclerRaid(charId: number, id: number, suivant: EtatRaid) {
-    if (!peutModifierRaid(charId)) return
-    const doc: Record<string, { add?: number[]; remove?: number[] }> = {
-      raidfait: suivant === 'fait' ? { add: [id] } : { remove: [id] },
-      raidailleurs: suivant === 'ailleurs' ? { add: [id] } : { remove: [id] },
+  /** Les BiS du groupe de raid courant, par personnage. Ils ne voyagent pas
+   *  avec les fiches de perso : un BiS appartient a un PALIER, et seul le
+   *  groupe sait lequel il suit. */
+  const [bisGroupe, setBisGroupe] = useState<Record<number, Bis | undefined>>({})
+  const groupeRaidId = grp.active?.type === 'raid' ? grp.active.id : null
+
+  useEffect(() => {
+    if (!groupeRaidId || !auth.token) {
+      setBisGroupe({})
+      return
     }
+    let vivant = true
+    apiGetBis(auth.token, groupeRaidId)
+      .then((r) => {
+        if (!vivant) return
+        const out: Record<number, Bis> = {}
+        for (const [charId, b] of Object.entries(r.bis)) {
+          out[Number(charId)] = { job: b.job, nom: b.nom, url: b.url, pieces: b.pieces }
+        }
+        setBisGroupe(out)
+      })
+      // Sans BiS, l'ecran propose de l'importer : c'est un etat normal, pas
+      // une panne a annoncer.
+      .catch(() => vivant && setBisGroupe({}))
+    return () => {
+      vivant = false
+    }
+  }, [groupeRaidId, auth.token])
+
+  /** Pose le BiS d'un joueur. L'erreur remonte : la carte l'affiche. */
+  async function importerBisJoueur(charId: number, bis: Bis) {
+    if (!groupeRaidId || !auth.token) throw new Error('bisEchecEcriture')
+    await apiSetBis(auth.token, groupeRaidId, charId, bis)
+    setBisGroupe((prev) => ({ ...prev, [charId]: bis }))
+  }
+
+  /** « Je l'ai obtenue ». Le seul geste qui ne se deduit d'aucune donnee. */
+  async function basculerRaid(charId: number, id: number, fait: boolean) {
+    if (!groupeRaidId || !auth.token || !peutModifierRaid(charId)) return
     try {
-      await auth.saveCollections(charId, doc)
+      await apiSetRaidFait(auth.token, groupeRaidId, charId, fait ? { add: [id] } : { remove: [id] })
       invalidateCharacter(charId)
       reload(charId)
     } catch {
-      // le worker a refuse : rien n'est ecrit, la case reste comme elle etait
+      // le worker a refuse : rien n'est ecrit, la pastille reste comme elle etait
     }
   }
 
@@ -1126,8 +1158,10 @@ export default function App() {
                   <Butin
                     palier={palier}
                     ready={activeReady}
+                    bis={bisGroupe}
                     peutModifier={peutModifierRaid}
-                    onCycle={cyclerRaid}
+                    onImport={importerBisJoueur}
+                    onBascule={basculerRaid}
                   />
                 )
               })()}

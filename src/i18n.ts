@@ -439,18 +439,58 @@ const STR = {
   groupDefaultName: { fr: 'Mon groupe', en: 'My group' },
   butinTab: { fr: 'Butin', en: 'Loot' },
   butinIntro: {
-    fr: 'Combien de fois faut-il encore tuer chaque étage pour équiper le groupe, sur {palier}. Tout est attendu du raid par défaut : clique une case pour dire que la pièce est prise, puis qu’elle viendra d’ailleurs.',
-    en: 'How many more clears of each floor the group needs, in {palier}. Everything is expected from the raid by default: click a box to say the piece is obtained, then that it will come from elsewhere.',
+    fr: 'Combien de fois faut-il encore tuer chaque étage pour équiper le groupe, sur {palier}. Chacun colle son BiS : ce qui vient du raid et ce qui vient du mémoquartz s’en déduit tout seul. Le seul geste qui reste, c’est « je l’ai obtenue ».',
+    en: 'How many more clears of each floor the group needs, in {palier}. Everyone pastes their BiS: what comes from the raid and what comes from tomestones follows on its own. The only gesture left is “I got it”.',
   },
   butinKills: { fr: '{n} kill(s) à faire', en: '{n} clear(s) to go' },
-  butinEtat_attendu: { fr: 'Attendu du raid — clique : je l’ai', en: 'Expected from the raid — click: I have it' },
-  butinEtat_fait: { fr: 'Obtenu — clique : je la prends ailleurs', en: 'Obtained — click: I get it elsewhere' },
-  butinEtat_ailleurs: {
-    fr: 'Prise ailleurs (mémoquartz, artisanat…) — clique : attendue du raid',
-    en: 'From elsewhere (tomestones, crafted…) — click: expected from the raid',
-  },
   butinFloor: { fr: 'Étage {n}', en: 'Floor {n}' },
   butinDone: { fr: 'Plus rien à y prendre', en: 'Nothing left to take' },
+  // Le BiS importé, et ce qu'on en déduit
+  bisImporter: { fr: 'Importer mon BiS', en: 'Import my BiS' },
+  bisRemplacer: { fr: 'Remplacer', en: 'Replace' },
+  bisAnnuler: { fr: 'Annuler', en: 'Cancel' },
+  bisEnCours: { fr: 'Lecture…', en: 'Reading…' },
+  bisAide: {
+    fr: 'Colle le lien de ton set Etro. Rien d’autre à saisir : le palier dit quelles pièces tombent en savage et lesquelles s’achètent en mémoquartz.',
+    en: 'Paste the link to your Etro set. Nothing else to fill in: the tier tells which pieces drop in savage and which are bought with tomestones.',
+  },
+  bisAucun: {
+    fr: 'Pas de BiS importé pour ce palier.',
+    en: 'No BiS imported for this tier.',
+  },
+  bisReste: { fr: 'Reste {n} pièce(s) du raid', en: '{n} piece(s) left from the raid' },
+  bisRien: { fr: 'Rien à attendre du raid', en: 'Nothing left to expect from the raid' },
+  bisTome: { fr: 'Mémoquartz', en: 'Tomestones' },
+  bisAilleurs: { fr: 'Ailleurs', en: 'Elsewhere' },
+  bisVideSlot: { fr: 'Case vide', en: 'Empty slot' },
+  bisObtenue: { fr: 'Obtenue', en: 'Obtained' },
+  bisClicPrendre: { fr: 'Clique : je l’ai obtenue', en: 'Click: I got it' },
+  bisClicRendre: { fr: 'Clique : pas encore obtenue', en: 'Click: not yet' },
+  bisPasLeDroit: {
+    fr: 'Seul le joueur (ou le chef du groupe) coche ici.',
+    en: 'Only the player (or the group leader) ticks here.',
+  },
+  bisLienInvalide: {
+    fr: 'Ce lien ne ressemble pas à un set Etro.',
+    en: 'That link does not look like an Etro set.',
+  },
+  bisXivgear: {
+    fr: 'XIVGear n’est pas encore lu. Pour l’instant, seul Etro.',
+    en: 'XIVGear is not read yet. Etro only, for now.',
+  },
+  bisIntrouvable: { fr: 'Ce set n’existe pas chez Etro.', en: 'Etro has no such set.' },
+  bisInjoignable: {
+    fr: 'Etro n’a pas répondu. Réessaie dans un instant.',
+    en: 'Etro did not answer. Try again in a moment.',
+  },
+  bisVide: {
+    fr: 'Ce set n’a aucune pièce équipée.',
+    en: 'That set has no equipped piece.',
+  },
+  bisEchecEcriture: {
+    fr: 'L’import n’a pas pu être enregistré.',
+    en: 'The import could not be saved.',
+  },
   butinNoTier: {
     fr: 'Ce groupe n’a pas de palier. Recrée-le en choisissant lequel vous faites.',
     en: 'This group has no tier. Create it again and pick the one you are running.',

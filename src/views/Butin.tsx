@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
-import type { Character, RaidPalier } from '../api'
+import { useMemo, useState } from 'react'
+import { iconeObjet, type Character, type RaidPalier } from '../api'
 import { useI18n } from '../i18n'
+import { ErreurBis, etages, importerBis, rangerBis, type Bis, type Vise } from '../raid'
 import { nomCourt, type Member } from '../store'
 import { onAvatarImgError, onItemImgError } from '../ui'
 
@@ -10,71 +11,51 @@ type Ready = Member & { data: Character }
 // « Combien de kills reste-t-il ? »
 //
 // C'est la seule question qu'un static se pose devant un palier. Pas un
-// inventaire : un nombre de soirées.
+// inventaire : un nombre de soirées. Elle est donc en haut, avant tout le reste.
 //
-// Chaque emplacement d'un joueur est dans un état parmi trois, et le DÉFAUT est
-// « attendu du savage » — sur un palier neuf, personne n'a rien à déclarer et le
-// compte est déjà juste. On ne saisit que les exceptions.
+// En dessous, une carte par joueur. Ce que chacun vise ne se saisit pas : il l'a
+// déjà écrit dans son BiS, on colle le lien et le catalogue du palier range les
+// douze pièces tout seul. Le seul geste qui reste est celui qui ne se déduit
+// d'aucune donnée : « je l'ai obtenue ».
 // ---------------------------------------------------------------------------
-
-export type Etat = 'attendu' | 'fait' | 'ailleurs'
-
-/** Pièces lâchées par un étage à chaque kill. C'est ce chiffre qui transforme
- *  des besoins en nombre de soirées : il est isolé ici pour se corriger d'une
- *  ligne si un palier change les règles. */
-const PIECES_PAR_KILL = 2
-
-export function etatDe(c: Character, id: number): Etat {
-  if (c.raidFait.includes(id)) return 'fait'
-  if (c.raidAilleurs.includes(id)) return 'ailleurs'
-  return 'attendu'
-}
-
-/** L'ordre du cycle suit l'usage : on coche d'abord ce qu'on vient d'obtenir,
- *  et on déclare plus rarement qu'on prendra la pièce ailleurs. */
-export function etatSuivant(e: Etat): Etat {
-  return e === 'attendu' ? 'fait' : e === 'fait' ? 'ailleurs' : 'attendu'
-}
 
 export function Butin({
   palier,
   ready,
+  bis,
   peutModifier,
-  onCycle,
+  onImport,
+  onBascule,
 }: {
   palier: RaidPalier
   ready: Ready[]
-  /** Qui peut toucher à la ligne de ce personnage. */
+  /** BiS du palier, par personnage. Absent tant que rien n'a été importé. */
+  bis: Record<number, Bis | undefined>
+  /** Qui peut toucher à la carte de ce personnage. */
   peutModifier: (charId: number) => boolean
-  onCycle: (charId: number, id: number, suivant: Etat) => void
+  onImport: (charId: number, bis: Bis) => Promise<void>
+  onBascule: (charId: number, id: number, fait: boolean) => void
 }) {
   const { lang, t } = useI18n()
 
-  const etages = useMemo(() => {
-    const map = new Map<number, RaidPalier['emplacements']>()
-    for (const e of palier.emplacements) {
-      const l = map.get(e.etage) ?? []
-      l.push(e)
-      map.set(e.etage, l)
-    }
-    return [...map.entries()].sort((a, b) => a[0] - b[0])
-  }, [palier])
-
-  /** Par étage : ce qui reste attendu, et par qui. */
-  const besoins = useMemo(
+  const cartes = useMemo(
     () =>
-      etages.map(([etage, emplacements]) => {
-        const parJoueur = ready
-          .map((m) => ({
-            membre: m,
-            manque: emplacements.filter((e) => etatDe(m.data, e.id) === 'attendu'),
-          }))
-          .filter((x) => x.manque.length > 0)
-        const pieces = parJoueur.reduce((n, x) => n + x.manque.length, 0)
-        return { etage, pieces, kills: Math.ceil(pieces / PIECES_PAR_KILL), parJoueur }
-      }),
-    [etages, ready],
+      ready.map((m) => ({
+        membre: m,
+        vises: rangerBis(palier, bis[m.id] ?? null, m.data.raidFait),
+      })),
+    [ready, palier, bis],
   )
+
+  const parEtage = useMemo(
+    () => etages(cartes.map((c) => ({ charId: c.membre.id, vises: c.vises }))),
+    [cartes],
+  )
+
+  const nomDe = (charId: number) => {
+    const c = cartes.find((x) => x.membre.id === charId)
+    return c ? nomCourt(c.membre) : ''
+  }
 
   return (
     <div className="view">
@@ -82,21 +63,21 @@ export function Butin({
 
       {/* La réponse, en haut, lisible sans défiler. */}
       <div className="kills-row">
-        {besoins.map((b) => (
-          <section key={b.etage} className={`kills-card ${b.kills === 0 ? 'is-done' : ''}`}>
+        {parEtage.map((e) => (
+          <section key={e.etage} className={`kills-card ${e.kills === 0 ? 'is-done' : ''}`}>
             <header>
-              <b>{t('butinFloor', { n: b.etage })}</b>
-              <span className="kills-n">{b.kills}</span>
+              <b>{t('butinFloor', { n: e.etage })}</b>
+              <span className="kills-n">{e.kills}</span>
             </header>
             <p className="kills-label">
-              {b.kills === 0 ? t('butinDone') : t('butinKills', { n: b.kills })}
+              {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
             </p>
-            {b.parJoueur.length > 0 && (
+            {e.parJoueur.length > 0 && (
               <ul className="kills-detail">
-                {b.parJoueur.map((x) => (
-                  <li key={x.membre.id}>
-                    <b>{nomCourt(x.membre)}</b>{' '}
-                    {x.manque.map((e) => (lang === 'fr' ? e.fr : e.en)).join(', ')}
+                {e.parJoueur.map((j) => (
+                  <li key={j.charId}>
+                    <b>{nomDe(j.charId)}</b>{' '}
+                    {j.emplacements.map((x) => (lang === 'fr' ? x.fr : x.en)).join(', ')}
                   </li>
                 ))}
               </ul>
@@ -105,66 +86,244 @@ export function Butin({
         ))}
       </div>
 
-      {etages.map(([etage, emplacements]) => (
-        <section key={etage} className="relic-series butin-etage">
-          <header className="relic-series-head">
-            <h4 className="relic-series-name">{t('butinFloor', { n: etage })}</h4>
-          </header>
-          <table className="butin-table">
-            <thead>
-              <tr>
-                <th />
-                {ready.map((m) => (
-                  <th key={m.id} className="col-player" title={m.data.name}>
-                    <img
-                      src={m.data.avatar}
-                      alt=""
-                      width={28}
-                      height={28}
-                      onError={onAvatarImgError}
-                    />
-                    <span className="col-player-name">{nomCourt(m)}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {emplacements.map((e) => (
-                <tr key={e.cle}>
-                  <th scope="row" className="butin-slot">
-                    <img
-                      src={e.icon}
-                      alt=""
-                      width={28}
-                      height={28}
-                      loading="lazy"
-                      onError={onItemImgError}
-                    />
-                    <span title={lang === 'fr' ? e.objetFr : e.objetEn}>
-                      {lang === 'fr' ? e.fr : e.en}
-                    </span>
-                  </th>
-                  {ready.map((m) => {
-                    const etat = etatDe(m.data, e.id)
-                    return (
-                      <td key={m.id}>
-                        <button
-                          className={`etat-btn etat-${etat}`}
-                          title={t(`butinEtat_${etat}` as 'butinEtat_attendu')}
-                          disabled={!peutModifier(m.id)}
-                          onClick={() => onCycle(m.id, e.id, etatSuivant(etat))}
-                        >
-                          {etat === 'fait' ? '✓' : etat === 'ailleurs' ? '—' : ''}
-                        </button>
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
+      <div className="bis-cards">
+        {cartes.map((c) => (
+          <CarteJoueur
+            key={c.membre.id}
+            membre={c.membre}
+            vises={c.vises}
+            bis={bis[c.membre.id]}
+            modifiable={peutModifier(c.membre.id)}
+            onImport={(b) => onImport(c.membre.id, b)}
+            onBascule={(id, fait) => onBascule(c.membre.id, id, fait)}
+          />
+        ))}
+      </div>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+function CarteJoueur({
+  membre,
+  vises,
+  bis,
+  modifiable,
+  onImport,
+  onBascule,
+}: {
+  membre: Ready
+  vises: Vise[]
+  bis: Bis | undefined
+  modifiable: boolean
+  onImport: (bis: Bis) => Promise<void>
+  onBascule: (id: number, fait: boolean) => void
+}) {
+  const { t } = useI18n()
+  const [saisie, setSaisie] = useState(false)
+  const reste = vises.filter((v) => v.etat === 'attendu').length
+
+  return (
+    <section className="bis-card">
+      <header className="bis-head">
+        <img
+          className="bis-avatar"
+          src={membre.data.avatar}
+          alt=""
+          width={44}
+          height={44}
+          onError={onAvatarImgError}
+        />
+        <div className="bis-qui">
+          <b>{nomCourt(membre)}</b>
+          {bis && (
+            <span className="bis-set">
+              {bis.job && <span className="bis-job">{bis.job}</span>}
+              {bis.url ? (
+                <a href={bis.url} target="_blank" rel="noreferrer">
+                  {bis.nom || 'Etro'}
+                </a>
+              ) : (
+                bis.nom
+              )}
+            </span>
+          )}
+        </div>
+        <span className={`bis-reste ${reste === 0 ? 'is-done' : ''}`}>
+          {reste === 0 ? t('bisRien') : t('bisReste', { n: reste })}
+        </span>
+      </header>
+
+      {bis && !saisie && (
+        <ul className="bis-slots">
+          {vises.map((v) => (
+            <Pastille
+              key={v.emplacement.cle}
+              vise={v}
+              modifiable={modifiable}
+              onBascule={onBascule}
+            />
+          ))}
+        </ul>
+      )}
+
+      {(!bis || saisie) && (
+        <Import
+          modifiable={modifiable}
+          annulable={!!bis}
+          onAnnuler={() => setSaisie(false)}
+          onImport={async (b) => {
+            await onImport(b)
+            setSaisie(false)
+          }}
+        />
+      )}
+
+      {bis && !saisie && modifiable && (
+        <button type="button" className="btn-ghost bis-remplacer" onClick={() => setSaisie(true)}>
+          {t('bisRemplacer')}
+        </button>
+      )}
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+function Pastille({
+  vise,
+  modifiable,
+  onBascule,
+}: {
+  vise: Vise
+  modifiable: boolean
+  onBascule: (id: number, fait: boolean) => void
+}) {
+  const { lang, t } = useI18n()
+  const { emplacement, pieces, inconnus, etat } = vise
+  const piece = pieces[0]
+
+  // Ce que la pastille montre : la pièce visée, pas une étiquette abstraite.
+  // Faute de BiS pour cette case, on nomme au moins l'emplacement.
+  const nom = piece
+    ? lang === 'fr'
+      ? piece.fr
+      : piece.en
+    : lang === 'fr'
+      ? emplacement.fr
+      : emplacement.en
+
+  // La provenance en toutes lettres. Un emplacement attendu affiche son étage :
+  // c'est ce qu'on veut savoir devant un tableau de raid.
+  const ou =
+    etat === 'attendu'
+      ? t('butinFloor', { n: emplacement.etage })
+      : etat === 'fait'
+        ? t('bisObtenue')
+        : pieces.length > 0
+          ? t('bisTome')
+          : inconnus.length > 0
+            ? t('bisAilleurs')
+            : t('bisVideSlot')
+
+  const cliquable = modifiable && (etat === 'attendu' || etat === 'fait')
+  const infobulle = !modifiable
+    ? t('bisPasLeDroit')
+    : etat === 'attendu'
+      ? t('bisClicPrendre')
+      : etat === 'fait'
+        ? t('bisClicRendre')
+        : ''
+
+  return (
+    <li className={`bis-slot est-${etat}`}>
+      <button
+        type="button"
+        disabled={!cliquable}
+        title={infobulle}
+        onClick={() => onBascule(emplacement.id, etat !== 'fait')}
+      >
+        <img
+          src={piece ? iconeObjet(piece.icone) : emplacement.icon}
+          alt=""
+          width={32}
+          height={32}
+          loading="lazy"
+          onError={onItemImgError}
+        />
+        <span className="bis-slot-texte">
+          <span className="bis-slot-nom">{nom}</span>
+          <span className="bis-slot-ou">{ou}</span>
+        </span>
+      </button>
+      {/* Le paladin reçoit son bouclier dans le même coffre que son arme : un
+          seul butin, donc une seule pastille, mais les deux pièces se disent. */}
+      {pieces.length > 1 && (
+        <span className="bis-slot-bis">{lang === 'fr' ? pieces[1].fr : pieces[1].en}</span>
+      )}
+    </li>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+function Import({
+  modifiable,
+  annulable,
+  onAnnuler,
+  onImport,
+}: {
+  modifiable: boolean
+  annulable: boolean
+  onAnnuler: () => void
+  onImport: (bis: Bis) => Promise<void>
+}) {
+  const { t } = useI18n()
+  const [lien, setLien] = useState('')
+  const [encours, setEncours] = useState(false)
+  const [erreur, setErreur] = useState('')
+
+  if (!modifiable) return <p className="empty bis-vide">{t('bisAucun')}</p>
+
+  async function envoyer(e: React.FormEvent) {
+    e.preventDefault()
+    setErreur('')
+    setEncours(true)
+    try {
+      await onImport(await importerBis(lien))
+      setLien('')
+    } catch (err) {
+      // Le message d'erreur EST une clé de traduction : l'import parle la
+      // langue de la vue, sans que la vue ait à connaître ses cas d'échec.
+      const cle = err instanceof ErreurBis ? err.message : 'bisEchecEcriture'
+      setErreur(t(cle as 'bisLienInvalide'))
+    } finally {
+      setEncours(false)
+    }
+  }
+
+  return (
+    <form className="bis-import" onSubmit={envoyer}>
+      <p className="muted">{t('bisAide')}</p>
+      <div className="bis-import-ligne">
+        <input
+          type="url"
+          value={lien}
+          placeholder="https://etro.gg/gearset/..."
+          onChange={(e) => setLien(e.target.value)}
+          required
+        />
+        <button type="submit" className="btn-primary" disabled={encours || !lien.trim()}>
+          {encours ? t('bisEnCours') : t('bisImporter')}
+        </button>
+        {annulable && (
+          <button type="button" className="btn-ghost" onClick={onAnnuler}>
+            {t('bisAnnuler')}
+          </button>
+        )}
+      </div>
+      {erreur && <p className="bis-erreur">{erreur}</p>}
+    </form>
   )
 }

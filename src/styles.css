@@ -2610,45 +2610,6 @@ a.player-name:hover {
    du marché : elle dit « tu le veux », pas « tu l'as ». */
 /* ------------------------------------------------------ butin de raid */
 
-/* Une table par etage : c'est ainsi qu'on farme, on ne fait pas « les bottes »,
-   on fait le deuxieme etage et on regarde ce qu'il lache. */
-.butin-etage {
-  border-left: 3px solid var(--gold);
-}
-
-.butin-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.butin-table th,
-.butin-table td {
-  padding: 6px 8px;
-  text-align: center;
-}
-
-.butin-table tbody tr {
-  border-top: 1px solid var(--hairline);
-}
-
-/* L'emplacement tient la colonne de gauche, avec l'image du coffre : on
-   reconnait un coffre a sa vignette bien avant d'avoir lu son nom. */
-.butin-slot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-align: left;
-  font-weight: 500;
-  color: var(--ink);
-  white-space: nowrap;
-}
-
-.butin-slot img {
-  border-radius: var(--radius-s);
-  flex-shrink: 0;
-}
-
 /* La reponse du static : quatre cartes, une par etage, lisibles sans defiler. */
 .kills-row {
   display: grid;
@@ -2704,37 +2665,205 @@ a.player-name:hover {
   gap: 4px;
 }
 
-/* Trois etats, trois allures. « Attendu » est le defaut, donc le plus discret :
-   c'est l'etat de tout le monde au premier jour d'un palier. */
-.etat-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+/* Une carte par joueur. Le tableau croise disait la meme chose, mais il fallait
+   suivre une ligne des yeux sur toute la largeur pour savoir ou en etait UN
+   joueur : la question qu'on se pose le plus souvent. */
+.bis-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.bis-card {
+  padding: 14px;
+  background: var(--surface);
   border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+
+.bis-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bis-avatar {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bis-qui {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Le nom du BiS et son lien : de la ou vient tout ce qui s'affiche en dessous.
+   Sans lui, la carte aurait l'air de savoir des choses sans dire d'ou. */
+.bis-set {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.bis-set a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bis-job {
+  padding: 1px 6px;
+  border-radius: 999px;
   background: var(--surface-2);
-  color: var(--ink);
-  font-weight: 700;
-  cursor: pointer;
+  border: 1px solid var(--hairline);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
-.etat-btn:disabled {
-  cursor: default;
-  opacity: 0.5;
+.bis-reste {
+  margin-left: auto;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
 }
 
-.etat-attendu {
-  border-style: dashed;
-  border-color: rgba(214, 178, 107, 0.5);
-}
-
-.etat-fait {
-  background: rgba(12, 163, 12, 0.18);
-  border-color: rgba(12, 163, 12, 0.5);
+.bis-reste.is-done {
   color: var(--good);
 }
 
-.etat-ailleurs {
+.bis-slots {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 6px;
+}
+
+.bis-slot button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  text-align: left;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.bis-slot button:disabled {
+  cursor: default;
+}
+
+.bis-slot img {
+  border-radius: var(--radius-s);
+  flex-shrink: 0;
+}
+
+.bis-slot-texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bis-slot-nom {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bis-slot-ou {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* Le bouclier du paladin, glisse sous l'arme : meme coffre, meme pastille. */
+.bis-slot-bis {
+  display: block;
+  padding: 2px 7px 0 47px;
+  font-size: 11px;
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Attendu du raid : dore, parce que c'est la seule chose qui coute des soirees.
+   Obtenu : vert et barre, c'est derriere nous. Ailleurs : gris, ca ne se
+   clique pas, mais ca se lit — savoir qu'une piece vient du memoquartz evite
+   de la chercher au raid. */
+.bis-slot.est-attendu button {
+  border-color: rgba(214, 178, 107, 0.55);
+  background: rgba(214, 178, 107, 0.1);
+}
+
+.bis-slot.est-fait button {
+  border-color: rgba(12, 163, 12, 0.45);
+  background: rgba(12, 163, 12, 0.12);
+}
+
+.bis-slot.est-fait .bis-slot-nom {
+  text-decoration: line-through;
+}
+
+.bis-slot.est-fait .bis-slot-ou {
+  color: var(--good);
+}
+
+.bis-slot.est-ailleurs button {
+  opacity: 0.65;
+}
+
+.bis-slot.est-ailleurs img {
+  filter: grayscale(1);
+}
+
+/* Sans BiS, la carte ne montre pas une grille vide a remplir a la main : elle
+   demande le lien, et c'est tout. */
+.bis-import {
+  margin-top: 12px;
+}
+
+.bis-import p {
+  margin: 0 0 8px;
+  font-size: 12px;
+}
+
+.bis-import-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bis-import-ligne input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.bis-erreur {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--critical);
+}
+
+.bis-remplacer {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.bis-vide {
+  margin-top: 12px;
 }
 
 /* ------------------------------------------------ catalogue des icones */

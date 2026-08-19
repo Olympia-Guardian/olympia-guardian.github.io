@@ -661,16 +661,14 @@ async function getCharacter(env, id, force, connecte = true) {
     minions: block('minions', !!char.public_minions),
     ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),
     relicIds: byKind.relics ?? [],
-    // Equipement de raid. Trois etats par emplacement, donc DEUX listes : ce
-    // qui est obtenu, et ce qu'on prendra ailleurs qu'en savage. Tout le reste
-    // est attendu du raid — le defaut est le cas courant, personne n'a rien a
-    // declarer sur un palier neuf.
+    // Equipement de raid OBTENU, par identifiant d'emplacement. C'est la seule
+    // chose qu'on stocke ici : ce qui vient du raid et ce qui vient d'ailleurs
+    // se lit dans le BiS importe (table raid_bis), il n'y a rien a declarer.
     //
-    // Volontairement absentes de missingKinds : elles ne viennent d'aucune
-    // source exterieure, leur absence ne doit donc pas declencher un amorcage
-    // FFXIV Collect qui n'aurait rien a apporter.
+    // Volontairement absente de missingKinds : elle ne vient d'aucune source
+    // exterieure, son absence ne doit donc pas declencher un amorcage FFXIV
+    // Collect qui n'aurait rien a apporter.
     raid_fait: byKind.raidfait ?? [],
-    raid_ailleurs: byKind.raidailleurs ?? [],
     outfit_piece_ids: byKind.outfitpieces ?? [],
     needsSeed,
   }
@@ -1186,9 +1184,10 @@ async function putCollections(env, user, charId, raw) {
   // synchro Lodestone réécrit ces deux collections (source lodestone).
   // outfitpieces : pièces de tenues possédées (stockage auxiliaire, comme
   // relics — un ensemble dont toutes les pièces sont là devient possédé).
-  // raidfait / raidailleurs : equipement de raid, meme nature auxiliaire.
+  // raidfait : equipement de raid obtenu, meme nature auxiliaire. Il s'ecrit
+  // aussi par /group/:id/raid/:charId, ou le CHEF du groupe y a droit.
   const deltas = []
-  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raidfait', 'raidailleurs']) {
+  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raidfait']) {
     const v = doc?.[kind]
     if (v === undefined) continue
     if (Array.isArray(v)) {
@@ -1787,6 +1786,178 @@ async function setMemberAlias(env, user, id, charId, raw) {
     { t: 'groups' },
   )
   return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user.id)))
+}
+
+// --------------------------------------------------------- equipement de raid
+//
+// Deux ecritures, une lecture. Elles passent par le GROUPE et non par le perso,
+// parce que le droit d'ecrire y est different : un static tient souvent son
+// tableau a une seule main, donc le chef du groupe peut importer et cocher pour
+// ses membres — ce que /character/:id/collections refuse a juste titre.
+
+/** Peut toucher a l'equipement de ce perso dans ce groupe : le proprietaire
+ *  verifie du perso, ou le chef du groupe. Rend la ligne du groupe pour
+ *  economiser la relecture, ou null si c'est refuse. */
+async function accesRaid(env, user, id, charId) {
+  const row = await groupRow(env, id)
+  if (!row) return null
+  const membre = await env.DB.prepare(
+    'SELECT 1 AS x FROM group_members WHERE group_id = ?1 AND char_id = ?2',
+  )
+    .bind(id, charId)
+    .first()
+  if (!membre) return null
+  if (row.owner_user_id === user.id) return row
+  return (await verifiedBinding(env, user.id, charId)) ? row : null
+}
+
+/** Previent le groupe : le tableau d'un static se regarde a plusieurs. */
+async function notifierGroupe(env, id) {
+  const linked = await env.DB.prepare('SELECT user_id FROM group_links WHERE group_id = ?1')
+    .bind(id)
+    .all()
+  await notify(
+    env,
+    linked.results.map((r) => r.user_id),
+    { t: 'groups' },
+  )
+}
+
+/** GET /group/:id/bis : les BiS du groupe sur le palier qu'il suit. */
+async function getRaidBis(env, user, id) {
+  const row = await groupRow(env, id)
+  if (!row) return response('{"error":"no such group"}', 404)
+  const allowed = row.owner_user_id === user.id || (await hasLink(env, user.id, id))
+  if (!allowed) return response('{"error":"no such group"}', 404)
+  if (!row.tier) return response(JSON.stringify({ tier: null, bis: {} }))
+  const membres = await env.DB.prepare(
+    'SELECT char_id FROM group_members WHERE group_id = ?1',
+  )
+    .bind(id)
+    .all()
+  const ids = membres.results.map((r) => r.char_id)
+  if (ids.length === 0) return response(JSON.stringify({ tier: row.tier, bis: {} }))
+  const marques = ids.map((_, i) => `?${i + 2}`).join(',')
+  const rows = await env.DB.prepare(
+    'SELECT char_id, job, nom, url, pieces, updated FROM raid_bis ' +
+      `WHERE tier = ?1 AND char_id IN (${marques})`,
+  )
+    .bind(row.tier, ...ids)
+    .all()
+  const bis = {}
+  for (const r of rows.results) {
+    let pieces
+    try {
+      pieces = JSON.parse(r.pieces)
+    } catch {
+      continue // ligne illisible : mieux vaut un BiS manquant qu'un ecran casse
+    }
+    bis[r.char_id] = {
+      job: r.job ?? '',
+      nom: r.nom ?? '',
+      url: r.url ?? '',
+      pieces,
+      updated: r.updated,
+    }
+  }
+  return response(JSON.stringify({ tier: row.tier, bis }))
+}
+
+const MAX_TEXTE_BIS = 200
+
+/** { case : identifiant d'objet }, douze cases au plus. Les noms de cases
+ *  viennent d'Etro (weapon, fingerL...) : on ne les enumere pas ici, mais on
+ *  refuse tout ce qui n'a pas leur forme. */
+function validPieces(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false
+  const cles = Object.keys(v)
+  if (cles.length === 0 || cles.length > 20) return false
+  return cles.every(
+    (c) =>
+      /^[a-zA-Z]{1,16}$/.test(c) &&
+      Number.isInteger(v[c]) &&
+      v[c] > 0 &&
+      v[c] < 1e9,
+  )
+}
+
+const texteCourt = (v) => (typeof v === 'string' ? v.slice(0, MAX_TEXTE_BIS) : '')
+
+/** PUT /group/:id/bis/:charId : pose (ou remplace) le BiS d'un joueur. */
+async function putRaidBis(env, user, id, charId, raw) {
+  const row = await accesRaid(env, user, id, charId)
+  if (!row) return response('{"error":"forbidden"}', 403)
+  if (!row.tier) return response('{"error":"no tier"}', 409)
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (!validPieces(body?.pieces)) return response('{"error":"invalid pieces"}', 422)
+  const now = Date.now()
+  await env.DB.prepare(
+    'INSERT INTO raid_bis (char_id, tier, job, nom, url, pieces, updated) ' +
+      'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) ON CONFLICT(char_id, tier) DO UPDATE SET ' +
+      'job = ?3, nom = ?4, url = ?5, pieces = ?6, updated = ?7',
+  )
+    .bind(
+      charId,
+      row.tier,
+      texteCourt(body.job),
+      texteCourt(body.nom),
+      texteCourt(body.url),
+      JSON.stringify(body.pieces),
+      now,
+    )
+    .run()
+  await notifierGroupe(env, id)
+  return response(JSON.stringify({ ok: true, updated: now }))
+}
+
+/** PUT /group/:id/raid/:charId : coche (ou decoche) des emplacements obtenus.
+ *  Meme stockage que les collections — un ensemble d'identifiants — mais avec
+ *  le droit d'ecriture du groupe. */
+async function putRaidFait(env, user, id, charId, raw) {
+  if (!(await accesRaid(env, user, id, charId))) return response('{"error":"forbidden"}', 403)
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const add = body?.add ?? []
+  const remove = body?.remove ?? []
+  if (!validIds(add, 200) || !validIds(remove, 200)) {
+    return response('{"error":"invalid ids"}', 422)
+  }
+  if (add.length === 0 && remove.length === 0) {
+    return response('{"error":"nothing to update"}', 422)
+  }
+  const actuel = await env.DB.prepare(
+    "SELECT ids FROM collections WHERE char_id = ?1 AND kind = 'raidfait'",
+  )
+    .bind(charId)
+    .first()
+  let liste = []
+  try {
+    liste = actuel ? JSON.parse(actuel.ids) : []
+  } catch {
+    liste = []
+  }
+  const set = new Set(liste)
+  for (const n of add) set.add(n)
+  for (const n of remove) set.delete(n)
+  const now = Date.now()
+  await env.DB.prepare(
+    'INSERT INTO collections (char_id, kind, ids, updated, source) ' +
+      "VALUES (?1, 'raidfait', ?2, ?3, 'user') ON CONFLICT(char_id, kind) DO UPDATE SET " +
+      'ids = ?2, updated = ?3',
+  )
+    .bind(charId, JSON.stringify([...set]), now)
+    .run()
+  await notifierGroupe(env, id)
+  return response(JSON.stringify({ ok: true, ids: [...set] }))
 }
 
 /** Ajoute un perso au groupe (membres + horodatage), sans contrôle d'accès. */
@@ -3556,6 +3727,25 @@ const routes = {
       if (req.method === 'POST') return createGroup(env, user, await req.text())
       return response('{"error":"method not allowed"}', 405)
     }
+    // --- equipement de raid : GET /group/:id/bis
+    //     PUT /group/:id/bis/:charId · PUT /group/:id/raid/:charId
+    const raidMatch = url.pathname.match(
+      /^\/group\/(grp-[\w-]{10,80})\/(bis|raid)(?:\/(\d{1,12}))?$/,
+    )
+    if (raidMatch) {
+      const [, id, quoi, charId] = raidMatch
+      const user = await authenticate(env, req)
+      if (!user) return response('{"error":"unauthorized"}', 401)
+      if (quoi === 'bis' && !charId && req.method === 'GET') return getRaidBis(env, user, id)
+      const corps = charId && req.method === 'PUT' ? await req.text() : ''
+      if (corps.length > 8192) return response('{"error":"too large"}', 413)
+      if (quoi === 'bis' && charId && req.method === 'PUT')
+        return putRaidBis(env, user, id, Number(charId), corps)
+      if (quoi === 'raid' && charId && req.method === 'PUT')
+        return putRaidFait(env, user, id, Number(charId), corps)
+      return response('{"error":"method not allowed"}', 405)
+    }
+
     const groupMatch = url.pathname.match(
       /^\/group\/(grp-[\w-]{10,80})(?:\/(join|link|members|rotate)|\/member\/(\d{1,12})|\/requests\/([\w:.@%-]{1,240}))?$/,
     )

@@ -27,28 +27,69 @@ import { writeFile } from 'node:fs/promises'
 const OUT = new URL('../public/data/', import.meta.url)
 const API = 'https://v2.xivapi.com/api'
 
-// `etages` porte le nom que les joueurs donnent a chaque etage. « Etage 2 » ne
-// se dit nulle part : on annonce M10S, et le tableau parle la meme langue que
-// le static. L'ordre suit celui d'EMPLACEMENTS, du premier etage au dernier.
+// `etages` porte deux choses par etage : le nom que les JOUEURS lui donnent
+// (« M10S », qu'aucune donnee du jeu ne contient, le jeu numerotant ses matchs
+// de 1 a 4 dans chaque palier), et le nom EXACT de la mission, qui sert a
+// retrouver sa banniere. L'ordre va du premier etage au dernier.
+//
+// Les noms français des paliers viennent du jeu, pas d'une traduction maison :
+// le jeu dit « Poids lourds-légers » pour Cruiserweight et « Poids lourds »
+// pour Heavyweight, la boxe ayant des categories que l'intuition invente mal.
 const PALIERS = [
   { cle: 'asphodelos', famille: 'Asphodelos', ilvl: 600,
-    etages: ['P1S', 'P2S', 'P3S', 'P4S'],
+    courts: ['P1S', 'P2S', 'P3S', 'P4S'],
+    missions: [
+      'Asphodelos: The First Circle (Savage)',
+      'Asphodelos: The Second Circle (Savage)',
+      'Asphodelos: The Third Circle (Savage)',
+      'Asphodelos: The Fourth Circle (Savage)',
+    ],
     fr: 'Asphodélos (P1S-P4S)', en: 'Asphodelos (P1S-P4S)' },
   { cle: 'abyssos', famille: 'Abyssos', ilvl: 630,
-    etages: ['P5S', 'P6S', 'P7S', 'P8S'],
+    courts: ['P5S', 'P6S', 'P7S', 'P8S'],
+    missions: [
+      'Abyssos: The Fifth Circle (Savage)',
+      'Abyssos: The Sixth Circle (Savage)',
+      'Abyssos: The Seventh Circle (Savage)',
+      'Abyssos: The Eighth Circle (Savage)',
+    ],
     fr: 'Abyssos (P5S-P8S)', en: 'Abyssos (P5S-P8S)' },
   { cle: 'anabaseios', famille: 'Ascension', ilvl: 660,
-    etages: ['P9S', 'P10S', 'P11S', 'P12S'],
+    courts: ['P9S', 'P10S', 'P11S', 'P12S'],
+    missions: [
+      'Anabaseios: The Ninth Circle (Savage)',
+      'Anabaseios: The Tenth Circle (Savage)',
+      'Anabaseios: The Eleventh Circle (Savage)',
+      'Anabaseios: The Twelfth Circle (Savage)',
+    ],
     fr: 'Anabaseios (P9S-P12S)', en: 'Anabaseios (P9S-P12S)' },
   { cle: 'aac-light', famille: 'Dark Horse', ilvl: 730,
-    etages: ['M1S', 'M2S', 'M3S', 'M4S'],
-    fr: 'AAC Poids mi-lourds (M1S-M4S)', en: 'AAC Light-heavyweight (M1S-M4S)' },
+    courts: ['M1S', 'M2S', 'M3S', 'M4S'],
+    missions: [
+      'AAC Light-heavyweight M1 (Savage)',
+      'AAC Light-heavyweight M2 (Savage)',
+      'AAC Light-heavyweight M3 (Savage)',
+      'AAC Light-heavyweight M4 (Savage)',
+    ],
+    fr: 'CCA Poids mi-lourds (M1S-M4S)', en: 'AAC Light-heavyweight (M1S-M4S)' },
   { cle: 'aac-cruiser', famille: 'Babyface', ilvl: 760,
-    etages: ['M5S', 'M6S', 'M7S', 'M8S'],
-    fr: 'AAC Poids lourds (M5S-M8S)', en: 'AAC Cruiserweight (M5S-M8S)' },
+    courts: ['M5S', 'M6S', 'M7S', 'M8S'],
+    missions: [
+      'AAC Cruiserweight M1 (Savage)',
+      'AAC Cruiserweight M2 (Savage)',
+      'AAC Cruiserweight M3 (Savage)',
+      'AAC Cruiserweight M4 (Savage)',
+    ],
+    fr: 'CCA Poids lourds-légers (M5S-M8S)', en: 'AAC Cruiserweight (M5S-M8S)' },
   { cle: 'aac-heavy', famille: 'Grand Champion', ilvl: 790,
-    etages: ['M9S', 'M10S', 'M11S', 'M12S'],
-    fr: 'AAC Poids super-lourds (M9S-M12S)', en: 'AAC Heavyweight (M9S-M12S)' },
+    courts: ['M9S', 'M10S', 'M11S', 'M12S'],
+    missions: [
+      'AAC Heavyweight M1 (Savage)',
+      'AAC Heavyweight M2 (Savage)',
+      'AAC Heavyweight M3 (Savage)',
+      'AAC Heavyweight M4 (Savage)',
+    ],
+    fr: 'CCA Poids lourds (M9S-M12S)', en: 'AAC Heavyweight (M9S-M12S)' },
 ]
 
 // Le nom du coffre est bâti pareil à chaque palier : « … <Emplacement> Coffer ».
@@ -248,6 +289,42 @@ async function pieces(palier) {
   return liste
 }
 
+/** Les missions sadiques du jeu, par nom exact. Chacune porte sa banniere : la
+ *  meme image que le jeu affiche dans la recherche de mission. Une seule
+ *  recherche suffit pour les vingt-quatre. */
+async function missions() {
+  const q = encodeURIComponent('+Name~"Savage"')
+  const d = await json(
+    `${API}/search?sheets=ContentFinderCondition&query=${q}&limit=500&fields=Name,Image`,
+  )
+  const par = new Map()
+  for (const r of d.results ?? []) {
+    par.set(r.fields?.Name, { id: r.row_id, image: r.fields?.Image?.id ?? 0 })
+  }
+  return par
+}
+
+/** Les etages d'un palier : nom des joueurs, nom du jeu, banniere. */
+async function etagesDe(palier, catalogue) {
+  const out = []
+  for (let i = 0; i < palier.courts.length; i++) {
+    const nom = palier.missions[i]
+    const ligne = catalogue.get(nom)
+    if (!ligne) throw new Error(`${palier.cle} : mission « ${nom} » introuvable, écriture refusée`)
+    out.push({ court: palier.courts[i], en: nom, id: ligne.id, image: ligne.image })
+  }
+  const fr = await json(
+    `${API}/sheet/ContentFinderCondition?rows=${out.map((e) => e.id).join(',')}` +
+      '&language=fr&fields=Name',
+  )
+  const noms = new Map((fr.rows ?? []).map((r) => [r.row_id, r.fields?.Name ?? '']))
+  for (const e of out) {
+    e.fr = noms.get(e.id) || e.en
+    delete e.id
+  }
+  return out
+}
+
 /** Les quatre composants d'un palier. Le nom exact compte : « Universal
  *  Tomestone » et « Universal Tomestone 2.0 » sont deux paliers différents, et
  *  une recherche floue les confondrait. */
@@ -286,6 +363,8 @@ function verifier(cle, table) {
   }
 }
 
+const catalogueMissions = await missions()
+
 const paliers = []
 for (let rang = 0; rang < PALIERS.length; rang++) {
   const p = PALIERS[rang]
@@ -305,7 +384,7 @@ for (let rang = 0; rang < PALIERS.length; rang++) {
     fr: p.fr,
     en: p.en,
     ilvl: p.ilvl,
-    etages: p.etages,
+    etages: await etagesDe(p, catalogueMissions),
     emplacements: liste,
     pieces: table,
     materiaux: compos,

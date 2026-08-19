@@ -20,6 +20,12 @@ import { onAvatarImgError, onItemImgError } from '../ui'
 
 type Ready = Member & { data: Character }
 
+/** Une bannière manquante s'efface : mieux vaut une carte sans image qu'une
+ *  icône de fichier cassé étalée en fond. */
+function onFondImgError(e: React.SyntheticEvent<HTMLImageElement>) {
+  e.currentTarget.style.display = 'none'
+}
+
 // ---------------------------------------------------------------------------
 // « Combien de kills reste-t-il ? »
 //
@@ -72,9 +78,10 @@ export function Butin({
 
   const composants = useMemo(() => materiauxManquants(palier, cartes), [palier, cartes])
 
-  /** « M10S », pas « Étage 2 » : c'est ainsi qu'un static nomme sa soirée. Le
-   *  numéro ne sert que de secours, si un palier arrivait sans ses noms. */
-  const nomEtage = (n: number) => palier.etages?.[n - 1] ?? t('butinFloor', { n })
+  /** L'étage tel que le jeu et les joueurs le nomment. Le numéro ne sert que de
+   *  secours, si un palier arrivait sans ses étages. */
+  const etageDe = (n: number) => palier.etages?.[n - 1]
+  const nomEtage = (n: number) => etageDe(n)?.court ?? t('butinFloor', { n })
 
   const nomDe = (charId: number) => {
     const c = cartes.find((x) => x.membre.id === charId)
@@ -87,27 +94,48 @@ export function Butin({
 
       {/* La réponse, en haut, lisible sans défiler. */}
       <div className="kills-row">
-        {parEtage.map((e) => (
-          <section key={e.etage} className={`kills-card ${e.kills === 0 ? 'is-done' : ''}`}>
-            <header>
-              <b>{nomEtage(e.etage)}</b>
-              <span className="kills-n">{e.kills}</span>
-            </header>
-            <p className="kills-label">
-              {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
-            </p>
-            {e.parJoueur.length > 0 && (
-              <ul className="kills-detail">
-                {e.parJoueur.map((j) => (
-                  <li key={j.charId}>
-                    <b>{nomDe(j.charId)}</b>{' '}
-                    {j.emplacements.map((x) => (lang === 'fr' ? x.fr : x.en)).join(', ')}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        ))}
+        {parEtage.map((e) => {
+          const etage = etageDe(e.etage)
+          return (
+            <section key={e.etage} className={`kills-card ${e.kills === 0 ? 'is-done' : ''}`}>
+              {/* La bannière que le jeu affiche dans sa recherche de mission :
+                  on reconnaît l'étage à son image avant d'avoir lu son nom. */}
+              {etage && (
+                <img
+                  className="kills-fond"
+                  src={iconeObjet(etage.image, false)}
+                  alt=""
+                  loading="lazy"
+                  onError={onFondImgError}
+                />
+              )}
+              <div className="kills-contenu">
+                <header>
+                  <b>{nomEtage(e.etage)}</b>
+                  <span className="kills-n">{e.kills}</span>
+                </header>
+                {etage && (
+                  <p className="kills-mission" title={lang === 'fr' ? etage.fr : etage.en}>
+                    {lang === 'fr' ? etage.fr : etage.en}
+                  </p>
+                )}
+                <p className="kills-label">
+                  {e.kills === 0 ? t('butinDone') : t('butinKills', { n: e.kills })}
+                </p>
+                {e.parJoueur.length > 0 && (
+                  <ul className="kills-detail">
+                    {e.parJoueur.map((j) => (
+                      <li key={j.charId}>
+                        <b>{nomDe(j.charId)}</b>{' '}
+                        {j.emplacements.map((x) => (lang === 'fr' ? x.fr : x.en)).join(', ')}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          )
+        })}
       </div>
 
       {/* Les composants. Ils coûtent des soirées eux aussi, mais aucune donnée

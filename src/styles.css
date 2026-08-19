@@ -2618,11 +2618,62 @@ a.player-name:hover {
   margin: 14px 0 20px;
 }
 
+/* La banniere de la mission tient le fond : on reconnait l'etage a son image
+   avant d'avoir lu son nom. Elle passe sous un voile, faute de quoi les
+   chiffres, qui sont le sujet de la carte, deviendraient illisibles dessus. */
 .kills-card {
+  position: relative;
+  overflow: hidden;
   padding: 12px 14px;
   background: var(--surface);
   border: 1px solid rgba(214, 178, 107, 0.45);
   border-radius: var(--radius);
+}
+
+/* Trois plans, et il faut les NUMEROTER : sans z-index, un ::after est le
+   dernier enfant de la carte, donc peint par-dessus le texte au lieu de rester
+   dessous. L'image au fond, le voile au milieu, les chiffres devant. */
+.kills-fond {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.34;
+}
+
+/* Opaque a gauche, ou se lisent les chiffres ; transparent a droite, ou
+   l'image a le droit de se montrer. */
+.kills-card::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(26, 26, 25, 0.94) 0%,
+    rgba(26, 26, 25, 0.78) 45%,
+    rgba(26, 26, 25, 0.42) 100%
+  );
+}
+
+.kills-contenu {
+  position: relative;
+  z-index: 2;
+}
+
+/* Le nom que le jeu donne a la mission, sous celui que lui donnent les
+   joueurs. « M10S » ne se trouve dans aucune donnee du jeu, « Poids lourds CCA
+   - match 2 » ne se dit a aucune table : les deux servent. */
+.kills-mission {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kills-card.is-done {
@@ -2648,9 +2699,13 @@ a.player-name:hover {
 }
 
 .kills-label {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
   font-size: 12px;
-  color: var(--ink-2);
+  color: var(--gold);
+}
+
+.kills-card.is-done .kills-label {
+  color: var(--good);
 }
 
 .kills-detail {

@@ -283,7 +283,7 @@ const CACHE_MAX_CHARS = 300_000
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
-const RAID_V = 'v5'
+const RAID_V = 'v6'
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
@@ -621,11 +621,15 @@ export interface RelicDb {
 
 /** Icône d'un objet à partir de son numéro. Le catalogue des pièces n'en
  *  stocke que le nombre : mille adresses complètes pesaient 80 Ko pour une
- *  information qui se recalcule d'une ligne. */
-export function iconeObjet(id: number): string {
+ *  information qui se recalcule d'une ligne.
+ *
+ *  `hd` sert aux petites icônes, où la finesse se voit. Les bannières de
+ *  mission, elles, la paient cher : 480 Ko en haute définition contre 68 en
+ *  standard, pour une image de fond qu'on assombrit de toute façon. */
+export function iconeObjet(id: number, hd = true): string {
   const n = String(id).padStart(6, '0')
   const dossier = n.slice(0, 3) + '000'
-  const chemin = `ui/icon/${dossier}/${n}_hr1.tex`
+  const chemin = `ui/icon/${dossier}/${n}${hd ? '_hr1' : ''}.tex`
   return `https://v2.xivapi.com/api/asset?format=webp&path=${encodeURIComponent(chemin)}`
 }
 
@@ -676,14 +680,25 @@ export interface RaidMateriau {
   icone: number
 }
 
+/** Un étage du palier : son nom de joueur, son nom de mission, sa bannière.
+ *  « M10S » ne figure dans aucune donnée du jeu, qui numérote ses matchs de 1 à
+ *  4 dans chaque palier ; c'est pourtant le seul nom qu'on emploie à une table
+ *  de raid. */
+export interface RaidEtage {
+  court: string
+  fr: string
+  en: string
+  /** Bannière de la mission, la même que dans la recherche de mission du jeu. */
+  image: number
+}
+
 export interface RaidPalier {
   cle: string
   fr: string
   en: string
   ilvl: number
-  /** Le nom que les joueurs donnent à chaque étage : M9S, M10S… « Étage 2 » ne
-   *  se dit à aucune table de raid. */
-  etages: string[]
+  /** Les quatre étages, du premier au dernier. */
+  etages: RaidEtage[]
   emplacements: RaidEmplacement[]
   pieces: RaidPiece[]
   materiaux: RaidMateriau[]

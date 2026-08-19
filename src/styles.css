@@ -1100,6 +1100,186 @@ a.player-name:hover {
   }
 }
 
+/* ------------------------------------------------- avancement du groupe */
+
+/* Podium : trois marches, la plus haute au milieu. Les blocs sont alignes par
+   le bas, c'est ce qui fait lire la hauteur comme un classement. */
+.podium {
+  list-style: none;
+  margin: 14px 0 18px;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 18px;
+}
+
+.podium-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 92px;
+  max-width: 150px;
+}
+
+.podium-face {
+  border-radius: 50%;
+  border: 2px solid var(--rank);
+  background: var(--surface-2);
+}
+
+.podium-name {
+  font-size: 13px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-pct {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.podium-block {
+  margin-top: 2px;
+  width: 100%;
+  height: var(--marche);
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, var(--rank), transparent 260%);
+  border: 1px solid var(--rank);
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.podium-rank {
+  font-size: 22px;
+  font-weight: 700;
+  color: #171716;
+}
+
+/* Or, argent, bronze. Aucune icone : le rang se lit au chiffre et a la hauteur. */
+.podium-1 {
+  --rank: var(--gold);
+  --marche: 62px;
+}
+
+.podium-2 {
+  --rank: #b9b9ae;
+  --marche: 44px;
+}
+
+.podium-3 {
+  --rank: #b07a4a;
+  --marche: 30px;
+}
+
+/* Une barre par joueur. La piste est retrecie de 13 px de chaque cote pour que
+   l'avatar plante a la pointe tienne dans la ligne a 0 % comme a 100 %. */
+.prog-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prog-row {
+  display: grid;
+  grid-template-columns: 104px 1fr 78px 58px;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.prog-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.prog-bar {
+  position: relative;
+  height: 10px;
+  margin: 0 13px;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+
+.prog-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.prog-bar i.lvl-low {
+  background: var(--critical);
+}
+
+.prog-bar i.lvl-mid {
+  background: var(--warning);
+}
+
+.prog-bar i.lvl-high {
+  background: var(--accent);
+}
+
+.prog-bar i.is-done {
+  background: var(--good);
+}
+
+.prog-avatar {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 1px var(--hairline);
+}
+
+.prog-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.prog-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.prog-section .relic-series-head {
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .prog-row {
+    grid-template-columns: 76px 1fr 62px;
+  }
+
+  .prog-count {
+    display: none;
+  }
+
+  .podium {
+    gap: 8px;
+  }
+
+  .podium-step {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+}
+
 /* ------------------------------------------------------------ fiche objet */
 
 .modal-backdrop {

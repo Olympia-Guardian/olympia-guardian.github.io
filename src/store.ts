@@ -122,17 +122,26 @@ export function useRelicDb() {
 // Hash de l'URL
 // ---------------------------------------------------------------------------
 
-/** Met à jour un paramètre du hash sans toucher aux autres (g, r). */
+/** Met à jour un paramètre du hash sans toucher aux autres (j, c, login).
+ *  L'ancre — la partie sans `=`, qui porte l'onglet de la section — est
+ *  conservée telle quelle : consommer une invitation ne doit pas faire sauter
+ *  l'onglet sous les yeux du visiteur. Voir src/routes.ts. */
 export function setHashParam(key: string, value: string | null): void {
   const map = new Map<string, string>()
+  const ancres: string[] = []
   for (const part of location.hash.replace(/^#/, '').split('&')) {
     const i = part.indexOf('=')
     if (i > 0) map.set(part.slice(0, i), part.slice(i + 1))
+    else if (part.length > 0) ancres.push(part)
   }
   if (value) map.set(key, value)
   else map.delete(key)
-  const s = [...map.entries()].map(([k, v]) => `${k}=${v}`).join('&')
-  history.replaceState(null, '', location.pathname + location.search + (s ? '#' + s : ''))
+  const parts = [...ancres, ...[...map.entries()].map(([k, v]) => `${k}=${v}`)]
+  history.replaceState(
+    null,
+    '',
+    location.pathname + location.search + (parts.length > 0 ? '#' + parts.join('&') : ''),
+  )
 }
 
 /** Valeur d'un paramètre du hash (#r=…&tab=…). */

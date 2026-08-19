@@ -1080,6 +1080,15 @@ const STR = {
   relicsTab: { fr: 'Reliques', en: 'Relics' },
   fashionFamily: { fr: 'Mode', en: 'Fashion' },
   relicGlobal: { fr: 'Avancement global, toutes les reliques', en: 'Overall progress, all relics' },
+  pickKindTitle: { fr: 'Choisis une collection', en: 'Pick a collection' },
+  pickKindJournal: {
+    fr: 'Les onglets ci-dessus ouvrent chacun une collection. Celle que tu ouvres se retrouve dans l’adresse : mets-la en favori pour y revenir directement.',
+    en: 'Each tab above opens one collection. The one you open shows in the address: bookmark it to come straight back.',
+  },
+  pickKindCollections: {
+    fr: 'Les onglets ci-dessus ouvrent chacun une collection, croisée avec ton groupe. Celle que tu ouvres se retrouve dans l’adresse : la page se met en favori et se partage telle quelle.',
+    en: 'Each tab above opens one collection, crossed with your group. The one you open shows in the address: bookmark or share the page as it is.',
+  },
   groupProgressTab: { fr: 'Avancement', en: 'Progress' },
   groupProgress: { fr: 'Avancement du groupe', en: 'Group progress' },
   progressCollections: { fr: 'Par collection', en: 'By collection' },

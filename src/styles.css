@@ -1461,6 +1461,32 @@ a.player-name:hover {
   padding: 30px 0;
 }
 
+/* Accueil d'une section dont aucun onglet n'est ouvert (/journal, /collections).
+   Aéré et centré : c'est une invitation à choisir, pas un message d'erreur. */
+.pick-kind {
+  max-width: 620px;
+  margin: 34px auto;
+  text-align: center;
+  padding: 34px 30px 38px;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid rgba(214, 178, 107, 0.45);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+
+.pick-kind h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: var(--gold);
+}
+
+.pick-kind p {
+  margin: 0 auto;
+  max-width: 52ch;
+  line-height: 1.6;
+}
+
 /* bandeau d'invitation (#j=…) : texte + boutons « rejoindre avec » */
 .join-banner {
   display: flex;

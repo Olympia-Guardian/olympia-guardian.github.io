@@ -18,7 +18,8 @@ import type { useAuth } from '../auth'
 import { apiSearchCharacter, type CharSearchResult } from '../groupsApi'
 import { kindLabel, localName, useI18n, type Lang } from '../i18n'
 import { sourceIcon, typeLabel } from '../sources'
-import { readHashParam, setHashParam, type Db, type Member } from '../store'
+import type { Db, Member } from '../store'
+import { ancre, ecrireAncre } from '../routes'
 import { Meter, TabIcon, TypeChip, onAvatarImgError, onItemImgError, xivIconUrl } from '../ui'
 import { useFlushOnHide } from '../useFlushOnHide'
 import { useVisible } from '../useVisible'
@@ -1346,17 +1347,20 @@ export function MyPage({
   const [char, setChar] = useState<Character | null>(null)
   // Les reliques ne sont pas un « kind » (données à part), mais elles ont leur
   // onglet ici : c'est la page où l'on suit sa propre progression.
-  // L'onglet vit dans le hash (#jtab=…) pour survivre aux rechargements.
-  const [kind, setKind] = useState<Kind | 'relics' | 'fashion'>(() => {
-    const k = readHashParam('jtab')
+  // L'onglet vit dans l'ancre (/journal#cards) pour survivre aux rechargements.
+  // Sans ancre, AUCUN onglet n'est ouvert : on arrive devant le choix. Ouvrir
+  // d'office une collection au hasard donnait à croire que c'était tout ce que
+  // la page contenait.
+  const [kind, setKind] = useState<Kind | 'relics' | 'fashion' | null>(() => {
+    const k = ancre()
     // Anciens liens vers les trois collections désormais fusionnées sous « Mode ».
     if ((FASHION_KINDS as string[]).includes(k ?? '')) return 'fashion'
     if (k === 'relics' || k === 'fashion' || (KINDS as string[]).includes(k ?? ''))
       return k as Kind | 'relics' | 'fashion'
-    return 'cards'
+    return null
   })
   useEffect(() => {
-    setHashParam('jtab', kind === 'cards' ? null : kind)
+    ecrireAncre(kind)
   }, [kind])
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -1986,7 +1990,12 @@ export function MyPage({
             </span>
           </nav>
           {notice && <p className="notice">{notice}</p>}
-          {kind === 'relics' ? (
+          {kind === null ? (
+            <div className="pick-kind">
+              <h2>{t('pickKindTitle')}</h2>
+              <p>{t('pickKindJournal')}</p>
+            </div>
+          ) : kind === 'relics' ? (
             relicDb ? (
               <Relics
                 db={relicDb}

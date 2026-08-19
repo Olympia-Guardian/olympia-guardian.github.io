@@ -14,7 +14,6 @@ import {
   nomCourt,
   nomMembre,
   readHashParam,
-  setHashParam,
   useDataAge,
   useDb,
   useMembers,
@@ -23,6 +22,13 @@ import {
   useRelicDb,
 } from './store'
 import { apiSuggest } from './groupsApi'
+import {
+  convertirAncienLien,
+  ecrireEmplacement,
+  lireEmplacement,
+  FASHION_KINDS,
+  type Tab,
+} from './routes'
 import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
@@ -42,23 +48,6 @@ import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
 import { Relics } from './views/Relics'
-
-type Tab =
-  | 'planning'
-  | Kind
-  | 'fashion'
-  | 'relics'
-  | 'mypage'
-  | 'market'
-  | 'groups'
-  | 'admin'
-  | 'guide'
-  | 'news'
-  | 'account'
-  | 'login'
-
-/** Collections fusionnées de l'onglet « Mode » (accessoires, lunettes, coiffures). */
-const FASHION_KINDS: Kind[] = ['fashions', 'facewear', 'hairstyles']
 
 /** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
 function useCharName(charId: number): string | null {
@@ -268,35 +257,16 @@ export default function App() {
     }
   }
 
-  // Nettoyage des anciens liens : le paramètre o= (coches manuelles) n'existe plus.
-  useEffect(() => {
-    setHashParam('o', null)
-  }, [])
-
-  // L'onglet vit dans le hash (#tab=…) : un rechargement — manuel ou par le
-  // rafraîchissement auto — ramène exactement où on était.
+  // La section vit dans le CHEMIN (/journal, /collections) : un rechargement —
+  // manuel ou par le rafraîchissement auto — ramène exactement où on était, et
+  // l'adresse se lit et se partage. Les anciens liens en #tab=… sont traduits
+  // ici, avant tout, pour qu'on ne lise pas une adresse déjà périmée.
   const [tab, setTab] = useState<Tab>(() => {
-    const t = readHashParam('tab')
-    // Anciens liens vers les trois collections fusionnées sous « Mode ».
-    if ((FASHION_KINDS as string[]).includes(t ?? '')) return 'fashion'
-    if (
-      t === 'relics' ||
-      t === 'mypage' ||
-      t === 'market' ||
-      t === 'groups' ||
-      t === 'fashion' ||
-      t === 'admin' ||
-      t === 'guide' ||
-      t === 'news' ||
-      t === 'login' ||
-      t === 'account' ||
-      (KINDS as string[]).includes(t ?? '')
-    )
-      return t as Tab
-    return 'planning'
+    convertirAncienLien()
+    return lireEmplacement()
   })
   useEffect(() => {
-    setHashParam('tab', tab === 'planning' ? null : tab)
+    ecrireEmplacement(tab)
   }, [tab])
   /** Se deconnecter renvoie devant la porte : rester sur un ecran qui n'a plus
    *  de contenu donne l'impression que quelque chose s'est casse. */
@@ -314,12 +284,6 @@ export default function App() {
     if (!readHashParam('j') && !readHashParam('c')) setTab('mypage')
   }, [])
 
-  // Dernière collection consultée : cliquer sur « Collections » y revient.
-  const [collectionTab, setCollectionTab] = useState<Kind | 'fashion'>(() => {
-    const t = readHashParam('tab')
-    if ((FASHION_KINDS as string[]).includes(t ?? '') || t === 'fashion') return 'fashion'
-    return (KINDS as string[]).includes(t ?? '') ? (t as Kind) : 'mounts'
-  })
   // Le filtre « nouveautés » ne vaut que sur l'onglet d'où il vient : quitter
   // la collection le lève de lui-même, sans effet à écrire ni à oublier.
   const newsOnly = useMemo(() => {
@@ -343,7 +307,6 @@ export default function App() {
     const dest = (FASHION_KINDS as string[]).includes(k) ? 'fashion' : k
     setNewsFilter({ kind: k, patch })
     setTab(dest as Tab)
-    setCollectionTab(dest as Kind | 'fashion')
   }
 
   const [creatingGroup, setCreatingGroup] = useState(false)
@@ -399,9 +362,11 @@ export default function App() {
   // « Avancement » disparaît quand on se retrouve seul (groupe quitté, membre
   // retiré, lien partagé). Sans ce garde-fou, l'écran resterait affiché sans
   // onglet pour y revenir ni pour en sortir.
+  // On attend de CONNAITRE le groupe : `members` est vide le temps que les
+  // fiches arrivent, et redirigeait donc quiconque rechargeait /progress.
   useEffect(() => {
-    if (tab === 'relics' && members.length <= 1) setTab('planning')
-  }, [tab, members])
+    if (tab === 'relics' && grp.active && grp.active.members.length <= 1) setTab('planning')
+  }, [tab, grp.active])
 
   // Présence « ce soir » : les absents sont ignorés par les vues (choix local).
   const [absent, setAbsent] = useState<number[]>(() => {
@@ -437,7 +402,8 @@ export default function App() {
   // Treize collections ne tiennent pas dans une pilule d'onglets : la barre du
   // haut ne garde que les grandes sections, la collection se choisit sur une
   // seconde ligne quand on est dans « Collections ».
-  const isCollection = (KINDS as string[]).includes(tab) || tab === 'fashion'
+  const isCollection =
+    (KINDS as string[]).includes(tab) || tab === 'fashion' || tab === 'collections'
   // Aide active : le sujet suit l'écran affiché (la cloche prime quand ouverte).
   const helpTopic = bellOpen
     ? 'bell'
@@ -455,11 +421,11 @@ export default function App() {
 
   // « Avancement » compare les membres entre eux : seul, il n'y a personne
   // contre qui se mesurer, et la page se resume a un podium a une marche.
-  const enGroupe = members.length > 1
+  const enGroupe = (grp.active?.members.length ?? 0) > 1
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'planning', label: t('planning'), icon: 'planning' },
-    { id: collectionTab, label: t('collections'), icon: 'collections' },
+    { id: 'collections', label: t('collections'), icon: 'collections' },
     ...(enGroupe
       ? [{ id: 'relics' as Tab, label: t('groupProgressTab'), icon: 'avancement' }]
       : []),
@@ -505,7 +471,7 @@ export default function App() {
             {TABS.map((tb) => (
               <button
                 key={tb.id}
-                className={`tab ${tab === tb.id || (tb.id === collectionTab && isCollection) ? 'is-active' : ''}`}
+                className={`tab ${tab === tb.id || (tb.id === 'collections' && isCollection) ? 'is-active' : ''}`}
                 onClick={() => setTab(tb.id)}
               >
                 <TabIcon k={tb.icon} /> {tb.label}
@@ -702,10 +668,7 @@ export default function App() {
                 <span key={fam.key} className="kind-family">
                   <button
                     className={`kind-btn ${tab === 'fashion' ? 'is-active' : ''}`}
-                    onClick={() => {
-                      setTab('fashion')
-                      setCollectionTab('fashion')
-                    }}
+                    onClick={() => setTab('fashion')}
                   >
                     <TabIcon k="fashion" /> {t('fashionFamily')}
                   </button>
@@ -716,10 +679,7 @@ export default function App() {
                     <button
                       key={k}
                       className={`kind-btn ${tab === k ? 'is-active' : ''}`}
-                      onClick={() => {
-                        setTab(k)
-                        setCollectionTab(k)
-                      }}
+                      onClick={() => setTab(k)}
                     >
                       <TabIcon k={k} /> {kindLabel(lang, k, 'short')}
                     </button>
@@ -760,7 +720,9 @@ export default function App() {
               tab !== 'login' && (
           <RosterBar
             members={members}
-            activeKind={isCollection ? (tab as Kind | 'fashion') : undefined}
+            activeKind={
+              isCollection && tab !== 'collections' ? (tab as Kind | 'fashion') : undefined
+            }
             controls={
               <div className="sidebar-controls">
                 {ready.length > 1 && (
@@ -970,6 +932,12 @@ export default function App() {
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
               />
             )}
+            {tab === 'collections' && (
+              <div className="pick-kind">
+                <h2>{t('pickKindTitle')}</h2>
+                <p>{t('pickKindCollections')}</p>
+              </div>
+            )}
             {db && activeReady.length > 0 && tab === 'fashion' && (
               <Matrix
                 kind="fashions"
@@ -1027,6 +995,7 @@ export default function App() {
               tab !== 'account' &&
               tab !== 'login' &&
               tab !== 'fashion' &&
+              tab !== 'collections' &&
               dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
             {db &&
               activeReady.length > 0 &&
@@ -1041,6 +1010,7 @@ export default function App() {
               tab !== 'account' &&
               tab !== 'login' &&
               tab !== 'fashion' &&
+              tab !== 'collections' &&
               !dbPending.has(tab) && (
               <Matrix
                 key={tab}

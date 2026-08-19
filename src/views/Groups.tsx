@@ -6,7 +6,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { fetchCharacter, parseLodestoneId, KINDS, type Character } from '../api'
 import type { ContactsController } from '../contacts'
-import { readHashParam, setHashParam } from '../store'
+import { ancre, ecrireAncre } from '../routes'
 import type { GroupsController, Group } from '../groups'
 import { apiGroupInvite, type ApiContact } from '../groupsApi'
 import { useI18n } from '../i18n'
@@ -697,12 +697,12 @@ export function GroupsPage({
 }) {
   const { t } = useI18n()
   const [creating, setCreating] = useState(false)
-  // Onglet courant (Groupes / Contacts) — dans le hash pour survivre au reload.
+  // Onglet courant (Groupes / Contacts) — dans l'ancre pour survivre au reload.
   const [section, setSection] = useState<'groups' | 'contacts'>(() =>
-    readHashParam('gtab') === 'contacts' ? 'contacts' : 'groups',
+    ancre() === 'contacts' ? 'contacts' : 'groups',
   )
   useEffect(() => {
-    setHashParam('gtab', section === 'groups' ? null : section)
+    ecrireAncre(section === 'groups' ? null : section)
   }, [section])
 
   return (

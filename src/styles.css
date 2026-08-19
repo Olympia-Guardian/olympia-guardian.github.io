@@ -2670,7 +2670,7 @@ a.player-name:hover {
    joueur : la question qu'on se pose le plus souvent. */
 .bis-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(410px, 1fr));
   gap: 14px;
 }
 
@@ -2685,11 +2685,6 @@ a.player-name:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.bis-avatar {
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .bis-qui {
@@ -2745,28 +2740,58 @@ a.player-name:hover {
   color: var(--gold);
 }
 
-/* Onze vignettes, pas onze lignes de texte. Le nom de la PIECE ne tient pas
-   sur une vignette (« Bagues d'oreille de protecteur de grand champion ») et
-   onze noms coupes au tiers se ressemblent tous : c'est donc l'EMPLACEMENT qui
-   s'ecrit, court et jamais tronque, l'icone qui montre la piece, et la bulle
-   qui donne le nom entier. */
-.bis-slots {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
+/* La fenetre d'equipement du jeu : arme et armure a gauche, accessoires a
+   droite, le personnage entre les deux. Un joueur y cherche chaque case a la
+   place ou il la cherche depuis des annees. */
+.bis-doll {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-  gap: 6px;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: stretch;
 }
 
+.bis-colonne {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* La colonne de droite est en miroir, comme dans le jeu : l'icone du cote du
+   personnage, le texte vers l'exterieur. */
+.bis-colonne.est-droite .bis-slot button {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.bis-colonne.est-droite .bis-marque {
+  right: auto;
+  left: -5px;
+}
+
+.bis-portrait {
+  width: 96px;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--hairline);
+}
+
+/* Le nom de la PIECE ne tient pas sur une case (« Bagues d'oreille de
+   protecteur de grand champion ») et onze noms coupes au tiers se ressemblent
+   tous : c'est donc l'EMPLACEMENT qui s'ecrit, court et jamais tronque,
+   l'icone qui montre la piece, et la bulle qui donne le nom entier. */
 .bis-slot button {
   width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px 6px;
-  text-align: center;
+  gap: 8px;
+  padding: 5px 7px;
+  text-align: left;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-s);
   background: var(--surface-2);
@@ -2819,10 +2844,15 @@ a.player-name:hover {
   border-color: var(--surface-2);
 }
 
+.bis-slot-texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .bis-slot-nom {
-  font-size: 11px;
-  line-height: 1.2;
-  max-width: 100%;
+  font-size: 12px;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2830,9 +2860,8 @@ a.player-name:hover {
 
 .bis-slot-ou {
   font-size: 10px;
-  line-height: 1.2;
+  line-height: 1.25;
   color: var(--ink-2);
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

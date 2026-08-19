@@ -150,6 +150,15 @@ export function Butin({
 
 // ---------------------------------------------------------------------------
 
+/** La fenêtre d'équipement du jeu, à l'identique : l'arme et l'armure à gauche,
+ *  les accessoires à droite, le personnage entre les deux. Un joueur reconnaît
+ *  la place de chaque case sans la lire, il la cherche là depuis des années.
+ *
+ *  L'ordre est donc celui du jeu, pas celui des étages : le décompte des
+ *  soirées est déjà rangé par étage, en haut de l'écran. */
+const COLONNE_GAUCHE = ['weapon', 'head', 'body', 'hands', 'legs', 'feet']
+const COLONNE_DROITE = ['earring', 'necklace', 'bracelet', 'ring1', 'ring2']
+
 function CarteJoueur({
   palier,
   membre,
@@ -170,18 +179,12 @@ function CarteJoueur({
   const { t } = useI18n()
   const [saisie, setSaisie] = useState(false)
   const reste = vises.filter((v) => v.etat === 'attendu').length
+  const parCle = new Map(vises.map((v) => [v.emplacement.cle, v]))
+  const colonne = (cles: string[]) => cles.map((c) => parCle.get(c)).filter((v) => !!v)
 
   return (
     <section className="bis-card">
       <header className="bis-head">
-        <img
-          className="bis-avatar"
-          src={membre.data.avatar}
-          alt=""
-          width={44}
-          height={44}
-          onError={onAvatarImgError}
-        />
         <div className="bis-qui">
           <b>{nomCourt(membre)}</b>
           {bis && (
@@ -203,17 +206,39 @@ function CarteJoueur({
       </header>
 
       {bis && !saisie && (
-        <ul className="bis-slots">
-          {vises.map((v) => (
-            <Pastille
-              key={v.emplacement.cle}
-              palier={palier}
-              vise={v}
-              modifiable={modifiable}
-              onBascule={onBascule}
-            />
-          ))}
-        </ul>
+        <div className="bis-doll">
+          <ul className="bis-colonne">
+            {colonne(COLONNE_GAUCHE).map((v) => (
+              <Pastille
+                key={v.emplacement.cle}
+                palier={palier}
+                vise={v}
+                modifiable={modifiable}
+                onBascule={onBascule}
+              />
+            ))}
+          </ul>
+          {/* Le portrait tient la place du modèle 3D, au milieu des deux
+              colonnes. C'est ce qui fait reconnaître la fenêtre d'un coup. */}
+          <img
+            className="bis-portrait"
+            src={membre.data.portrait || membre.data.avatar}
+            alt=""
+            loading="lazy"
+            onError={onAvatarImgError}
+          />
+          <ul className="bis-colonne est-droite">
+            {colonne(COLONNE_DROITE).map((v) => (
+              <Pastille
+                key={v.emplacement.cle}
+                palier={palier}
+                vise={v}
+                modifiable={modifiable}
+                onBascule={onBascule}
+              />
+            ))}
+          </ul>
+        </div>
       )}
 
       {(!bis || saisie) && (
@@ -338,10 +363,12 @@ function Pastille({
             />
           )}
         </span>
-        <span className="bis-slot-nom">{lang === 'fr' ? emplacement.fr : emplacement.en}</span>
-        {/* La place reste prise même quand il n'y a rien à dire : sans ça, une
-            rangée de vignettes se décalerait de quelques pixels sur l'autre. */}
-        <span className="bis-slot-ou">{etat_court || '\u00a0'}</span>
+        <span className="bis-slot-texte">
+          <span className="bis-slot-nom">{lang === 'fr' ? emplacement.fr : emplacement.en}</span>
+          {/* La place reste prise même quand il n'y a rien à dire : sans ça, une
+              case se décalerait de quelques pixels sur sa voisine. */}
+          <span className="bis-slot-ou">{etat_court || '\u00a0'}</span>
+        </span>
       </button>
     </li>
   )

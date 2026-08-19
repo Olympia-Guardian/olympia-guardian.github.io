@@ -356,14 +356,24 @@ button:focus-visible {
   padding: 7px 14px;
 }
 
+/* L'or est la couleur de l'application — le titre, les cadres, les jauges
+   terminees. Le bleu de --accent porte une AUTRE information, l'avancement des
+   collections : le garder aussi sur les boutons melangeait les deux langages,
+   et le bouton principal detonnait sur chaque ecran. Texte sombre sur l'or,
+   comme les marches du podium. */
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--gold);
+  color: #171716;
   font-weight: 600;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
+}
+
+.btn-primary:disabled {
+  filter: none;
+  opacity: 0.45;
 }
 
 .btn-ghost {
@@ -4926,10 +4936,13 @@ a.player-name:hover {
   border-top: 1px solid var(--hairline);
 }
 
+/* Deux colonnes de meme facture, alignees par le HAUT : calees par le bas, la
+   plus courte decrochait de trois lignes des que l'autre recevait ses
+   raccourcis. */
 .market-form {
   display: flex;
-  align-items: flex-end;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 28px;
   flex-wrap: wrap;
 }
 
@@ -4939,6 +4952,27 @@ a.player-name:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1 1 280px;
+  max-width: 380px;
+}
+
+/* Qui et ou : deux reglages de meme nature, poses ensemble dans l'en-tete
+   plutot qu'au milieu des montants, auxquels ils ne repondent pas. */
+.market-qui {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.market-field-perso {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-field-perso select {
+  min-width: 190px;
 }
 
 .market-field {

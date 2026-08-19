@@ -35,6 +35,10 @@ const ACHETABLES: Kind[] = [
 
 const BUDGETS = [100_000, 500_000, 1_000_000, 5_000_000, 20_000_000]
 
+/** Plafonds par objet, plus bas que les budgets : ils ecartent la piece rare
+ *  hors de prix, la ou le budget arrete la liste entiere. */
+const PRIX_MAX = [50_000, 100_000, 250_000, 500_000, 1_000_000]
+
 /** Ce que le marche a fait, en toutes lettres : la moyenne, la derniere vente
  *  et sa date, le sens dans lequel ca va, et a quelle frequence l'objet se
  *  vend. Cette derniere ligne dit la solidite de tout le reste — un ecart
@@ -189,42 +193,43 @@ export function Market({
           <h2>
             <TabIcon k="market" /> {t('market')}
           </h2>
-          {region && (
-            <div className="mode-switch market-scope">
-              <button
-                className={`mode-btn ${portee === 'dc' ? 'is-active' : ''}`}
-                onClick={() => setPortee('dc')}
-              >
-                {t('marketScopeDc', { dc: perso.data.dataCenter })}
-              </button>
-              <button
-                className={`mode-btn ${portee === 'region' ? 'is-active' : ''}`}
-                title={t('marketScopeRegionHint')}
-                onClick={() => setPortee('region')}
-              >
-                {t('marketScopeRegion', { region })}
-              </button>
-            </div>
-          )}
+          <div className="market-qui">
+            {chars.length > 1 && (
+              <label className="market-field market-field-perso">
+                <span>{t('marketChar')}</span>
+                <select value={perso.id} onChange={(e) => setCharId(Number(e.target.value))}>
+                  {chars.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {nomMembre(c)} ({c.data.dataCenter})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {region && (
+              <div className="mode-switch market-scope">
+                <button
+                  className={`mode-btn ${portee === 'dc' ? 'is-active' : ''}`}
+                  onClick={() => setPortee('dc')}
+                >
+                  {t('marketScopeDc', { dc: perso.data.dataCenter })}
+                </button>
+                <button
+                  className={`mode-btn ${portee === 'region' ? 'is-active' : ''}`}
+                  title={t('marketScopeRegionHint')}
+                  onClick={() => setPortee('region')}
+                >
+                  {t('marketScopeRegion', { region })}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       <section className="market-panneau">
         <span className="market-legende">{t('marketBudgetLegend')}</span>
         <div className="market-form">
-          {chars.length > 1 && (
-            <label className="market-field">
-              <span>{t('marketChar')}</span>
-              <select value={perso.id} onChange={(e) => setCharId(Number(e.target.value))}>
-                {chars.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {nomMembre(c)} ({c.data.dataCenter})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
           <div className="market-field-groupe">
             <label className="market-field">
               <span>{t('marketBudget')}</span>
@@ -237,8 +242,8 @@ export function Market({
                 onChange={(e) => setBudget(Math.max(0, Number(e.target.value)))}
               />
             </label>
-            {/* Ces montants remplissent le BUDGET. Poses apres « prix maximum »,
-                ils avaient l'air d'appartenir a l'autre champ. */}
+            {/* Ces montants remplissent le BUDGET. Poses apres « prix maximum
+                par objet », ils avaient l'air d'appartenir a l'autre champ. */}
             <div className="market-presets">
               {BUDGETS.map((b) => (
                 <button
@@ -249,21 +254,33 @@ export function Market({
                   {gils(b, lang)}
                 </button>
               ))}
+            </div>
           </div>
-        </div>
 
-        <label className="market-field">
-          <span>{t('marketMaxPrice')}</span>
-          <input
-            type="number"
-            min={0}
-            step={10_000}
-            value={prixMax || ''}
-            placeholder={t('marketNoCap')}
-            onChange={(e) => setPrixMax(Math.max(0, Number(e.target.value)))}
-          />
-        </label>
-
+          <div className="market-field-groupe">
+            <label className="market-field">
+              <span>{t('marketMaxPrice')}</span>
+              <input
+                type="number"
+                min={0}
+                step={10_000}
+                value={prixMax || ''}
+                placeholder={t('marketNoCap')}
+                onChange={(e) => setPrixMax(Math.max(0, Number(e.target.value)))}
+              />
+            </label>
+            <div className="market-presets">
+              {PRIX_MAX.map((b) => (
+                <button
+                  key={b}
+                  className={`cat-chip ${prixMax === b ? 'is-active' : ''}`}
+                  onClick={() => setPrixMax(b)}
+                >
+                  {gils(b, lang)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <span className="market-legende">{t('marketKindsLegend')}</span>

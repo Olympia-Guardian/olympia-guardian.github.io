@@ -2611,13 +2611,12 @@ a.player-name:hover {
 /* ------------------------------------------------------ butin de raid */
 
 /* La reponse du static : quatre cartes, une par etage, lisibles sans defiler.
-   align-items: start, sinon une carte depliee etire les trois autres a sa
-   hauteur : elles paraissaient vides alors qu'elles etaient simplement
-   repliees. */
+   Toutes de la meme hauteur, celle de la plus chargee : les quatre se deplient
+   ensemble, donc aucune ne reste vide a cote d'une autre ouverte, et une rangee
+   reguliere se lit mieux qu'un escalier. */
 .kills-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  align-items: start;
   gap: 12px;
   margin: 14px 0 20px;
 }

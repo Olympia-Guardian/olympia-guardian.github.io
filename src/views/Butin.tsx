@@ -106,18 +106,12 @@ export function Butin({
 
   const composants = useMemo(() => materiauxManquants(palier, cartes), [palier, cartes])
 
-  // Le detail des pieces se deplie a la demande. La carte repond d'abord au
-  // « combien de soirees » ; le « pour qui » est une deuxieme question, et
-  // quatre listes ouvertes en permanence repoussaient les joueurs sous la ligne
-  // de flottaison.
-  const [ouverts, setOuverts] = useState<Set<number>>(() => new Set())
-  const basculerEtage = (n: number) =>
-    setOuverts((prev) => {
-      const suite = new Set(prev)
-      if (suite.has(n)) suite.delete(n)
-      else suite.add(n)
-      return suite
-    })
+  // Le detail des pieces se deplie a la demande, et les quatre etages
+  // ENSEMBLE : on regarde une soiree de raid, pas un etage isole, et ouvrir
+  // carte par carte decalait les trois autres a chaque clic. La carte repond
+  // d'abord au « combien de soirees » ; le « pour qui » est une deuxieme
+  // question, qui repoussait les joueurs sous la ligne de flottaison.
+  const [detail, setDetail] = useState(false)
 
   /** L'étage tel que le jeu et les joueurs le nomment. Le numéro ne sert que de
    *  secours, si un palier arrivait sans ses étages. */
@@ -171,9 +165,9 @@ export function Butin({
                     <button
                       type="button"
                       className="icon-btn kills-plier"
-                      aria-expanded={ouverts.has(e.etage)}
-                      title={ouverts.has(e.etage) ? t('butinPlier') : t('butinDeplier')}
-                      onClick={() => basculerEtage(e.etage)}
+                      aria-expanded={detail}
+                      title={detail ? t('butinPlier') : t('butinDeplier')}
+                      onClick={() => setDetail((v) => !v)}
                     >
                       <TabIcon k="infos" />
                     </button>
@@ -185,7 +179,7 @@ export function Butin({
                   du jeu, et au bout de la ligne les visages de ceux qui
                   l'attendent. Les deux bagues s'y confondent, le jeu n'ayant
                   qu'une catégorie « bague ». */}
-              {e.parJoueur.length > 0 && ouverts.has(e.etage) && (
+              {e.parJoueur.length > 0 && detail && (
                 <ul className="kills-besoins">
                     {regrouper(e.parJoueur).map((b) => (
                       <li

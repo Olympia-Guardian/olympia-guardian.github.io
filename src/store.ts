@@ -277,7 +277,22 @@ export function useMembers(ids: number[]) {
     [load],
   )
 
-  return { members, refresh, reload }
+  /** Modifie une fiche DÉJÀ chargée, sans aller-retour ni état de chargement.
+   *
+   *  `reload` la faisait repasser par « loading », donc sortir de la liste des
+   *  fiches prêtes : la carte disparaissait le temps d'un appel et toute la
+   *  grille se réorganisait autour. Pour cocher une case, c'est un clignotement
+   *  pour rien — le serveur vient de répondre ce qu'il a écrit, il n'y a pas à
+   *  le relire. */
+  const patch = useCallback((id: number, maj: Partial<Character>) => {
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === id && m.status === 'ok' && m.data ? { ...m, data: { ...m.data, ...maj } } : m,
+      ),
+    )
+  }, [])
+
+  return { members, refresh, reload, patch }
 }
 
 // ---------------------------------------------------------------------------

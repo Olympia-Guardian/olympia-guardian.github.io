@@ -235,6 +235,16 @@ export function etages(vises: { charId: number; vises: Vise[] }[]): Etage[] {
   return out
 }
 
+/** Le composant que cet emplacement attend encore. Il sert de vignette : voir
+ *  la fibre ou l'agent sur la pastille dit d'un coup d'œil ce qu'elle coûte,
+ *  là où « mémoquartz » ne disait que d'où elle vient. */
+export function materiauDe(palier: RaidPalier, vise: Vise): RaidMateriau | null {
+  const piece = vise.pieces.find((p) => p.provenance === 'tome')
+  if (!piece) return null
+  const famille = FAMILLE[piece.emplacement]
+  return palier.materiaux.find((m) => m.cle === famille) ?? null
+}
+
 /** Les composants qu'il manque encore au groupe.
  *
  *  Ils tombent en savage eux aussi, mais sans étage attitré : on les compte, on

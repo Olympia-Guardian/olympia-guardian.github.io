@@ -6,6 +6,7 @@ import {
   etages,
   etatSuivant,
   importerBis,
+  materiauDe,
   materiauxManquants,
   rangerBis,
   type Bis,
@@ -76,7 +77,7 @@ export function Butin({
 
   return (
     <div className="view">
-      <p className="muted">{t('butinIntro', { palier: lang === 'fr' ? palier.fr : palier.en })}</p>
+      <h3 className="raid-titre">{lang === 'fr' ? palier.fr : palier.en}</h3>
 
       {/* La réponse, en haut, lisible sans défiler. */}
       <div className="kills-row">
@@ -126,7 +127,6 @@ export function Butin({
               </li>
             ))}
           </ul>
-          <p className="muted">{t('compoAleatoire')}</p>
         </section>
       )}
 
@@ -134,6 +134,7 @@ export function Butin({
         {cartes.map((c) => (
           <CarteJoueur
             key={c.membre.id}
+            palier={palier}
             membre={c.membre}
             vises={c.vises}
             bis={bis[c.membre.id]}
@@ -150,6 +151,7 @@ export function Butin({
 // ---------------------------------------------------------------------------
 
 function CarteJoueur({
+  palier,
   membre,
   vises,
   bis,
@@ -157,6 +159,7 @@ function CarteJoueur({
   onImport,
   onBascule,
 }: {
+  palier: RaidPalier
   membre: Ready
   vises: Vise[]
   bis: Bis | undefined
@@ -204,6 +207,7 @@ function CarteJoueur({
           {vises.map((v) => (
             <Pastille
               key={v.emplacement.cle}
+              palier={palier}
               vise={v}
               modifiable={modifiable}
               onBascule={onBascule}
@@ -245,11 +249,25 @@ const CLIC: Record<string, string> = {
   complet: 'bisClicDefaire',
 }
 
+/** Une vignette par emplacement.
+ *
+ *  Le nom de la PIÈCE ne tient pas sur une vignette : « Bagues d'oreille de
+ *  protecteur de grand champion » se coupait au tiers, et onze noms coupés se
+ *  ressemblent tous. C'est donc l'EMPLACEMENT qui s'écrit, court et jamais
+ *  tronqué, tandis que l'icône montre la pièce et que la bulle donne son nom
+ *  entier.
+ *
+ *  Le coin de l'icône porte ce qu'il reste à faire : le numéro de l'étage tant
+ *  que le raid la doit, une coche quand c'est fini, et pour le mémoquartz le
+ *  COMPOSANT lui-même — voir la fibre sur la vignette dit ce qu'elle coûte
+ *  mieux que le mot « mémoquartz ». */
 function Pastille({
+  palier,
   vise,
   modifiable,
   onBascule,
 }: {
+  palier: RaidPalier
   vise: Vise
   modifiable: boolean
   onBascule: (id: number, suivant: Etat) => void
@@ -258,21 +276,9 @@ function Pastille({
   const { emplacement, pieces, etat } = vise
   const piece = pieces[0]
   const suivant = etatSuivant(etat)
+  const materiau = materiauDe(palier, vise)
 
-  // Ce que la pastille montre : la pièce visée, pas une étiquette abstraite.
-  // Faute de BiS pour cette case, on nomme au moins l'emplacement.
-  const nom = piece
-    ? lang === 'fr'
-      ? piece.fr
-      : piece.en
-    : lang === 'fr'
-      ? emplacement.fr
-      : emplacement.en
-
-  // Où en est la pièce, en toutes lettres. Un emplacement attendu du raid
-  // affiche son ÉTAGE : c'est ce qu'on veut savoir devant un tableau de raid.
-  // Une pièce de mémoquartz dit la marche qui lui manque encore.
-  const ou =
+  const etat_court =
     etat === 'attendu'
       ? t('butinFloor', { n: emplacement.etage })
       : etat === 'obtenu'
@@ -285,41 +291,58 @@ function Pastille({
               ? t('bisComplet')
               : etat === 'inconnu'
                 ? t('bisAilleurs')
-                : t('bisVideSlot')
+                : ''
 
   const cliquable = modifiable && suivant !== null
-  const infobulle = !modifiable
-    ? t('bisPasLeDroit')
-    : suivant
-      ? t(CLIC[etat] as 'bisClicPrendre')
-      : ''
+  // La bulle dit tout ce que la vignette n'a pas la place d'écrire : les noms
+  // entiers (deux pour le paladin, arme et bouclier), l'état, et le geste.
+  const bulle = [
+    pieces.map((p) => (lang === 'fr' ? p.fr : p.en)).join(' + ') ||
+      (lang === 'fr' ? emplacement.fr : emplacement.en),
+    etat_court,
+    !modifiable ? t('bisPasLeDroit') : suivant ? t(CLIC[etat] as 'bisClicPrendre') : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   return (
     <li className={`bis-slot est-${etat}`}>
       <button
         type="button"
         disabled={!cliquable}
-        title={infobulle}
+        title={bulle}
         onClick={() => suivant && onBascule(emplacement.id, suivant)}
       >
-        <img
-          src={piece ? iconeObjet(piece.icone) : emplacement.icon}
-          alt=""
-          width={32}
-          height={32}
-          loading="lazy"
-          onError={onItemImgError}
-        />
-        <span className="bis-slot-texte">
-          <span className="bis-slot-nom">{nom}</span>
-          <span className="bis-slot-ou">{ou}</span>
+        <span className="bis-vignette">
+          <img
+            src={piece ? iconeObjet(piece.icone) : emplacement.icon}
+            alt=""
+            width={40}
+            height={40}
+            loading="lazy"
+            onError={onItemImgError}
+          />
+          {etat === 'attendu' && <span className="bis-marque">{emplacement.etage}</span>}
+          {(etat === 'obtenu' || etat === 'complet') && (
+            <span className="bis-marque est-ok">✓</span>
+          )}
+          {materiau && (etat === 'a-acheter' || etat === 'a-ameliorer') && (
+            <img
+              className="bis-marque bis-marque-img"
+              src={iconeObjet(materiau.icone)}
+              alt=""
+              width={18}
+              height={18}
+              loading="lazy"
+              onError={onItemImgError}
+            />
+          )}
         </span>
+        <span className="bis-slot-nom">{lang === 'fr' ? emplacement.fr : emplacement.en}</span>
+        {/* La place reste prise même quand il n'y a rien à dire : sans ça, une
+            rangée de vignettes se décalerait de quelques pixels sur l'autre. */}
+        <span className="bis-slot-ou">{etat_court || '\u00a0'}</span>
       </button>
-      {/* Le paladin reçoit son bouclier dans le même coffre que son arme : un
-          seul butin, donc une seule pastille, mais les deux pièces se disent. */}
-      {pieces.length > 1 && (
-        <span className="bis-slot-bis">{lang === 'fr' ? pieces[1].fr : pieces[1].en}</span>
-      )}
     </li>
   )
 }

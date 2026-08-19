@@ -438,10 +438,6 @@ const STR = {
   },
   groupDefaultName: { fr: 'Mon groupe', en: 'My group' },
   butinTab: { fr: 'Butin', en: 'Loot' },
-  butinIntro: {
-    fr: 'Combien de fois faut-il encore tuer chaque étage pour équiper le groupe, sur {palier}. Chacun colle son BiS : ce qui vient du raid et ce qui vient du mémoquartz s’en déduit tout seul. Le seul geste qui reste, c’est « je l’ai obtenue ».',
-    en: 'How many more clears of each floor the group needs, in {palier}. Everyone pastes their BiS: what comes from the raid and what comes from tomestones follows on its own. The only gesture left is “I got it”.',
-  },
   butinKills: { fr: '{n} kill(s) à faire', en: '{n} clear(s) to go' },
   butinFloor: { fr: 'Étage {n}', en: 'Floor {n}' },
   butinDone: { fr: 'Plus rien à y prendre', en: 'Nothing left to take' },
@@ -465,8 +461,8 @@ const STR = {
   bisObtenue: { fr: 'Obtenue', en: 'Obtained' },
   // Le mémoquartz a deux marches : on l’achète, puis on la termine avec un
   // composant qui, lui, tombe en savage.
-  bisAAcheter: { fr: 'Mémoquartz, à acheter', en: 'Tomestones, to buy' },
-  bisAAmeliorer: { fr: 'Achetée, à améliorer', en: 'Bought, to upgrade' },
+  bisAAcheter: { fr: 'À acheter', en: 'To buy' },
+  bisAAmeliorer: { fr: 'À améliorer', en: 'To upgrade' },
   bisComplet: { fr: 'Améliorée', en: 'Upgraded' },
   bisClicPrendre: { fr: 'Clique : je l’ai obtenue', en: 'Click: I got it' },
   bisClicRendre: { fr: 'Clique : pas encore obtenue', en: 'Click: not yet' },
@@ -476,10 +472,6 @@ const STR = {
   compoTitre: {
     fr: 'Composants encore nécessaires au groupe',
     en: 'Upgrade components the group still needs',
-  },
-  compoAleatoire: {
-    fr: 'Ils tombent en savage eux aussi, mais au hasard des étages : impossible de les compter en soirées sans inventer.',
-    en: 'They drop in savage too, but on no fixed floor: counting them as clears would mean making numbers up.',
   },
   bisPasLeDroit: {
     fr: 'Seul le joueur (ou le chef du groupe) coche ici.',

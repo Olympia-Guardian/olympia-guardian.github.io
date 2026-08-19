@@ -136,7 +136,7 @@ export default function App() {
   // Contacts (amis / blacklist) + bandeau d'un lien de contact ouvert (#c=…).
   const contacts = useContacts(auth.token)
   const cinv = useContactInvite(auth.token)
-  const { members: fiches, refresh, reload } = useMembers(grp.active?.members ?? [])
+  const { members: fiches, refresh, reload, patch } = useMembers(grp.active?.members ?? [])
   // Les surnoms appartiennent au groupe, pas au personnage : on les attache ici,
   // une fois, plutôt que de les faire descendre jusqu'à chaque écran.
   const surnoms = grp.active?.aliases
@@ -419,19 +419,40 @@ export default function App() {
 
   /** Ou en est un emplacement. Les seuls gestes qui ne se deduisent d'aucune
    *  donnee : je l'ai obtenue, je l'ai achetee, je l'ai amelioree. Les deux
-   *  listes partent ENSEMBLE, parce qu'un clic peut changer les deux. */
+   *  listes partent ENSEMBLE, parce qu'un clic peut changer les deux.
+   *
+   *  La vignette change AVANT la reponse du worker. Cocher une case est un
+   *  geste qu'on repete vingt fois de suite dans une soiree : attendre un
+   *  aller-retour a chaque fois, carte disparue le temps du chargement, rendait
+   *  l'ecran clignotant. En cas de refus, la vignette revient ou elle etait. */
   async function basculerRaid(charId: number, id: number, suivant: EtatRaid) {
     if (!groupeRaidId || !auth.token || !peutModifierRaid(charId)) return
+    const membre = activeReady.find((x) => x.id === charId)
+    if (!membre) return
     const m = marches(suivant)
+    const avant = { raidFait: membre.data.raidFait, raidAmeliore: membre.data.raidAmeliore }
+    const sans = (liste: number[]) => liste.filter((x) => x !== id)
+    const apres = {
+      raidFait: m.fait ? [...sans(avant.raidFait), id] : sans(avant.raidFait),
+      raidAmeliore: m.ameliore ? [...sans(avant.raidAmeliore), id] : sans(avant.raidAmeliore),
+    }
+    patch(charId, apres)
+    // La fiche en cache n'est plus a jour : la prochaine lecture doit repartir
+    // du worker, meme si l'ecran, lui, montre deja le bon etat.
+    invalidateCharacter(charId)
     try {
-      await apiSetRaidEtat(auth.token, groupeRaidId, charId, {
+      const r = await apiSetRaidEtat(auth.token, groupeRaidId, charId, {
         fait: m.fait ? { add: [id] } : { remove: [id] },
         ameliore: m.ameliore ? { add: [id] } : { remove: [id] },
       })
-      invalidateCharacter(charId)
-      reload(charId)
+      // Ce que le worker a REELLEMENT ecrit : deux onglets ouverts se rejoignent
+      // ici, sans que le second efface le travail du premier.
+      patch(charId, {
+        raidFait: r.raidfait ?? apres.raidFait,
+        raidAmeliore: r.raidameliore ?? apres.raidAmeliore,
+      })
     } catch {
-      // le worker a refuse : rien n'est ecrit, la pastille reste comme elle etait
+      patch(charId, avant)
     }
   }
 

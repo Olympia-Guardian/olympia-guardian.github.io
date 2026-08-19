@@ -28,6 +28,7 @@ import {
   apiPatchGroup,
   apiQuitGroup,
   apiRemoveMember,
+  apiSetAlias,
   apiRequestJoin,
   apiRotateInvite,
   type ApiGroup,
@@ -43,6 +44,9 @@ export interface Group {
   shared: boolean
   mine: 'owner' | 'member' | 'guest'
   members: number[]
+  /** Surnoms posés dans CE groupe : { charId: alias }. L'alias appartient à
+   *  l'appartenance, pas au personnage — un même perso garde son nom ailleurs. */
+  aliases?: Record<number, string>
   /** Code du lien d'invitation — propriétaire uniquement. */
   inviteCode?: string
   /** Demandes d'adhésion en attente — propriétaire uniquement. */
@@ -89,7 +93,12 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
-type LocalGroup = { id: string; name: string; members: number[] }
+type LocalGroup = {
+  id: string
+  name: string
+  members: number[]
+  aliases?: Record<number, string>
+}
 
 function readLocalGroups(): LocalGroup[] {
   return readJson<LocalGroup[]>(LOCAL_KEY, []).filter(
@@ -104,7 +113,14 @@ function readPending(): PendingInvite[] {
 }
 
 function localToGroup(g: LocalGroup): Group {
-  return { id: g.id, name: g.name, shared: false, mine: 'owner', members: g.members }
+  return {
+    id: g.id,
+    name: g.name,
+    shared: false,
+    mine: 'owner',
+    members: g.members,
+    aliases: g.aliases,
+  }
 }
 
 function apiToGroup(g: ApiGroup): Group {
@@ -114,6 +130,7 @@ function apiToGroup(g: ApiGroup): Group {
     shared: g.shared,
     mine: g.mine,
     members: g.members,
+    aliases: g.aliases,
     inviteCode: g.inviteCode,
     requests: g.requests,
     memberUsers: g.memberUsers,
@@ -488,6 +505,35 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     [persistLocals],
   )
 
+  /** Surnomme un membre : « Aly'n Dohrr » devient « Monsieur Dohrr » pour tout
+   *  le groupe. Une chaîne vide rend au perso son nom du Lodestone. Côté
+   *  serveur, seuls le chef du groupe et le propriétaire vérifié du perso sont
+   *  acceptés ; un groupe local n'appartient qu'à son navigateur. */
+  const setAlias = useCallback(
+    async (id: string, charId: number, alias: string) => {
+      const propre = alias.trim()
+      if (id.startsWith('loc-')) {
+        persistLocals(
+          readLocalGroups().map((g) => {
+            if (g.id !== id) return g
+            const aliases = { ...(g.aliases ?? {}) }
+            if (propre) aliases[charId] = propre
+            else delete aliases[charId]
+            return { ...g, aliases }
+          }),
+        )
+      } else if (tokenRef.current) {
+        const g = await apiSetAlias(tokenRef.current, id, charId, propre)
+        // Le serveur omet « aliases » quand il n'en reste aucun : sans ce
+        // defaut, un dernier surnom efface resterait affiche.
+        setServer((prev) =>
+          prev.map((x) => (x.id === id ? { ...x, ...g, aliases: g.aliases ?? {} } : x)),
+        )
+      }
+    },
+    [persistLocals],
+  )
+
   /** « Inviter » : rend le lien d'invitation d'un groupe online. Le type se
    *  choisit à la création — un groupe offline ne se partage pas. */
   const share = useCallback(
@@ -571,6 +617,7 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     drop: signale(drop),
     addMember: signale(addMember),
     removeMember: signale(removeMember),
+    setAlias: signale(setAlias),
     share,
     rotateInvite: signale(rotateInvite),
     requestJoin: signale(requestJoin),

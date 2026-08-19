@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { parseLodestoneId, type Kind } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
+import { nomMembre } from './store'
 import { Meter, onAvatarImgError } from './ui'
 
 function relativeDate(iso: string, t: I18n['t']): string {
@@ -60,7 +61,7 @@ function PlayerCard({
             rel="noreferrer"
             title={t('syncedAgo', { when: relativeDate(c.lastParsed, t) })}
           >
-            {c.name}
+            {nomMembre(member)}
           </a>
           <span className="player-server">{c.server}</span>
         </div>
@@ -166,8 +167,8 @@ export function RosterBar({
             <img
               key={m.id}
               src={m.data.avatar}
-              alt={m.data.name}
-              title={`${m.data.name}${absent.includes(m.id) ? ' ' + t('awayTonight') : ''}`}
+              alt={nomMembre(m)}
+              title={`${nomMembre(m)}${absent.includes(m.id) ? ' ' + t('awayTonight') : ''}`}
               width={34}
               height={34}
               className={`rail-face ${m.id === focusId ? 'is-focus' : ''} ${

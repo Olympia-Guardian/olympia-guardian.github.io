@@ -11,6 +11,8 @@ import { RosterBar } from './RosterBar'
 import { TabIcon } from './ui'
 import { fetchCharacter, invalidateCharacter } from './api'
 import {
+  nomCourt,
+  nomMembre,
   readHashParam,
   setHashParam,
   useDataAge,
@@ -125,7 +127,17 @@ export default function App() {
   // Contacts (amis / blacklist) + bandeau d'un lien de contact ouvert (#c=…).
   const contacts = useContacts(auth.token)
   const cinv = useContactInvite(auth.token)
-  const { members, refresh, reload } = useMembers(grp.active?.members ?? [])
+  const { members: fiches, refresh, reload } = useMembers(grp.active?.members ?? [])
+  // Les surnoms appartiennent au groupe, pas au personnage : on les attache ici,
+  // une fois, plutôt que de les faire descendre jusqu'à chaque écran.
+  const surnoms = grp.active?.aliases
+  const members = useMemo(
+    () =>
+      surnoms && Object.keys(surnoms).length > 0
+        ? fiches.map((m) => (surnoms[m.id] ? { ...m, alias: surnoms[m.id] } : m))
+        : fiches,
+    [fiches, surnoms],
+  )
   const ready = useReadyMembers(members)
   const ownedSets = useOwnedSets(ready)
 
@@ -152,7 +164,7 @@ export default function App() {
         db,
         ready
           .filter((m) => verifiedIds.includes(m.id))
-          .map((m) => ({ id: m.id, name: m.data.name, data: m.data })),
+          .map((m) => ({ id: m.id, name: nomMembre(m), data: m.data })),
         lang,
         crossIgnored,
       ),
@@ -760,7 +772,7 @@ export default function App() {
                     <option value="">{t('wholeGroup')}</option>
                     {ready.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {t('justMe', { name: m.data.name.split(' ')[0] })}
+                        {t('justMe', { name: nomCourt(m) })}
                       </option>
                     ))}
                   </select>
@@ -1105,7 +1117,7 @@ export default function App() {
                 setLang={setLang}
                 chars={verifiedIds.map((id) => ({
                   id,
-                  name: ready.find((m) => m.id === id)?.data.name ?? '',
+                  name: nomMembre(ready.find((m) => m.id === id) ?? {}),
                 }))}
                 onImport={async (charId, par) => {
                   // Uniquement des ajouts : un fichier partiel ne peut rien

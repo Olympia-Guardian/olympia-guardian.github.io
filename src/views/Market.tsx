@@ -13,6 +13,7 @@ import {
 } from '../market'
 import { ROLL_ICON } from './MyPage'
 import type { Db, Member } from '../store'
+import { nomMembre } from '../store'
 import { onItemImgError, TabIcon } from '../ui'
 import type { Wishes } from '../wishlist'
 
@@ -203,7 +204,7 @@ export function Market({
             <select value={perso.id} onChange={(e) => setCharId(Number(e.target.value))}>
               {chars.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.data.name} ({c.data.dataCenter})
+                  {nomMembre(c)} ({c.data.dataCenter})
                 </option>
               ))}
             </select>

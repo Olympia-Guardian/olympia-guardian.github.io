@@ -1461,22 +1461,37 @@ function newInviteCode() {
 
 async function groupMembers(env, id) {
   const rows = await env.DB.prepare(
-    'SELECT char_id FROM group_members WHERE group_id = ?1 ORDER BY added',
+    'SELECT char_id, alias FROM group_members WHERE group_id = ?1 ORDER BY added',
   )
     .bind(id)
     .all()
-  return rows.results.map((r) => r.char_id)
+  return {
+    ids: rows.results.map((r) => r.char_id),
+    aliases: aliasMap(rows.results),
+  }
+}
+
+/** { charId: alias } a partir de lignes group_members, les vides ecartees. */
+function aliasMap(rows) {
+  const out = {}
+  for (const r of rows) if (r.alias) out[r.char_id] = r.alias
+  return out
 }
 
 function groupJson(row, members, userId) {
   const owner = !!userId && row.owner_user_id === userId
+  // members : { ids, aliases } depuis groupMembers, ou un simple tableau d'ids
+  // pour les appels qui les ont deja sous la main.
+  const ids = Array.isArray(members) ? members : members.ids
+  const aliases = Array.isArray(members) ? {} : members.aliases
   return {
     id: row.id,
     name: row.name,
     shared: !!row.shared,
     updated: row.updated,
     mine: userId ? (owner ? 'owner' : 'member') : 'guest',
-    members,
+    members: ids,
+    ...(Object.keys(aliases).length > 0 ? { aliases } : {}),
     // Le code d'invitation ne sort que pour le propriétaire.
     ...(owner && row.invite_code ? { inviteCode: row.invite_code } : {}),
   }
@@ -1492,7 +1507,7 @@ async function listGroups(env, user) {
     .bind(user.id)
     .all()
   const members = await env.DB.prepare(
-    'SELECT m.group_id, m.char_id FROM group_members m ' +
+    'SELECT m.group_id, m.char_id, m.alias FROM group_members m ' +
       'JOIN group_links l ON l.group_id = m.group_id WHERE l.user_id = ?1 ORDER BY m.added',
   )
     .bind(user.id)
@@ -1500,7 +1515,7 @@ async function listGroups(env, user) {
   const byGroup = new Map()
   for (const r of members.results) {
     const arr = byGroup.get(r.group_id) ?? []
-    arr.push(r.char_id)
+    arr.push(r)
     byGroup.set(r.group_id, arr)
   }
   // Demandes en attente sur les groupes que je possède
@@ -1536,7 +1551,14 @@ async function listGroups(env, user) {
   return response(
     JSON.stringify({
       groups: groups.results.map((g) => ({
-        ...groupJson(g, byGroup.get(g.id) ?? [], user.id),
+        ...groupJson(
+          g,
+          {
+            ids: (byGroup.get(g.id) ?? []).map((r) => r.char_id),
+            aliases: aliasMap(byGroup.get(g.id) ?? []),
+          },
+          user.id,
+        ),
         ...(g.owner_user_id === user.id && reqByGroup.has(g.id)
           ? { requests: reqByGroup.get(g.id) }
           : {}),
@@ -1662,6 +1684,56 @@ async function verifiedBinding(env, userId, charId) {
     .bind(userId, charId)
     .first()
   return !!row
+}
+
+/** Un alias tient sur une pastille : court, sans retour a la ligne. Vide (ou
+ *  absent) efface l'alias et rend au perso son nom du Lodestone. */
+const MAX_ALIAS = 24
+
+function validAlias(v) {
+  if (v === null || v === undefined || v === '') return true
+  return typeof v === 'string' && v.trim().length <= MAX_ALIAS && !/[\r\n\t]/.test(v)
+}
+
+/** PATCH /group/:id/member/:charId {alias} : surnommer un membre.
+ *
+ *  Deux personnes ont le droit : le chef du groupe, qui nomme ses membres, et
+ *  le proprietaire VERIFIE du perso, qui se nomme lui-meme. Meme regle que le
+ *  retrait d'un membre, pour la meme raison : personne d'autre n'a affaire a
+ *  ce perso. L'alias reste attache a l'appartenance, donc un surnom pose ici
+ *  ne suit pas le perso dans les autres groupes. */
+async function setMemberAlias(env, user, id, charId, raw) {
+  const row = await groupRow(env, id)
+  if (!row) return response('{"error":"no such group"}', 404)
+  if (row.owner_user_id !== user.id && !(await verifiedBinding(env, user.id, charId)))
+    return response('{"error":"forbidden"}', 403)
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (!validAlias(body?.alias)) return response('{"error":"invalid alias"}', 422)
+  const alias = body?.alias ? body.alias.trim() : null
+  const now = Date.now()
+  const res = await env.DB.prepare(
+    'UPDATE group_members SET alias = ?3 WHERE group_id = ?1 AND char_id = ?2',
+  )
+    .bind(id, charId, alias)
+    .run()
+  if (!res.meta?.changes) return response('{"error":"no such member"}', 404)
+  await env.DB.prepare('UPDATE groups SET updated = ?2 WHERE id = ?1').bind(id, now).run()
+  row.updated = now
+  // Tout le groupe voit l'alias : chacun doit le recevoir sans recharger.
+  const linked = await env.DB.prepare('SELECT user_id FROM group_links WHERE group_id = ?1')
+    .bind(id)
+    .all()
+  await notify(
+    env,
+    linked.results.map((r) => r.user_id),
+    { t: 'groups' },
+  )
+  return response(JSON.stringify(groupJson(row, await groupMembers(env, id), user.id)))
 }
 
 /** Ajoute un perso au groupe (membres + horodatage), sans contrôle d'accès. */
@@ -3449,6 +3521,8 @@ const routes = {
         return addGroupMember(env, user, id, await req.text())
       if (action === 'rotate' && req.method === 'POST') return rotateInvite(env, user, id)
       if (memberId && req.method === 'DELETE') return removeGroupMember(env, user, id, Number(memberId))
+      if (memberId && req.method === 'PATCH')
+        return setMemberAlias(env, user, id, Number(memberId), await req.text())
       if (requestUserId && req.method === 'POST')
         return handleRequest(env, user, id, decodeURIComponent(requestUserId), await req.text())
       return response('{"error":"method not allowed"}', 405)

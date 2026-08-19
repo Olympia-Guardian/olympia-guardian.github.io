@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { KINDS, type Character, type Kind } from './api'
 import type { Member } from './store'
+import { nomMembre } from './store'
 import { lsGet, lsSet } from './storage'
 
 type Ready = Member & { data: Character }
@@ -41,7 +42,7 @@ export function useDigest(ready: Ready[]) {
           for (const m of ready) {
             const prev = snap.byChar?.[m.id]
             if (!prev) {
-              out.push({ name: m.data.name, joined: true, deltas: [] })
+              out.push({ name: nomMembre(m), joined: true, deltas: [] })
               continue
             }
             const deltas: [Kind, number][] = []
@@ -49,7 +50,7 @@ export function useDigest(ready: Ready[]) {
               const d = m.data[k].count - (prev[k] ?? 0)
               if (d > 0) deltas.push([k, d])
             }
-            if (deltas.length > 0) out.push({ name: m.data.name, deltas })
+            if (deltas.length > 0) out.push({ name: nomMembre(m), deltas })
           }
           if (out.length > 0) setLines(out)
         }
@@ -65,7 +66,7 @@ export function useDigest(ready: Ready[]) {
       const snap: Snapshot = raw ? JSON.parse(raw) : { at: 0, byChar: {} }
       for (const m of ready) {
         snap.byChar[m.id] = {
-          name: m.data.name,
+          name: nomMembre(m),
           ...Object.fromEntries(KINDS.map((k) => [k, m.data[k].count])),
         }
       }

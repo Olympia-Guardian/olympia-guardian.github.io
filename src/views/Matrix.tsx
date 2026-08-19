@@ -3,6 +3,7 @@ import { HIDDEN_KINDS, type Character, type Item, type Kind, type Source } from 
 import { kindLabel, localName, localSource, useI18n } from '../i18n'
 import { itemStillObtainable, typeLabel } from '../sources'
 import type { Member } from '../store'
+import { nomCourt, nomMembre } from '../store'
 import { TabIcon, TypeChip, onAvatarImgError, onItemImgError } from '../ui'
 import type { Wishes } from '../wishlist'
 
@@ -254,9 +255,9 @@ export function Matrix({
                 {t(rows.length > 1 ? 'itemsCountN' : 'itemsCount1', { n: rows.length })}
               </th>
               {activeMembers.map((m) => (
-                <th key={m.id} className="col-player" title={m.data.name}>
-                  <img src={m.data.avatar} alt={m.data.name} width={28} height={28} onError={onAvatarImgError} />
-                  <span className="col-player-name">{m.data.name.split(' ')[0]}</span>
+                <th key={m.id} className="col-player" title={nomMembre(m)}>
+                  <img src={m.data.avatar} alt={nomMembre(m)} width={28} height={28} onError={onAvatarImgError} />
+                  <span className="col-player-name">{nomCourt(m)}</span>
                 </th>
               ))}
               {!solo && <th className="col-count">{t('missingCol')}</th>}
@@ -370,7 +371,7 @@ export function Matrix({
                           <td
                             key={m.id}
                             className="cell cell-pending"
-                            title={t('pendingCell', { who: m.data.name })}
+                            title={t('pendingCell', { who: nomMembre(m) })}
                           >
                             ✓
                           </td>
@@ -380,7 +381,7 @@ export function Matrix({
                         <td
                           key={m.id}
                           className="cell cell-missing cell-suggestable"
-                          title={t('suggestCell', { what: name, who: m.data.name })}
+                          title={t('suggestCell', { what: name, who: nomMembre(m) })}
                           onClick={() => {
                             void suggest.send(m.id, k, item.id).catch(() => undefined)
                           }}
@@ -393,7 +394,7 @@ export function Matrix({
                       <td
                         key={m.id}
                         className={`cell ${has ? 'cell-owned' : 'cell-missing'}`}
-                        title={t(has ? 'owns' : 'ownsNot', { who: m.data.name, what: name })}
+                        title={t(has ? 'owns' : 'ownsNot', { who: nomMembre(m), what: name })}
                       >
                         {has ? '✓' : '✗'}
                       </td>

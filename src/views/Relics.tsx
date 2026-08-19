@@ -17,6 +17,7 @@ import {
   type StepCost,
 } from '../relicCosts'
 import type { Db, Member } from '../store'
+import { nomCourt, nomMembre } from '../store'
 import { Meter, onAvatarImgError, onItemImgError, TabIcon } from '../ui'
 
 type Ready = Member & { data: Character }
@@ -544,9 +545,9 @@ const SeriesCard = memo(function SeriesCard({
           const count = relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
           return (
             <div key={member.id} className="relic-player">
-              <img src={member.data.avatar} alt="" width={26} height={26} title={member.data.name} onError={onAvatarImgError} />
+              <img src={member.data.avatar} alt="" width={26} height={26} title={nomMembre(member)} onError={onAvatarImgError} />
               <div className="relic-meter">
-                <Meter label={member.data.name.split(' ')[0]} count={count} total={info.total} />
+                <Meter label={nomCourt(member)} count={count} total={info.total} />
               </div>
               {count >= info.total && <span className="relic-done">{t('relicDone')}</span>}
             </div>
@@ -698,8 +699,8 @@ const SeriesCard = memo(function SeriesCard({
               <tr>
                 <th className="relic-step-info" />
                 {ready.map((member) => (
-                  <th key={member.id} title={member.data.name}>
-                    <img src={member.data.avatar} alt={member.data.name} width={24} height={24} onError={onAvatarImgError} />
+                  <th key={member.id} title={nomMembre(member)}>
+                    <img src={member.data.avatar} alt={nomMembre(member)} width={24} height={24} onError={onAvatarImgError} />
                   </th>
                 ))}
               </tr>
@@ -731,8 +732,8 @@ const SeriesCard = memo(function SeriesCard({
                       const missing = info.jobs - c
                       const tip =
                         stepCost && stepCost.materials.length > 0 && missing > 0
-                          ? `${member.data.name.split(' ')[0]} — ${t('relicStepTotal', { n: missing })} ${matsText(stepTotal(stepCost, missing), lang)}`
-                          : member.data.name
+                          ? `${nomCourt(member)} — ${t('relicStepTotal', { n: missing })} ${matsText(stepTotal(stepCost, missing), lang)}`
+                          : nomMembre(member)
                       return (
                         <td key={member.id} className={`relic-step-cell ${cls}`} title={tip}>
                           {c}/{info.jobs}
@@ -910,7 +911,7 @@ function RelicSummary({
   const sections = useMemo(() => {
     const socle = (m: Ready) => ({
       id: m.id,
-      nom: m.data.name.split(' ')[0],
+      nom: nomCourt(m),
       avatar: m.data.avatar,
     })
     const cols = ORDRE_PROGRESSION.map((k) => {
@@ -948,7 +949,7 @@ function RelicSummary({
           count += m.data[k].count
           total += m.data[k].total
         }
-        return { id: m.id, nom: m.data.name.split(' ')[0], avatar: m.data.avatar, count, total }
+        return { id: m.id, nom: nomCourt(m), avatar: m.data.avatar, count, total }
       })
       .sort(parAvance)
   }, [ready, reliques, totalAll])
@@ -1158,9 +1159,9 @@ export function Relics({
             const count = db.relics.reduce((sum, r) => sum + (owned.has(r.id) ? 1 : 0), 0)
             return (
               <div key={m.id} className="relic-player">
-                <img src={m.data.avatar} alt="" width={26} height={26} title={m.data.name} onError={onAvatarImgError} />
+                <img src={m.data.avatar} alt="" width={26} height={26} title={nomMembre(m)} onError={onAvatarImgError} />
                 <div className="relic-meter">
-                  <Meter label={m.data.name.split(' ')[0]} count={count} total={totalAll} />
+                  <Meter label={nomCourt(m)} count={count} total={totalAll} />
                 </div>
                 <span className="relic-remaining">{pct(count, totalAll, lang)}</span>
               </div>
@@ -1176,7 +1177,7 @@ export function Relics({
             const drops = mats.filter((mat) => mat.cat === 'drop')
             return (
               <div key={member.id} className="relic-grand-player">
-                <p className="relic-grand-name">{member.data.name.split(' ')[0]}</p>
+                <p className="relic-grand-name">{nomCourt(member)}</p>
                 {mats.length === 0 && <p className="relic-total-line"><span className="relic-done">{t('relicDone')}</span></p>}
                 {currencies.length > 0 && (
                   <div className="relic-grand-line">

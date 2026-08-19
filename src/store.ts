@@ -150,6 +150,21 @@ export interface Member {
   status: 'loading' | 'ok' | 'error'
   error?: string
   data?: Character
+  /** Surnom posé dans le groupe actif. Remplace le nom partout à l'écran ;
+   *  le nom du Lodestone reste dans `data`, il n'est jamais réécrit. */
+  alias?: string
+}
+
+/** Nom d'un membre tel qu'on doit l'afficher : son surnom s'il en a un. */
+export function nomMembre(m: { alias?: string; data?: Character }): string {
+  return m.alias ?? m.data?.name ?? ''
+}
+
+/** Version courte, pour les colonnes étroites et les jauges : le prénom, ou
+ *  l'alias entier — on ne coupe pas un surnom, il est déjà court et il a été
+ *  choisi tel quel. */
+export function nomCourt(m: { alias?: string; data?: Character }): string {
+  return m.alias ?? m.data?.name.split(' ')[0] ?? ''
 }
 
 /** Fiches des membres d'une liste d'ids (le groupe actif) : chargement,

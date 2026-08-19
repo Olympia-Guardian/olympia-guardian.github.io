@@ -18,6 +18,8 @@ export interface ApiGroup {
   updated: number
   mine: 'owner' | 'member' | 'guest'
   members: number[]
+  /** Surnoms posés dans CE groupe : { charId: alias }. Absent si aucun. */
+  aliases?: Record<number, string>
   /** Code du lien d'invitation — présent pour le propriétaire uniquement. */
   inviteCode?: string
   /** Demandes d'adhésion en attente — propriétaire uniquement. */
@@ -102,6 +104,17 @@ export function apiAddMember(token: string, id: string, charId: number): Promise
 
 export function apiRemoveMember(token: string, id: string, charId: number): Promise<ApiGroup> {
   return call(`/group/${id}/member/${charId}`, token, { method: 'DELETE' })
+}
+
+/** Surnomme un membre. Chaîne vide : retour au nom du Lodestone. Autorisé au
+ *  chef du groupe et au propriétaire vérifié du perso. */
+export function apiSetAlias(
+  token: string,
+  id: string,
+  charId: number,
+  alias: string,
+): Promise<ApiGroup> {
+  return call(`/group/${id}/member/${charId}`, token, { method: 'PATCH', body: { alias } })
 }
 
 /** Ce que voit un porteur du lien : le nom du groupe et son propre statut. */

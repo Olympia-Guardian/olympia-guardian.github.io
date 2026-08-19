@@ -138,16 +138,41 @@ export function GroupCreateDialog({
   )
 }
 
-/** Pastille d'un membre : avatar + nom (+ retrait si autorisé). */
-function MemberChip({ charId, onRemove }: { charId: number; onRemove?: () => void }) {
+/** Pastille d'un membre : avatar + nom (+ surnom et retrait si autorisés).
+ *  Quand un surnom est posé, c'est LUI qu'on affiche : c'est le nom sous lequel
+ *  le groupe connaît la personne. Le nom du Lodestone reste au survol, sans
+ *  quoi on ne saurait plus de quel perso il s'agit. */
+function MemberChip({
+  charId,
+  alias,
+  onRemove,
+  onAlias,
+}: {
+  charId: number
+  alias?: string
+  onRemove?: () => void
+  onAlias?: (nom: string) => void
+}) {
   const { t } = useI18n()
   const char = useChar(charId)
+  const vrai = char?.name ?? `#${charId}`
   return (
     <span className="member-chip">
       {char?.avatar && (
         <img src={char.avatar} alt="" width={24} height={24} onError={onAvatarImgError} />
       )}
-      <span className="member-chip-name">{char?.name ?? `#${charId}`}</span>
+      <span className="member-chip-name" title={alias ? vrai : undefined}>
+        {alias ?? vrai}
+      </span>
+      {onAlias && (
+        <button
+          className="icon-btn"
+          title={alias ? t('memberAliasOf', { name: vrai }) : t('memberAlias')}
+          onClick={() => onAlias(vrai)}
+        >
+          <TabIcon k="rename" />
+        </button>
+      )}
       {onRemove && (
         <button className="icon-btn" title={t('removeMember')} onClick={onRemove}>
           ×
@@ -509,6 +534,14 @@ function GroupCard({
     }
   }
 
+  // Meme droit que le retrait : le chef du groupe, ou le proprietaire verifie
+  // du perso. Personne d'autre n'a affaire a ce personnage.
+  function surnommer(charId: number, vrai: string) {
+    const saisi = prompt(t('memberAliasPrompt', { name: vrai }), g.aliases?.[charId] ?? '')
+    if (saisi === null) return
+    void grp.setAlias(g.id, charId, saisi.trim())
+  }
+
   function renameGroup() {
     const name = prompt(t('groupNamePrompt'), g.name)?.trim()
     if (name && name !== g.name) void grp.rename(g.id, name)
@@ -556,7 +589,9 @@ function GroupCard({
           <MemberChip
             key={id}
             charId={id}
+            alias={g.aliases?.[id]}
             onRemove={canRemove(id) ? () => void grp.removeMember(g.id, id) : undefined}
+            onAlias={canRemove(id) ? (vrai) => surnommer(id, vrai) : undefined}
           />
         ))}
       </div>

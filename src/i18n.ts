@@ -579,6 +579,12 @@ const STR = {
   loading: { fr: 'Chargement…', en: 'Loading…' },
   retry: { fr: 'Réessayer', en: 'Retry' },
   removeMember: { fr: 'Retirer du groupe', en: 'Remove from group' },
+  memberAlias: { fr: 'Surnommer', en: 'Set nickname' },
+  memberAliasPrompt: {
+    fr: 'Comment appelle-t-on {name} dans ce groupe ? (vide : son nom du Lodestone)',
+    en: 'What is {name} called in this group? (empty: their Lodestone name)',
+  },
+  memberAliasOf: { fr: 'Alias de {name}', en: 'Nickname of {name}' },
   remove: { fr: 'Retirer', en: 'Remove' },
   refreshMember: { fr: 'Actualiser depuis FFXIV Collect', en: 'Refresh from FFXIV Collect' },
   loadError: { fr: 'Erreur de chargement', en: 'Failed to load' },

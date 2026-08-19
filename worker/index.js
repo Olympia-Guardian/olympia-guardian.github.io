@@ -22,7 +22,36 @@ const MOBILE_UA =
 const CATALOG_BASE = 'https://olympia-guardian.github.io/data/'
 const COLLECT_API = 'https://ffxivcollect.com/api'
 
-const CHAR_TTL = 3_600_000 // 1 h
+// Une collection bouge une fois par semaine, pas toutes les heures : une heure
+// de cache multipliait par six nos lectures chez Square Enix pour une fraicheur
+// dont personne ne profite. Le bouton « synchroniser » du journal reste la pour
+// qui vient de gagner une monture et veut la voir tout de suite.
+const CHAR_TTL = 6 * 3_600_000 // 6 h — sert au recul apres un scrape rate
+// Au-dela, on relit meme sans qu'on le demande : la fiche d'un perso dont le
+// proprietaire ne revient jamais ne doit pas rester fausse pour l'eternite.
+const PEREMPTION = 7 * 24 * 3_600_000 // 7 jours
+
+// Plafond GLOBAL de lectures du Lodestone, toutes fiches et tous joueurs
+// confondus. Nos autres limites protegent contre UN utilisateur gourmand ; rien
+// ne protegeait contre mille utilisateurs raisonnables arrivant le meme soir.
+// Square Enix n'a pas d'API et sanctionne par adresse IP : un blocage arreterait
+// toutes les fiches d'un coup, sans recours cote serveur. Au-dela du plafond on
+// sert la fiche en base, meme perimee — vieille d'un jour vaut infiniment mieux
+// qu'absente.
+const LODESTONE_PAR_HEURE = 600
+let lodestoneFenetre = 0
+let lodestoneCompte = 0
+
+function budgetLodestone() {
+  const heure = Math.floor(Date.now() / 3_600_000)
+  if (heure !== lodestoneFenetre) {
+    lodestoneFenetre = heure
+    lodestoneCompte = 0
+  }
+  if (lodestoneCompte >= LODESTONE_PAR_HEURE) return false
+  lodestoneCompte++
+  return true
+}
 // Seules les montures et les mascottes sont lisibles sur le Lodestone : tout le
 // reste se coche dans « Ma Page ». Copie de KINDS/HIDDEN_KINDS (src/api.ts) —
 // les deux listes doivent rester synchronisées.
@@ -431,7 +460,12 @@ async function applySeed(env, id, raw) {
 
 // Le bouton « Synchroniser » du journal force un re-scrape immédiat, mais au
 // plus une fois par jour et par personnage (le TTL d'une heure fait le reste).
-const FORCE_COOLDOWN = 86_400_000
+// La synchro etant devenue la voie PRINCIPALE de rafraichissement, un delai
+// d'une journee aurait rendu les fiches moins fraiches qu'avant : quelqu'un qui
+// gagne deux montures dans la soiree doit pouvoir le voir. Quinze minutes
+// suffisent a empecher le martelage — un perso ne peut declencher que quatre
+// lectures par heure, et seulement si on clique.
+const FORCE_COOLDOWN = 15 * 60_000
 
 // `connecte` : sans compte, on ne renvoie que ce qui est deja ouvert sur le
 // Lodestone (montures et mascottes). Les onze autres collections sont saisies
@@ -441,10 +475,24 @@ const FORCE_COOLDOWN = 86_400_000
 // sait deja afficher pour les profils Lodestone fermes.
 async function getCharacter(env, id, force, connecte = true) {
   const row = await env.DB.prepare('SELECT * FROM characters WHERE id = ?1').bind(id).first()
-  const fresh = row && Date.now() - row.updated < CHAR_TTL
   const allowForce = force && (!row || Date.now() - (row.forced_at ?? 0) >= FORCE_COOLDOWN)
 
-  if (!fresh || allowForce) {
+  // La synchro devient un GESTE, plus un effet de bord de la consultation.
+  // Trois raisons seulement de sortir chez Square Enix :
+  //  - fiche inconnue : sans elle on n'a rien a montrer ;
+  //  - le joueur a clique « synchroniser » ;
+  //  - fiche vieille de plus d'une semaine : la donnee ne doit pas pourrir
+  //    indefiniment pour un perso dont le proprietaire ne revient jamais.
+  // Consulter la fiche d'un camarade ne declenche donc plus rien. C'est ce qui
+  // divise le volume un soir d'affluence, bien plus surement qu'un plafond.
+  const rance = row && Date.now() - row.updated > PEREMPTION
+  const besoin = !row || allowForce || rance
+  if (besoin && !budgetLodestone()) {
+    // Plafond global atteint : on ne sort pas. Sans fiche du tout on laisse
+    // remonter l'absence, sinon on sert ce qu'on a, meme perime.
+    void compter(env, 'lodestone_plafond')
+    if (!row) return null
+  } else if (besoin) {
     // Un scrape peut échouer (rate limit Lodestone quand plusieurs fiches se
     // rafraîchissent en même temps) : on sert alors la fiche en cache et on
     // retente dans 5 minutes plutôt que de marteler à chaque requête.
@@ -2757,7 +2805,10 @@ async function adminRefreshChar(env, id) {
   const r = await env.DB.prepare(
     'UPDATE characters SET updated = ?2, forced_at = NULL WHERE id = ?1',
   )
-    .bind(id, Date.now() - CHAR_TTL - 1000)
+    // Au-dela de la peremption, sinon la fiche ne serait plus relue : depuis
+    // que la synchro est un geste, l'anciennete seule ne declenche rien avant
+    // une semaine.
+    .bind(id, Date.now() - PEREMPTION - 1000)
     .run()
   return response(JSON.stringify({ ok: true, found: r.meta.changes > 0 }))
 }

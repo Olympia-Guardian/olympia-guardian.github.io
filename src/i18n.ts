@@ -439,12 +439,18 @@ const STR = {
   groupDefaultName: { fr: 'Mon groupe', en: 'My group' },
   butinTab: { fr: 'Butin', en: 'Loot' },
   butinIntro: {
-    fr: 'Ce que chacun a déjà pris sur {palier}. Une case cochée, c’est une pièce obtenue.',
-    en: 'What each of you already took in {palier}. A ticked box is a piece obtained.',
+    fr: 'Combien de fois faut-il encore tuer chaque étage pour équiper le groupe, sur {palier}. Tout est attendu du raid par défaut : clique une case pour dire que la pièce est prise, puis qu’elle viendra d’ailleurs.',
+    en: 'How many more clears of each floor the group needs, in {palier}. Everything is expected from the raid by default: click a box to say the piece is obtained, then that it will come from elsewhere.',
+  },
+  butinKills: { fr: '{n} kill(s) à faire', en: '{n} clear(s) to go' },
+  butinEtat_attendu: { fr: 'Attendu du raid — clique : je l’ai', en: 'Expected from the raid — click: I have it' },
+  butinEtat_fait: { fr: 'Obtenu — clique : je la prends ailleurs', en: 'Obtained — click: I get it elsewhere' },
+  butinEtat_ailleurs: {
+    fr: 'Prise ailleurs (mémoquartz, artisanat…) — clique : attendue du raid',
+    en: 'From elsewhere (tomestones, crafted…) — click: expected from the raid',
   },
   butinFloor: { fr: 'Étage {n}', en: 'Floor {n}' },
-  butinNeeded: { fr: '{n} à distribuer', en: '{n} left to hand out' },
-  butinDone: { fr: 'Tout le monde l’a', en: 'Everyone has it' },
+  butinDone: { fr: 'Plus rien à y prendre', en: 'Nothing left to take' },
   butinNoTier: {
     fr: 'Ce groupe n’a pas de palier. Recrée-le en choisissant lequel vous faites.',
     en: 'This group has no tier. Create it again and pick the one you are running.',

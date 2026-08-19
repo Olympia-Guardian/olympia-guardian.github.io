@@ -236,8 +236,10 @@ export type Character = { [K in Kind]: CharCollection } & {
   relicIds: number[]
   /** Pièces de tenues possédées (un ensemble complet devient possédé tout seul). */
   outfitPieceIds: number[]
-  /** Coffres de raid deja pris, par identifiant d'emplacement. */
-  raidIds: number[]
+  /** Emplacements de raid obtenus, par identifiant de `raid.json`. */
+  raidFait: number[]
+  /** Emplacements qu'on ne prendra pas en savage. Le reste est attendu. */
+  raidAilleurs: number[]
   /** Profil Lodestone étendu (absent tant que la fiche n'a pas été re-scrapée). */
   profile: CharProfile | null
   /** Prochaine synchro forcée possible (epoch ms) — bouton du journal. */
@@ -278,7 +280,7 @@ const CACHE_MAX_CHARS = 300_000
 // le monde : indispensable quand la FORME des données change (sinon un vieux
 // cache de 24 h continue d'alimenter l'appli avec l'ancienne structure).
 const DB_V = 'v15' // catalogues par collection (v15 : itemId pour les prix du marché)
-const RAID_V = 'v1'
+const RAID_V = 'v2'
 const RELIC_V = 'v2' // base des reliques (v2 : paliers d'armure fusionnés)
 // La FORME d'une fiche change à chaque nouvelle collection : bumper ici,
 // sinon les fiches en cache (sans le nouveau bloc) font planter les vues.
@@ -444,7 +446,8 @@ function mapCharacter(r: any): Character {
     profile: r.profile ?? null,
     nextForceAt: r.next_force_at ?? 0,
     outfitPieceIds: (r.outfit_piece_ids as number[] | undefined) ?? [],
-    raidIds: (r.raid_ids as number[] | undefined) ?? [],
+    raidFait: (r.raid_fait as number[] | undefined) ?? [],
+    raidAilleurs: (r.raid_ailleurs as number[] | undefined) ?? [],
     ...(Object.fromEntries(KINDS.map((k) => [k, col(r[k])])) as { [K in Kind]: CharCollection }),
     relicIds:
       (r.relicIds as number[] | undefined) ??
@@ -620,8 +623,11 @@ export interface RaidEmplacement {
   cle: string
   /** Étage qui le lâche, de 1 à 4. */
   etage: number
-  /** Identifiant du coffre dans les données du jeu. */
+  /** Notre identifiant, unique tous paliers confondus. Celui du coffre ne
+   *  conviendrait pas : les deux anneaux le partagent. */
   id: number
+  /** Identifiant du coffre dans les données du jeu (icône, nom). */
+  coffre: number
   fr: string
   en: string
   objetFr: string

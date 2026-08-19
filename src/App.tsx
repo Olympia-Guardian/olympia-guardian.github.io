@@ -46,7 +46,7 @@ import { GroupCreateDialog, GroupsPage } from './views/Groups'
 import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
-import { Butin } from './views/Butin'
+import { Butin, type Etat as EtatRaid } from './views/Butin'
 import { Relics } from './views/Relics'
 
 /** Nom d'un perso à partir de son ID (fiche en cache la plupart du temps). */
@@ -373,21 +373,23 @@ export default function App() {
     if (horsCompte && tab === 'fashion') setTab('collections')
   }, [horsCompte, tab])
 
-  /** Coffres deja pris, par personnage. */
-  const butinPris = useMemo(
-    () => new Map(ready.map((m) => [m.id, new Set(m.data.raidIds)])),
-    [ready],
-  )
+  /** Qui peut toucher a l'equipement de qui. Le proprietaire verifie du
+   *  personnage, evidemment, mais aussi le CHEF du groupe : un static tient
+   *  souvent son tableau a une seule main. Meme regle que les alias. */
+  const peutModifierRaid = (charId: number) =>
+    verifiedIds.includes(charId) || grp.active?.mine === 'owner'
 
-  /** Cocher un coffre : seul le proprietaire verifie du perso peut le faire,
-   *  le worker le verifie de son cote. */
-  async function basculerButin(charId: number, coffreId: number) {
-    if (!verifiedIds.includes(charId)) return
-    const pris = butinPris.get(charId)?.has(coffreId) ?? false
+  /** Fait tourner l'etat d'un emplacement. Les trois etats tiennent dans deux
+   *  listes : ce qui est fait, ce qu'on prend ailleurs, et le reste — attendu
+   *  du raid — qui n'est ecrit nulle part puisque c'est le defaut. */
+  async function cyclerRaid(charId: number, id: number, suivant: EtatRaid) {
+    if (!peutModifierRaid(charId)) return
+    const doc: Record<string, { add?: number[]; remove?: number[] }> = {
+      raidfait: suivant === 'fait' ? { add: [id] } : { remove: [id] },
+      raidailleurs: suivant === 'ailleurs' ? { add: [id] } : { remove: [id] },
+    }
     try {
-      await auth.saveCollections(charId, {
-        raid: pris ? { remove: [coffreId] } : { add: [coffreId] },
-      })
+      await auth.saveCollections(charId, doc)
       invalidateCharacter(charId)
       reload(charId)
     } catch {
@@ -1124,11 +1126,8 @@ export default function App() {
                   <Butin
                     palier={palier}
                     ready={activeReady}
-                    obtenus={butinPris}
-                    // On ne coche que POUR SOI : le butin d'un autre est le
-                    // sien, et l'application n'a jamais laisse personne cocher
-                    // a la place d'un tiers.
-                    onToggle={auth.token ? basculerButin : undefined}
+                    peutModifier={peutModifierRaid}
+                    onCycle={cyclerRaid}
                   />
                 )
               })()}

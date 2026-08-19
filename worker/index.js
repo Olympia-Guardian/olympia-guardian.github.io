@@ -661,10 +661,16 @@ async function getCharacter(env, id, force, connecte = true) {
     minions: block('minions', !!char.public_minions),
     ...Object.fromEntries(HIDDEN_KINDS.map((k) => [k, block(k)])),
     relicIds: byKind.relics ?? [],
-    // Butin de raid deja pris. Volontairement absent de missingKinds : cette
-    // liste ne vient d'aucune source exterieure, donc son absence ne doit pas
-    // declencher un amorcage FFXIV Collect qui n'aurait rien a apporter.
-    raid_ids: byKind.raid ?? [],
+    // Equipement de raid. Trois etats par emplacement, donc DEUX listes : ce
+    // qui est obtenu, et ce qu'on prendra ailleurs qu'en savage. Tout le reste
+    // est attendu du raid — le defaut est le cas courant, personne n'a rien a
+    // declarer sur un palier neuf.
+    //
+    // Volontairement absentes de missingKinds : elles ne viennent d'aucune
+    // source exterieure, leur absence ne doit donc pas declencher un amorcage
+    // FFXIV Collect qui n'aurait rien a apporter.
+    raid_fait: byKind.raidfait ?? [],
+    raid_ailleurs: byKind.raidailleurs ?? [],
     outfit_piece_ids: byKind.outfitpieces ?? [],
     needsSeed,
   }
@@ -1180,9 +1186,9 @@ async function putCollections(env, user, charId, raw) {
   // synchro Lodestone réécrit ces deux collections (source lodestone).
   // outfitpieces : pièces de tenues possédées (stockage auxiliaire, comme
   // relics — un ensemble dont toutes les pièces sont là devient possédé).
-  // raid : coffres deja pris dans un palier savage, meme nature auxiliaire.
+  // raidfait / raidailleurs : equipement de raid, meme nature auxiliaire.
   const deltas = []
-  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raid']) {
+  for (const kind of [...ALL_KINDS, 'relics', 'outfitpieces', 'raidfait', 'raidailleurs']) {
     const v = doc?.[kind]
     if (v === undefined) continue
     if (Array.isArray(v)) {

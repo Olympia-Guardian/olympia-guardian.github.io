@@ -946,16 +946,6 @@ function RelicSummary({
     return cols
   }, [ready, reliques, totalAll, lang, t, kinds, avecReliques])
 
-  // Le nombre du bandeau se DEDUIT des sections. Il comptait auparavant le
-  // catalogue entier, boutique et version 1.0 comprises : depuis que ces
-  // 1 171 objets sont sortis des compteurs, il annoncait 14 091 au-dessus de
-  // barres qui en totalisaient 12 920. Un chiffre qui contredit l'ecran qu'il
-  // coiffe vaut moins que pas de chiffre du tout.
-  const headerTotal = useMemo(
-    () => (cdb ? sections.reduce((n, sec) => n + sec.total, 0) : totalAll),
-    [cdb, sections, totalAll],
-  )
-
   // Classement general : tout ce qui se collectionne, reliques comprises.
   const general = useMemo(() => {
     return ready
@@ -977,7 +967,6 @@ function RelicSummary({
       <section className="relic-series relic-global">
         <header className="relic-series-head">
           <h4 className="relic-series-name">{t(cdb ? 'groupProgress' : 'relicGlobal')}</h4>
-          <span className="relic-shape">{fmt(headerTotal, lang)}</span>
         </header>
         {general.length > 1 && <Podium rangs={general} lang={lang} />}
         <ul className="prog-list">

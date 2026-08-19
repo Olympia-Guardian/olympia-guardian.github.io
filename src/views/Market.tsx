@@ -430,7 +430,13 @@ export function Market({
                             const ecart = ecartMoyenne(a.price, repere)
                             if (ecart === null) return <i className="market-ecart" />
                             return (
-                              <i className={`market-ecart ${ecart < 0 ? 'is-bon' : 'is-cher'}`}>
+                              <i
+                                className={`market-ecart ${
+                                  // Au prix habituel, ni vert ni rouge : il n'y
+                                  // a rien a signaler, seulement a constater.
+                                  ecart === 0 ? 'is-neutre' : ecart < 0 ? 'is-bon' : 'is-cher'
+                                }`}
+                              >
                                 {ecart > 0 ? '+' : ''}
                                 {ecart} %
                               </i>

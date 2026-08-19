@@ -222,14 +222,13 @@ export async function fetchPrices(
   return { offres: out, moyennes }
 }
 
-/** Ecart d'un prix a la moyenne des ventes, en pourcentage. Null quand
- *  Universalis n'a pas d'historique, ou quand l'ecart tient dans le bruit :
- *  annoncer « +1 % » sur un objet qui se vend a la piece n'informe personne. */
+/** Ecart d'un prix a la moyenne des ventes, en pourcentage. Null uniquement
+ *  quand Universalis n'a pas de vente a comparer — un ecart faible reste une
+ *  reponse : « au prix habituel » se lit tout autant que « +56 % ». */
 export function ecartMoyenne(prix: number, repere: Repere | undefined): number | null {
   const moyenne = repere?.moyenne ?? 0
   if (moyenne <= 0 || prix <= 0) return null
-  const pct = Math.round(((prix - moyenne) / moyenne) * 100)
-  return Math.abs(pct) < 5 ? null : pct
+  return Math.round(((prix - moyenne) / moyenne) * 100)
 }
 
 // ---------------------------------------------------------------------------

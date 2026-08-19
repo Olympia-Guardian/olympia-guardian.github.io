@@ -2722,11 +2722,11 @@ a.player-name:hover {
 
 /* L'icone devant, les visages derriere : on lit d'abord CE QUI manque, et
    ensuite a qui. Un seul exemplaire de l'icone, meme si quatre personnes
-   attendent la meme piece. */
+   attendent la meme piece. Aucun nom ecrit : la bulle les donne, et un nom
+   repete quatre fois par etage remplissait la carte pour rien. */
 .besoin {
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 
 .besoin-case {
@@ -2754,21 +2754,6 @@ a.player-name:hover {
   margin-left: -7px;
 }
 
-.besoin-quoi {
-  display: flex;
-  flex-direction: column;
-  font-size: 11px;
-  line-height: 1.25;
-  color: var(--ink-2);
-}
-
-.besoin-quoi em {
-  font-style: normal;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* Une carte par joueur. Le tableau croise disait la meme chose, mais il fallait
    suivre une ligne des yeux sur toute la largeur pour savoir ou en etait UN

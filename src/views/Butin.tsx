@@ -159,7 +159,13 @@ export function Butin({
                 {e.parJoueur.length > 0 && (
                   <ul className="kills-besoins">
                     {regrouper(e.parJoueur).map((b) => (
-                      <li key={b.cle} className="besoin">
+                      <li
+                        key={b.cle}
+                        className="besoin"
+                        title={`${nomCategorie(b.emplacement, lang)} · ${b.charIds
+                          .map((id) => nomDe(id))
+                          .join(', ')}`}
+                      >
                         <img
                           className="besoin-case"
                           src={slotIconUrl(b.cle) ?? b.emplacement.icon}
@@ -178,6 +184,7 @@ export function Butin({
                                   key={id}
                                   src={membre.data.avatar}
                                   alt=""
+                                  title={nomCourt(membre)}
                                   width={22}
                                   height={22}
                                   loading="lazy"
@@ -186,10 +193,6 @@ export function Butin({
                               )
                             )
                           })}
-                        </span>
-                        <span className="besoin-quoi">
-                          {nomCategorie(b.emplacement, lang)}
-                          <em>{b.charIds.map((id) => nomDe(id)).join(', ')}</em>
                         </span>
                       </li>
                     ))}

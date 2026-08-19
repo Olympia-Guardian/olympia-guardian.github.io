@@ -1,4 +1,4 @@
-import { lsGet, lsRemove, lsSet } from './storage'
+import { lsGet, lsSet } from './storage'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, KIND_FAMILIES, LODESTONE_KINDS, PLANNING_KINDS, type Kind } from './api'
 import { useAuth, useFournisseurs, vientDeSeConnecter } from './auth'
@@ -11,7 +11,6 @@ import { RosterBar } from './RosterBar'
 import { TabIcon } from './ui'
 import { fetchCharacter, invalidateCharacter } from './api'
 import {
-  nomCourt,
   nomMembre,
   readHashParam,
   useDataAge,
@@ -361,28 +360,6 @@ export default function App() {
   // « Quoi de neuf depuis la dernière visite »
   const digest = useDigest(ready)
 
-  // « Juste pour moi » : focalise toutes les vues sur un seul perso (choix local).
-  const [focusId, setFocusId] = useState<number | null>(() => {
-    try {
-      const n = Number(lsGet('ogs.focus.v1'))
-      return Number.isInteger(n) && n > 0 ? n : null
-    } catch {
-      return null
-    }
-  })
-  useEffect(() => {
-    try {
-      if (focusId) lsSet('ogs.focus.v1', String(focusId))
-      else lsRemove('ogs.focus.v1')
-    } catch {
-      // pas de persistance, pas grave
-    }
-  }, [focusId])
-  useEffect(() => {
-    if (focusId !== null && members.length > 0 && !members.some((m) => m.id === focusId)) {
-      setFocusId(null)
-    }
-  }, [members, focusId])
 
   // Une adresse de collection qu'on ne montre pas hors compte (/collections#emotes)
   // ramène au choix de collection : mieux vaut la liste de ce qui existe qu'une
@@ -422,11 +399,8 @@ export default function App() {
     setAbsent((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const activeReady = useMemo(
-    () =>
-      focusId
-        ? ready.filter((m) => m.id === focusId)
-        : ready.filter((m) => !absent.includes(m.id)),
-    [ready, focusId, absent],
+    () => ready.filter((m) => !absent.includes(m.id)),
+    [ready, absent],
   )
 
   // Sidepanel replié ? (par défaut : rail pour les gros groupes)
@@ -758,25 +732,6 @@ export default function App() {
               isCollection && tab !== 'collections' ? (tab as Kind | 'fashion') : undefined
             }
             connecte={!horsCompte}
-            controls={
-              <div className="sidebar-controls">
-                {ready.length > 1 && (
-                  <select
-                    value={focusId ?? ''}
-                    onChange={(e) => setFocusId(e.target.value ? Number(e.target.value) : null)}
-                    title={t('focusTitle')}
-                  >
-                    <option value="">{t('wholeGroup')}</option>
-                    {ready.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {t('justMe', { name: nomCourt(m) })}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            }
-            focusId={focusId}
             absent={absent}
             collapsed={rosterCollapsed}
             onToggleCollapsed={() => setRosterOpen(rosterCollapsed)}

@@ -225,10 +225,6 @@ button:focus-visible {
   flex-shrink: 0;
 }
 
-.rail-face.is-focus {
-  border-color: var(--gold);
-}
-
 .rail-face.is-absent {
   opacity: 0.4;
 }
@@ -449,26 +445,16 @@ button:focus-visible {
   border-color: rgba(208, 59, 59, 0.4);
 }
 
-/* vue « juste pour moi » : le perso choisi ressort, les autres s'estompent */
-.player-card.is-focus {
-  border-color: rgba(214, 178, 107, 0.55);
-}
-
-.sidebar.has-focus .player-card:not(.is-focus):not(.add-card) {
-  opacity: 0.5;
-}
-
 /* présence « ce soir » */
 .player-card.is-absent {
   opacity: 0.45;
 }
 
+/* C'est LE geste de la barre laterale : c'est par lui qu'on retire quelqu'un
+   du calcul du soir. Il etait plus petit que le texte a cote de lui. */
 .presence-btn {
-  font-size: 13px;
-}
-
-.focus-select {
-  max-width: 200px;
+  font-size: 20px;
+  padding: 4px 8px;
 }
 
 /* badge de synchro du salon */

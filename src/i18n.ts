@@ -33,8 +33,6 @@ export function persistLang(lang: Lang): void {
 const STR = {
   // Barre du haut
   planning: { fr: 'Planning', en: 'Planner' },
-  wholeGroup: { fr: '👥 Tout le groupe', en: '👥 Whole group' },
-  justMe: { fr: '👤 Juste {name}', en: '👤 Just {name}' },
   focusTitle: {
     fr: 'Voir tout le groupe, ou juste un perso (choix mémorisé sur ce navigateur)',
     en: 'View the whole group, or a single character (remembered on this browser)',

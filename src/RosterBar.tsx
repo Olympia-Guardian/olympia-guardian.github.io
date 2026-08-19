@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
 import { parseLodestoneId, type Kind } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
@@ -16,14 +16,12 @@ function relativeDate(iso: string, t: I18n['t']): string {
 // de la collection consultée, plus les deux qui viennent du Lodestone.
 function PlayerCard({
   member,
-  focus,
   present,
   activeKind,
   connecte,
   onTogglePresence,
 }: {
   member: Member
-  focus?: boolean
   present: boolean
   activeKind?: Kind | 'fashion'
   connecte: boolean
@@ -52,7 +50,7 @@ function PlayerCard({
   const c = member.data
   const somePrivate = !c.mounts.isPublic || !c.minions.isPublic
   return (
-    <div className={`player-card ${focus ? 'is-focus' : ''} ${present ? '' : 'is-absent'}`}>
+    <div className={`player-card ${present ? '' : 'is-absent'}`}>
       <div className="player-head">
         <img className="player-avatar" src={c.avatar} alt="" width={38} height={38} onError={onAvatarImgError} />
         <div className="player-id">
@@ -117,8 +115,6 @@ function PlayerCard({
 
 export function RosterBar({
   members,
-  controls,
-  focusId,
   absent,
   activeKind,
   connecte,
@@ -129,8 +125,6 @@ export function RosterBar({
   onAdd,
 }: {
   members: Member[]
-  controls?: ReactNode
-  focusId: number | null
   absent: number[]
   /** Collection consultée : sa jauge s'ajoute aux cartes des joueurs. */
   activeKind?: Kind | 'fashion'
@@ -176,9 +170,7 @@ export function RosterBar({
               title={`${nomMembre(m)}${absent.includes(m.id) ? ' ' + t('awayTonight') : ''}`}
               width={34}
               height={34}
-              className={`rail-face ${m.id === focusId ? 'is-focus' : ''} ${
-                absent.includes(m.id) ? 'is-absent' : ''
-              }`}
+              className={`rail-face ${absent.includes(m.id) ? 'is-absent' : ''}`}
               onError={onAvatarImgError}
             />
           ) : (
@@ -192,22 +184,13 @@ export function RosterBar({
   }
 
   return (
-    <aside className={`sidebar ${focusId !== null ? 'has-focus' : ''}`}>
+    <aside className="sidebar">
       <div className="sidebar-head">
+        {/* Les cartes disent déjà qui est là et combien ils sont : les compter
+            au-dessus d'elles n'apprenait rien. Reste ce qui se lit vraiment,
+            le nombre de présents quand quelqu'un manque à l'appel. */}
         <span className="sidebar-title">
-          {members.length === 1 ? (
-            t('soloChar')
-          ) : (
-            <>
-              {t('team')} · {members.length}
-              {absent.length > 0 && (
-                <span className="sidebar-presence">
-                  {' · '}
-                  {t(presentCount > 1 ? 'presents' : 'present', { n: presentCount })}
-                </span>
-              )}
-            </>
-          )}
+          {absent.length > 0 && t(presentCount > 1 ? 'presents' : 'present', { n: presentCount })}
         </span>
         {absent.length > 0 && (
           <button className="btn btn-ghost btn-mini" onClick={onResetPresence} title={t('allHereTitle')}>
@@ -218,12 +201,10 @@ export function RosterBar({
           «
         </button>
       </div>
-      {controls}
       {members.map((m) => (
         <PlayerCard
           key={m.id}
           member={m}
-          focus={m.id === focusId}
           present={!absent.includes(m.id)}
           activeKind={activeKind}
           connecte={connecte}

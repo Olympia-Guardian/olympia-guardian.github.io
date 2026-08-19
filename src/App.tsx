@@ -384,6 +384,13 @@ export default function App() {
     }
   }, [members, focusId])
 
+  // « Avancement » disparaît quand on se retrouve seul (groupe quitté, membre
+  // retiré, lien partagé). Sans ce garde-fou, l'écran resterait affiché sans
+  // onglet pour y revenir ni pour en sortir.
+  useEffect(() => {
+    if (tab === 'relics' && members.length <= 1) setTab('planning')
+  }, [tab, members])
+
   // Présence « ce soir » : les absents sont ignorés par les vues (choix local).
   const [absent, setAbsent] = useState<number[]>(() => {
     try {
@@ -434,10 +441,16 @@ export default function App() {
               ? 'groups'
               : null
 
+  // « Avancement » compare les membres entre eux : seul, il n'y a personne
+  // contre qui se mesurer, et la page se resume a un podium a une marche.
+  const enGroupe = members.length > 1
+
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'planning', label: t('planning'), icon: 'planning' },
     { id: collectionTab, label: t('collections'), icon: 'collections' },
-    { id: 'relics', label: t('groupProgressTab'), icon: 'avancement' },
+    ...(enGroupe
+      ? [{ id: 'relics' as Tab, label: t('groupProgressTab'), icon: 'avancement' }]
+      : []),
   ]
 
   return (

@@ -21,11 +21,7 @@
   --gold: #d6b26b;
   --radius: 12px;
   --radius-s: 8px;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 * {
@@ -418,9 +414,7 @@ button:focus-visible {
   opacity: 0;
   pointer-events: none;
   transform: translateY(8px);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .scroll-top.is-shown {
@@ -980,11 +974,11 @@ a.player-name:hover {
 }
 
 .relic-totals summary::before {
-  content: "▸ ";
+  content: '▸ ';
 }
 
 .relic-totals[open] summary::before {
-  content: "▾ ";
+  content: '▾ ';
 }
 
 .relic-total-line {
@@ -1064,12 +1058,12 @@ a.player-name:hover {
 }
 
 .relic-cat-head::before {
-  content: "▸ ";
+  content: '▸ ';
   color: var(--muted);
 }
 
 .relic-cat[open] .relic-cat-head::before {
-  content: "▾ ";
+  content: '▾ ';
 }
 
 .relic-cat-count {
@@ -1997,6 +1991,7 @@ a.player-name:hover {
   border-radius: 50%;
 }
 
+
 /* ------------------------------------------------------------------- admin */
 
 .admin-head-actions {
@@ -2469,6 +2464,7 @@ a.player-name:hover {
   border-bottom: 1px solid var(--hairline);
 }
 
+
 .account-h4 {
   margin: 6px 0 0;
   font-size: 13px;
@@ -2490,7 +2486,7 @@ a.player-name:hover {
 
 /* Le contrôle de fichier natif jure avec tout le reste : on le cache et on
    déclenche le même bouton que partout ailleurs. */
-.account-file input[type="file"] {
+.account-file input[type='file'] {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -3277,6 +3273,7 @@ a.player-name:hover {
   background: rgba(200, 164, 100, 0.12);
 }
 
+
 /* ------------------------------------------------------------------- hero */
 
 .hero {
@@ -3403,9 +3400,7 @@ a.player-name:hover {
    rangées, recherche puis contenu à droite) et les conteneurs intermédiaires
    s'effacent avec display: contents. Les vues sans rail ne changent pas. */
 @media (min-width: 901px) {
-  .mypage-editor:has(
-    > .editor-layout > .editor-body > .cat-layout > .cat-rail
-  ) {
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) {
     display: grid;
     grid-template-columns: 216px minmax(0, 1fr);
     /* auto + 1fr : la hauteur du rail (2 rangées) est absorbée par la rangée
@@ -3413,37 +3408,28 @@ a.player-name:hover {
        recherche et creuse un vide sous elle */
     grid-template-rows: auto 1fr;
     grid-template-areas:
-      "rail controls"
-      "rail body";
+      'rail controls'
+      'rail body';
     column-gap: 20px;
     row-gap: 18px;
     align-items: start;
   }
 
-  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail)
-    > .editor-controls {
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-controls {
     grid-area: controls;
   }
 
-  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail)
-    > .editor-layout,
-  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail)
-    > .editor-layout
-    > .editor-body,
-  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail)
-    > .editor-layout
-    > .editor-body
-    > .cat-layout {
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-layout,
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-layout > .editor-body,
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) > .editor-layout > .editor-body > .cat-layout {
     display: contents;
   }
 
-  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail)
-    .cat-rail {
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) .cat-rail {
     grid-area: rail;
   }
 
-  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail)
-    .cat-content {
+  .mypage-editor:has(> .editor-layout > .editor-body > .cat-layout > .cat-rail) .cat-content {
     grid-area: body;
   }
 }
@@ -3490,6 +3476,7 @@ a.player-name:hover {
   font-weight: 600;
 }
 
+
 .tab-lock {
   display: inline-flex;
   vertical-align: -3px;
@@ -3500,6 +3487,7 @@ a.player-name:hover {
   width: 14px;
   height: 14px;
 }
+
 
 /* Quatorze jauges : on remplit la largeur disponible plutôt que trois colonnes
    figées, sinon l'en-tête du perso occupe la moitié de l'écran. */
@@ -3535,6 +3523,7 @@ a.player-name:hover {
   align-items: center;
   gap: 4px;
 }
+
 
 .mypage-user {
   margin-left: auto;
@@ -3585,11 +3574,6 @@ a.player-name:hover {
   align-items: flex-start;
 }
 
-/* Pas de content-visibility ici, volontairement : il ecrase la hauteur des
-   pages hors ecran, le document passe de 9000 a 3760 px, et TOUTES les pages se
-   retrouvent a portee de l'observateur qui decide du chargement des images. Les
-   deux mecanismes se combattent — on garde celui qui empeche vraiment le
-   telechargement (useVisible), pas celui qui saute seulement le dessin. */
 .album-page {
   background: var(--surface);
   border: 1px solid var(--hairline);
@@ -3608,7 +3592,7 @@ a.player-name:hover {
 
 .album-page-head::before,
 .album-page-head::after {
-  content: "";
+  content: '';
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(214, 178, 107, 0.55));
@@ -3633,7 +3617,7 @@ a.player-name:hover {
 /* Hauteur reservee AVANT l'image. Sans elle, une carte sans image ne mesure
    rien : les dix-sept pages de l'album s'empilent en haut de l'ecran, elles
    « approchent » donc toutes du regard, et le verrou qui devait retenir les
-   images les laissait toutes partir. Le ratio est celui des cartes du jeu. */
+   images les laissait toutes partir. Meme ratio que la case vide. */
 .album-card {
   position: relative;
   padding: 0;
@@ -4100,9 +4084,7 @@ a.player-name:hover {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
 .spell-row:hover {
@@ -4187,24 +4169,12 @@ a.player-name:hover {
   background: #6b6b68;
 }
 
-.aspect-fire {
-  background: #e0684b;
-}
-.aspect-water {
-  background: #4e9de0;
-}
-.aspect-wind {
-  background: #63bd63;
-}
-.aspect-earth {
-  background: #d0a85c;
-}
-.aspect-lightning {
-  background: #a875e8;
-}
-.aspect-ice {
-  background: #7fd4e8;
-}
+.aspect-fire { background: #e0684b; }
+.aspect-water { background: #4e9de0; }
+.aspect-wind { background: #63bd63; }
+.aspect-earth { background: #d0a85c; }
+.aspect-lightning { background: #a875e8; }
+.aspect-ice { background: #7fd4e8; }
 
 .spell-stars {
   display: inline-flex;
@@ -4344,7 +4314,7 @@ a.player-name:hover {
 
 /* puce décorative de la liste en lecture seule — jamais sur les lignes cochables */
 .panel-pieces:not(.panel-pieces-check) li::before {
-  content: "· ";
+  content: '· ';
   color: var(--muted);
 }
 
@@ -4369,14 +4339,14 @@ a.player-name:hover {
 }
 
 .relic-player-fold > summary::before {
-  content: "▸";
+  content: '▸';
   color: var(--muted);
   font-size: 11px;
   flex-shrink: 0;
 }
 
 .relic-player-fold[open] > summary::before {
-  content: "▾";
+  content: '▾';
   color: var(--gold);
 }
 
@@ -4612,6 +4582,7 @@ a.player-name:hover {
   font-size: 11px;
   padding: 2px 9px;
 }
+
 
 /* pourcentages : colonne fixe alignée à droite, chiffres tabulaires */
 .relic-player .relic-remaining {
@@ -5043,9 +5014,7 @@ a.player-name:hover {
   border: 1px solid var(--hairline);
   border-radius: 999px;
   text-decoration: none;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .footer-support:hover {
@@ -5507,42 +5476,23 @@ a.player-name:hover {
   height: 100%;
   width: 38%;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--gold),
-    #f0dca9,
-    var(--gold),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--gold), #f0dca9, var(--gold), transparent);
   animation: loader-run 1.15s cubic-bezier(0.45, 0, 0.35, 1) infinite;
 }
 
 @keyframes loader-run {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(300%);
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
 }
 
 @keyframes loader-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes loader-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 /* Sans animation : une barre dorée pleine, discrète et immobile. */

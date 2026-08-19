@@ -379,8 +379,10 @@ export default function App() {
     if (tab === 'relics' && grp.active && grp.active.members.length <= 1) setTab('planning')
   }, [tab, grp.active])
 
-  // Présence « ce soir » : les absents sont ignorés par les vues (choix local).
-  const [absent, setAbsent] = useState<number[]>(() => {
+  // Qui l'on regarde : les masqués restent du groupe mais sortent de tous les
+  // calculs (choix local, propre à cet appareil). La clé garde son ancien nom,
+  // les listes déjà enregistrées chez les visiteurs restent valables.
+  const [masques, setMasques] = useState<number[]>(() => {
     try {
       const parsed = JSON.parse(lsGet('ogs.absent.v1') ?? '[]')
       return Array.isArray(parsed) ? parsed.filter((n) => Number.isInteger(n)) : []
@@ -390,17 +392,17 @@ export default function App() {
   })
   useEffect(() => {
     try {
-      lsSet('ogs.absent.v1', JSON.stringify(absent))
+      lsSet('ogs.absent.v1', JSON.stringify(masques))
     } catch {
       // pas de persistance, pas grave
     }
-  }, [absent])
-  const togglePresence = (id: number) =>
-    setAbsent((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }, [masques])
+  const toggleVu = (id: number) =>
+    setMasques((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const activeReady = useMemo(
-    () => ready.filter((m) => !absent.includes(m.id)),
-    [ready, absent],
+    () => ready.filter((m) => !masques.includes(m.id)),
+    [ready, masques],
   )
 
   // Sidepanel replié ? (par défaut : rail pour les gros groupes)
@@ -732,11 +734,11 @@ export default function App() {
               isCollection && tab !== 'collections' ? (tab as Kind | 'fashion') : undefined
             }
             connecte={!horsCompte}
-            absent={absent}
+            masques={masques}
             collapsed={rosterCollapsed}
             onToggleCollapsed={() => setRosterOpen(rosterCollapsed)}
-            onTogglePresence={togglePresence}
-            onResetPresence={() => setAbsent([])}
+            onToggleVu={toggleVu}
+            onToutVoir={() => setMasques([])}
             onAdd={canManualAdd ? handleAddMember : undefined}
           />
           )}

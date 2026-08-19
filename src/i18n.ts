@@ -563,21 +563,21 @@ const STR = {
 
   // Roster
   team: { fr: 'Équipe', en: 'Team' },
-  present: { fr: '{n} présent', en: '{n} here' },
-  presents: { fr: '{n} présents', en: '{n} here' },
-  allHere: { fr: 'Tous là', en: 'All here' },
-  allHereTitle: { fr: 'Remettre tout le monde présent', en: 'Mark everyone as present' },
+  shown: { fr: '{n} affiché', en: '{n} shown' },
+  shownPlural: { fr: '{n} affichés', en: '{n} shown' },
+  showAll: { fr: 'Tout voir', en: 'Show all' },
+  showAllTitle: { fr: 'Réafficher tout le groupe', en: 'Show the whole group again' },
   collapseRoster: { fr: 'Réduire le roster', en: 'Collapse roster' },
   expandRoster: { fr: 'Développer le roster', en: 'Expand roster' },
-  presentTitle: {
-    fr: 'Présent ce soir, clique pour le marquer absent (les vues l\'ignorent)',
-    en: 'Here tonight, click to mark as away (views will ignore them)',
+  seeOn: {
+    fr: 'Affiché : clique pour le retirer des vues, sans le retirer du groupe',
+    en: 'Shown: click to leave them out of the views, without leaving the group',
   },
-  absentTitle: {
-    fr: 'Absent ce soir, clique pour le remettre dans le groupe',
-    en: 'Away tonight, click to bring them back',
+  seeOff: {
+    fr: 'Masqué : clique pour le réafficher',
+    en: 'Hidden: click to show them again',
   },
-  awayTonight: { fr: '(absent ce soir)', en: '(away tonight)' },
+  seeHidden: { fr: '(masqué)', en: '(hidden)' },
   loading: { fr: 'Chargement…', en: 'Loading…' },
   retry: { fr: 'Réessayer', en: 'Retry' },
   removeMember: { fr: 'Retirer du groupe', en: 'Remove from group' },

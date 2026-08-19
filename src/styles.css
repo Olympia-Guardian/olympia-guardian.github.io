@@ -225,7 +225,7 @@ button:focus-visible {
   flex-shrink: 0;
 }
 
-.rail-face.is-absent {
+.rail-face.is-hidden {
   opacity: 0.4;
 }
 
@@ -445,16 +445,28 @@ button:focus-visible {
   border-color: rgba(208, 59, 59, 0.4);
 }
 
-/* présence « ce soir » */
-.player-card.is-absent {
+/* masqué : reste du groupe, sort des calculs */
+.player-card.is-hidden {
   opacity: 0.45;
 }
 
 /* C'est LE geste de la barre laterale : c'est par lui qu'on retire quelqu'un
-   du calcul du soir. Il etait plus petit que le texte a cote de lui. */
-.presence-btn {
-  font-size: 20px;
-  padding: 4px 8px;
+   des vues sans le retirer du groupe. Une seule icone, deux etats : eteinte
+   quand le personnage est masque, ce qui evite d'avoir a lire l'infobulle. */
+.vu-btn {
+  padding: 4px 6px;
+}
+
+.vu-btn img.kind-icon {
+  width: 22px;
+  height: 22px;
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.vu-btn.is-on img.kind-icon {
+  opacity: 1;
+  filter: none;
 }
 
 /* badge de synchro du salon */

@@ -3,7 +3,7 @@ import { parseLodestoneId, type Kind } from './api'
 import { kindLabel, useI18n, type I18n } from './i18n'
 import type { Member } from './store'
 import { nomMembre } from './store'
-import { Meter, onAvatarImgError } from './ui'
+import { Meter, TabIcon, onAvatarImgError } from './ui'
 
 function relativeDate(iso: string, t: I18n['t']): string {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
@@ -16,16 +16,17 @@ function relativeDate(iso: string, t: I18n['t']): string {
 // de la collection consultée, plus les deux qui viennent du Lodestone.
 function PlayerCard({
   member,
-  present,
+  vu,
   activeKind,
   connecte,
-  onTogglePresence,
+  onToggleVu,
 }: {
   member: Member
-  present: boolean
+  /** Compté par les vues ? Sinon il reste dans le groupe, mais à l'écart. */
+  vu: boolean
   activeKind?: Kind | 'fashion'
   connecte: boolean
-  onTogglePresence?: () => void
+  onToggleVu?: () => void
 }) {
   const { lang, t } = useI18n()
   if (member.status === 'loading') {
@@ -50,7 +51,7 @@ function PlayerCard({
   const c = member.data
   const somePrivate = !c.mounts.isPublic || !c.minions.isPublic
   return (
-    <div className={`player-card ${present ? '' : 'is-absent'}`}>
+    <div className={`player-card ${vu ? '' : 'is-hidden'}`}>
       <div className="player-head">
         <img className="player-avatar" src={c.avatar} alt="" width={38} height={38} onError={onAvatarImgError} />
         <div className="player-id">
@@ -66,13 +67,13 @@ function PlayerCard({
           <span className="player-server">{c.server}</span>
         </div>
         <span className="player-actions">
-          {onTogglePresence && (
+          {onToggleVu && (
             <button
-              className={`icon-btn presence-btn ${present ? 'is-on' : ''}`}
-              title={present ? t('presentTitle') : t('absentTitle')}
-              onClick={onTogglePresence}
+              className={`icon-btn vu-btn ${vu ? 'is-on' : ''}`}
+              title={t(vu ? 'seeOn' : 'seeOff')}
+              onClick={onToggleVu}
             >
-              {present ? '🎮' : '💤'}
+              <TabIcon k="inspect" />
             </button>
           )}
         </span>
@@ -115,25 +116,26 @@ function PlayerCard({
 
 export function RosterBar({
   members,
-  absent,
+  masques,
   activeKind,
   connecte,
   collapsed,
   onToggleCollapsed,
-  onTogglePresence,
-  onResetPresence,
+  onToggleVu,
+  onToutVoir,
   onAdd,
 }: {
   members: Member[]
-  absent: number[]
+  /** Personnages écartés des vues, par choix local. Ils restent du groupe. */
+  masques: number[]
   /** Collection consultée : sa jauge s'ajoute aux cartes des joueurs. */
   activeKind?: Kind | 'fashion'
   /** Sans compte, les cartes ne renvoient pas vers « Mon Journal », qui ne s'ouvre pas. */
   connecte: boolean
   collapsed: boolean
   onToggleCollapsed: () => void
-  onTogglePresence: (id: number) => void
-  onResetPresence: () => void
+  onToggleVu: (id: number) => void
+  onToutVoir: () => void
   /** Absent : le groupe actif n'est pas éditable — le formulaire d'ajout disparaît. */
   onAdd?: (id: number) => void
 }) {
@@ -153,7 +155,7 @@ export function RosterBar({
     onAdd?.(id)
   }
 
-  const presentCount = members.length - absent.length
+  const affiches = members.length - masques.length
 
   if (collapsed) {
     return (
@@ -167,10 +169,10 @@ export function RosterBar({
               key={m.id}
               src={m.data.avatar}
               alt={nomMembre(m)}
-              title={`${nomMembre(m)}${absent.includes(m.id) ? ' ' + t('awayTonight') : ''}`}
+              title={`${nomMembre(m)}${masques.includes(m.id) ? ' ' + t('seeHidden') : ''}`}
               width={34}
               height={34}
-              className={`rail-face ${absent.includes(m.id) ? 'is-absent' : ''}`}
+              className={`rail-face ${masques.includes(m.id) ? 'is-hidden' : ''}`}
               onError={onAvatarImgError}
             />
           ) : (
@@ -190,11 +192,11 @@ export function RosterBar({
             au-dessus d'elles n'apprenait rien. Reste ce qui se lit vraiment,
             le nombre de présents quand quelqu'un manque à l'appel. */}
         <span className="sidebar-title">
-          {absent.length > 0 && t(presentCount > 1 ? 'presents' : 'present', { n: presentCount })}
+          {masques.length > 0 && t(affiches > 1 ? 'shownPlural' : 'shown', { n: affiches })}
         </span>
-        {absent.length > 0 && (
-          <button className="btn btn-ghost btn-mini" onClick={onResetPresence} title={t('allHereTitle')}>
-            {t('allHere')}
+        {masques.length > 0 && (
+          <button className="btn btn-ghost btn-mini" onClick={onToutVoir} title={t('showAllTitle')}>
+            {t('showAll')}
           </button>
         )}
         <button className="icon-btn" title={t('collapseRoster')} onClick={onToggleCollapsed}>
@@ -205,10 +207,10 @@ export function RosterBar({
         <PlayerCard
           key={m.id}
           member={m}
-          present={!absent.includes(m.id)}
+          vu={!masques.includes(m.id)}
           activeKind={activeKind}
           connecte={connecte}
-          onTogglePresence={members.length > 1 ? () => onTogglePresence(m.id) : undefined}
+          onToggleVu={members.length > 1 ? () => onToggleVu(m.id) : undefined}
         />
       ))}
       {onAdd && (

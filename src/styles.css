@@ -1701,13 +1701,40 @@ a.player-name:hover {
   align-items: stretch;
 }
 
+/* Le portrait porte sa pastille : il lui faut donc un cadre qui la retienne. */
+.mypage-portrait-cadre {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* Personnage verifie : une pastille verte posee sur le coin, debordant assez
+   pour se detacher du portrait sans en manger le visage. */
+.mypage-verifie {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--good);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
 .mypage-portrait {
   width: 180px;
-  flex-shrink: 0;
   object-fit: cover;
   border-radius: var(--radius-s);
   border: 1px solid var(--hairline);
-  align-self: flex-start;
 }
 
 .mypage-char-main {

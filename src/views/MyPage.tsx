@@ -1807,13 +1807,21 @@ export function MyPage({
             <div className="mypage-char-layout">
               {/* Le portrait est LA premiere chose qu'on regarde : il passe
                   devant les centaines d'icones de la collection affichee. */}
-              <img
-                className="mypage-portrait"
-                src={char.portrait || char.avatar}
-                alt=""
-                fetchPriority="high"
-                onError={onAvatarImgError}
-              />
+              <span className="mypage-portrait-cadre">
+                <img
+                  className="mypage-portrait"
+                  src={char.portrait || char.avatar}
+                  alt=""
+                  fetchPriority="high"
+                  onError={onAvatarImgError}
+                />
+                {/* La verification porte sur CE personnage : la marque se pose
+                    donc sur son portrait, pas au bout de son nom ou elle
+                    passait pour une etiquette de plus. */}
+                <span className="mypage-verifie" title={t('bindVerifiedChip')}>
+                  ✓
+                </span>
+              </span>
               <div className="mypage-char-main">
                 <div className="player-head mypage-char-head">
                   <div className="player-id">
@@ -1824,7 +1832,6 @@ export function MyPage({
                           « {(lang === 'fr' && char.profile.titleFr) || char.profile.title} »
                         </span>
                       )}
-                      <span className="chip chip-owned">✓ {t('bindVerifiedChip')}</span>
                       {char.profile?.grandCompany && (
                         <span className="char-org" title={t('factGC')}>
                           {char.profile.gcIcon && (

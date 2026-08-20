@@ -1068,6 +1068,33 @@ const STR = {
     fr: 'Tout ce qu’il faut savoir pour prendre en main Codex Olympia. Ces sujets apparaissent aussi en « Aide active » à la première visite de chaque écran.',
     en: 'Everything you need to get started with Codex Olympia. These topics also appear as “Active Help” the first time you visit each screen.',
   },
+  pasTitre: { fr: 'Premiers pas', en: 'First steps' },
+  pasCompte: { fr: '{n} sur {total}', en: '{n} of {total}' },
+  pasAller: { fr: 'Y aller', en: 'Take me there' },
+  pasFini: {
+    fr: 'Tout est en place. Les sujets ci-dessous répondent au reste, à relire quand tu veux.',
+    en: 'Everything is in place. The topics below cover the rest, whenever you need them.',
+  },
+  pasLoginTitle: { fr: 'Se connecter', en: 'Sign in' },
+  pasLoginBody: {
+    fr: 'Par Discord, Google ou XIVAuth. Sans compte, on ne voit que les montures et les mascottes, et rien ne se garde d’un appareil à l’autre.',
+    en: 'With Discord, Google or XIVAuth. Without an account you only see mounts and minions, and nothing carries from one device to another.',
+  },
+  pasCharTitle: { fr: 'Relier son personnage', en: 'Link your character' },
+  pasCharBody: {
+    fr: 'Colle l’adresse de ta fiche Lodestone, puis recopie le code donné dans ton profil en jeu. C’est ce qui prouve que le perso est le tien, et qui te laisse cocher tes collections.',
+    en: 'Paste your Lodestone page address, then copy the code it gives you into your in-game profile. That is what proves the character is yours, and what lets you tick your collections.',
+  },
+  pasGroupTitle: { fr: 'Créer ou rejoindre un groupe', en: 'Create or join a group' },
+  pasGroupBody: {
+    fr: 'Seul, l’application ne sert qu’à se compter. À plusieurs, elle dit qui a quoi, qui manque quoi, et ce qui se farme ensemble.',
+    en: 'On your own, the app only counts you. With others, it says who has what, who is missing what, and what is worth farming together.',
+  },
+  pasRaidTitle: { fr: 'Suivre son équipement de raid', en: 'Track your raid gear' },
+  pasRaidBody: {
+    fr: 'Crée un groupe qui suit un palier savage, colle ton BiS Etro ou XIVGear, et le compte des soirées se fait tout seul.',
+    en: 'Create a group that follows a savage tier, paste your Etro or XIVGear BiS, and the clear count works itself out.',
+  },
   guideResetHelp: { fr: 'Revoir les aides actives', en: 'Replay active help' },
   guideResetDone: {
     fr: 'Elles réapparaîtront sur chaque écran ✓',

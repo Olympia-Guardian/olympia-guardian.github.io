@@ -92,7 +92,75 @@ export function ActiveHelp({ topicKey }: { topicKey: string | null }) {
   )
 }
 
-/** Page Guide : tous les sujets d'aide, plus le bouton de réinitialisation. */
+/** Où en est le joueur. Le guide s'en sert pour cocher ce qui est fait : une
+ *  marche déjà franchie ne se relit pas, et voir trois coches sur cinq dit
+ *  mieux « il reste ça » que n'importe quelle phrase. */
+export interface Avancement {
+  connecte: boolean
+  perso: boolean
+  groupe: boolean
+  raid: boolean
+}
+
+/** Les premiers pas, dans l'ordre. Le guide décrivait chaque écran sans jamais
+ *  dire par où commencer : neuf paragraphes, tous vrais, et aucun chemin. */
+const ETAPES: { cle: keyof Avancement; titre: StrKey; corps: StrKey; onglet: string }[] = [
+  { cle: 'connecte', titre: 'pasLoginTitle', corps: 'pasLoginBody', onglet: 'login' },
+  { cle: 'perso', titre: 'pasCharTitle', corps: 'pasCharBody', onglet: 'account' },
+  { cle: 'groupe', titre: 'pasGroupTitle', corps: 'pasGroupBody', onglet: 'groups' },
+  { cle: 'raid', titre: 'pasRaidTitle', corps: 'pasRaidBody', onglet: 'groups' },
+]
+
+function PremiersPas({
+  avancement,
+  flags,
+  onAller,
+}: {
+  avancement: Avancement
+  flags: Flags
+  onAller?: (onglet: string) => void
+}) {
+  const { t } = useI18n()
+  const etapes = ETAPES.filter((e) => e.cle !== 'raid' || flags.raid)
+  const fait = etapes.filter((e) => avancement[e.cle]).length
+  // La première marche non franchie : la seule qui compte vraiment, les autres
+  // n'étant que du contexte au-dessus et de l'avenir en dessous.
+  const courante = etapes.find((e) => !avancement[e.cle])?.cle ?? null
+
+  return (
+    <section className="relic-series group-card guide-pas">
+      <header className="relic-series-head">
+        <h4 className="relic-series-name">{t('pasTitre')}</h4>
+        <span className="muted">{t('pasCompte', { n: fait, total: etapes.length })}</span>
+      </header>
+      <ol>
+        {etapes.map((e, i) => {
+          const done = avancement[e.cle]
+          return (
+            <li
+              key={e.cle}
+              className={`${done ? 'est-fait' : ''} ${courante === e.cle ? 'est-courante' : ''}`}
+            >
+              <span className="guide-pas-num">{done ? '✓' : i + 1}</span>
+              <span className="guide-pas-texte">
+                <b>{t(e.titre)}</b>
+                <small>{t(e.corps)}</small>
+              </span>
+              {!done && onAller && (
+                <button className="btn btn-mini btn-primary" onClick={() => onAller(e.onglet)}>
+                  {t('pasAller')}
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+      {courante === null && <p className="guide-pas-fini">{t('pasFini')}</p>}
+    </section>
+  )
+}
+
+/** Page Guide : les premiers pas, puis tous les sujets d'aide. */
 /** Sujets atteignables sans compte. Les autres décrivent des écrans qu'on ne
  *  peut pas ouvrir : un guide qui parle de ce qu'on ne voit pas donne
  *  l'impression d'avoir raté quelque chose. */
@@ -101,9 +169,14 @@ const SUJETS_HORS_COMPTE = ['link', 'planning', 'collections', 'groups']
 export function GuidePage({
   connecte = true,
   flags = FLAGS_ALLUMES,
+  avancement,
+  onAller,
 }: {
   connecte?: boolean
   flags?: Flags
+  /** Où en est le joueur. Absent, les premiers pas ne s'affichent pas. */
+  avancement?: Avancement
+  onAller?: (onglet: string) => void
 }) {
   const { t } = useI18n()
   const [resetDone, setResetDone] = useState(false)
@@ -124,6 +197,9 @@ export function GuidePage({
         </button>
       </div>
       <p className="modal-muted">{t('guideIntro')}</p>
+      {avancement && (
+        <PremiersPas avancement={avancement} flags={flags} onAller={onAller} />
+      )}
       {HELP_TOPICS.filter((h) => {
         // Un sujet sans interrupteur ne s'eteint jamais : le repli sur une cle
         // par defaut aurait fait disparaitre tout le guide le jour ou cette

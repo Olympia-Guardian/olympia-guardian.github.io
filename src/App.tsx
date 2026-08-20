@@ -1245,7 +1245,21 @@ export default function App() {
             {tab === 'admin' && auth.token && auth.user?.isAdmin && (
               <AdminPage token={auth.token} />
             )}
-            {tab === 'guide' && <GuidePage connecte={!horsCompte} flags={flags} />}
+            {tab === 'guide' && (
+              <GuidePage
+                connecte={!horsCompte}
+                flags={flags}
+                // Le guide coche ce qui est deja fait : une marche franchie ne
+                // se relit pas, et le joueur voit ou il en est sans compter.
+                avancement={{
+                  connecte: !!auth.token,
+                  perso: verifiedIds.length > 0,
+                  groupe: grp.groups.length > 0,
+                  raid: grp.groups.some((g) => g.type === 'raid'),
+                }}
+                onAller={(onglet) => setTab(onglet as Tab)}
+              />
+            )}
             {/* Les persos du COMPTE, pas ceux du groupe affiche : un perso
                 verifie mais absent du roster existe quand meme, et la page
                 annoncait « aucun perso verifie » a tort. */}

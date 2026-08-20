@@ -201,6 +201,109 @@ function compter(env, cle, n = 1) {
   }
 }
 
+// Les segments de chemin qu'on accepte de compter. Une liste FERMEE, et non
+// une regle qui nettoierait les identifiants : un code d'invitation tire au
+// sort peut ressembler a un mot, et il aurait alors sa propre ligne dans la
+// table. Ici, tout ce qui n'est pas reconnu disparait, et le nombre de cles
+// reste borne quoi qu'il arrive.
+const SEGMENTS = new Set([
+  'account', 'admin', 'adoption', 'auth', 'bind', 'bis', 'blocks', 'callback',
+  'character', 'collect-sync', 'collections', 'contact', 'contacts', 'costs',
+  'export', 'flags', 'group', 'group-invites', 'groups', 'inbox', 'invite',
+  'join', 'link', 'me', 'member', 'members', 'metrics', 'overview',
+  'providers', 'purge-tokens', 'raid', 'report', 'reports', 'request',
+  'requests', 'resolve', 'respond', 'room', 'rotate', 'search-character',
+  'seed', 'sent', 'suggest', 'suggestions', 'usage', 'user', 'verify', 'ws',
+])
+
+function nomRoute(pathname) {
+  const parts = pathname.split('/').filter((x) => SEGMENTS.has(x))
+  return parts.slice(0, 3).join('/') || 'autre'
+}
+
+// Les ecrans que le navigateur a le droit d'annoncer. Meme raison : une liste
+// fermee, pour qu'un navigateur bavard ou malveillant ne puisse pas remplir la
+// table de cles inventees.
+const ECRANS = new Set([
+  'planning', 'collections', 'mounts', 'minions', 'cards', 'fashions',
+  'facewear', 'hairstyles', 'outfits', 'armoires', 'bardings', 'emotes',
+  'frames', 'orchestrions', 'spells', 'achievements', 'fashion', 'relics',
+  'mypage', 'market', 'groups', 'admin', 'guide', 'news', 'account', 'login',
+  'butin',
+])
+
+/** POST /usage : le navigateur annonce l'ecran qu'il vient d'ouvrir.
+ *
+ *  Anonyme et non authentifie, volontairement : on compte COMBIEN de fois un
+ *  ecran s'ouvre, jamais qui l'ouvre. Rien d'autre n'est lu de la requete, ni
+ *  compte, ni adresse, ni horaire au-dela du jour courant. */
+async function noterUsage(env, raw) {
+  let ecran
+  try {
+    ecran = JSON.parse(raw)?.ecran
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (typeof ecran !== 'string' || !ECRANS.has(ecran)) {
+    return response('{"error":"unknown screen"}', 422)
+  }
+  await compter(env, `ecran:${ecran}`)
+  return response('{"ok":true}')
+}
+
+// ------------------------------------------------------------ interrupteurs
+//
+// De quoi eteindre une partie de l'application sans deployer. Le defaut est
+// ALLUME : seuls les elements eteints ont une ligne, de sorte qu'une table vide
+// — ou une lecture qui echoue — laisse tout fonctionner. L'inverse aurait fait
+// tomber le site le jour ou D1 hoquette.
+
+const INTERRUPTEURS = ['market', 'raid', 'suggestions']
+
+async function lireFlags(env) {
+  const off = new Set()
+  try {
+    const rows = await env.DB.prepare('SELECT cle FROM flags WHERE actif = 0').all()
+    for (const r of rows.results) off.add(r.cle)
+  } catch {
+    // Table absente ou illisible : tout reste allume.
+  }
+  return Object.fromEntries(INTERRUPTEURS.map((c) => [c, !off.has(c)]))
+}
+
+/** GET /flags : ce qui est allume. Public et sans compte — le front en a besoin
+ *  avant meme de savoir qui regarde, et l'information n'a rien de secret. */
+async function getFlags(env) {
+  return response(JSON.stringify(await lireFlags(env)), 200, {
+    // Une minute de cache : assez pour ne pas interroger D1 a chaque visite,
+    // assez court pour qu'un interrupteur se voie sans attendre.
+    'Cache-Control': 'public, max-age=60',
+  })
+}
+
+/** Vrai si l'element est eteint. Sert aux routes qui doivent refuser. */
+async function eteint(env, cle) {
+  return (await lireFlags(env))[cle] === false
+}
+
+async function setFlag(env, raw) {
+  let body
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  if (!INTERRUPTEURS.includes(body?.cle)) return response('{"error":"unknown flag"}', 422)
+  const actif = body?.actif ? 1 : 0
+  await env.DB.prepare(
+    'INSERT INTO flags (cle, actif, updated) VALUES (?1, ?2, ?3) ' +
+      'ON CONFLICT(cle) DO UPDATE SET actif = ?2, updated = ?3',
+  )
+    .bind(body.cle, actif, Date.now())
+    .run()
+  return response(JSON.stringify(await lireFlags(env)))
+}
+
 // ----------------------------------------------------------------- lodestone
 
 // Le Lodestone n'est pas une API : c'est le site de Square Enix, que nous
@@ -1631,6 +1734,11 @@ async function createGroup(env, user, raw) {
   // Un groupe de raid suit un palier ; un groupe de collection n'en suit aucun.
   // On refuse la combinaison inverse plutot que de la corriger en silence.
   const type = body?.type === 'raid' ? 'raid' : 'collection'
+  // Un groupe de raid ne se cree plus quand la fonctionnalite est eteinte. Les
+  // groupes deja crees, eux, continuent de vivre : eteindre n'est pas effacer.
+  if (type === 'raid' && (await eteint(env, 'raid'))) {
+    return response('{"error":"raid disabled"}', 403)
+  }
   const tier = type === 'raid' && typeof body?.tier === 'string' ? body.tier.slice(0, 40) : null
   if (type === 'raid' && !tier) return response('{"error":"missing tier"}', 422)
   const stmts = [
@@ -3453,10 +3561,10 @@ async function ownersOfChar(env, charId) {
 
 // --------------------------------------------------------------------- http
 
-function response(body, status = 200) {
+function response(body, status = 200, entetes) {
   return new Response(body, {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS },
+    headers: { 'Content-Type': 'application/json', ...CORS, ...entetes },
   })
 }
 
@@ -3488,6 +3596,17 @@ const routes = {
     // afficherait des boutons qui échouent tant que les clés ne sont pas
     // posées — et, une fois posées, les boutons apparaissent tout seuls sans
     // qu'il faille recompiler le front.
+    // Ce qui est allume. Public : le front en a besoin avant de savoir qui
+    // regarde, et l'information n'a rien de secret.
+    if (url.pathname === '/flags' && req.method === 'GET') return getFlags(env)
+
+    // L'ecran qu'un navigateur vient d'ouvrir. Anonyme, et sans compte.
+    if (url.pathname === '/usage' && req.method === 'POST') {
+      const raw = await req.text()
+      if (raw.length > 200) return response('{"error":"too large"}', 413)
+      return noterUsage(env, raw)
+    }
+
     if (url.pathname === '/providers' && req.method === 'GET') {
       const dispo = Object.keys(FOURNISSEURS).filter((k) => FOURNISSEURS[k].id(env))
       return new Response(JSON.stringify(dispo), {
@@ -3599,6 +3718,7 @@ const routes = {
     if (url.pathname === '/suggest' && req.method === 'POST') {
       const user = await authenticate(env, req)
       if (!user) return response('{"error":"unauthorized"}', 401)
+      if (await eteint(env, 'suggestions')) return response('{"error":"disabled"}', 403)
       return createSuggestions(env, user, await req.text())
     }
     if (url.pathname === '/suggestions' && req.method === 'GET') {
@@ -3657,6 +3777,10 @@ const routes = {
       if (url.pathname === '/admin/metrics' && req.method === 'GET') return listMetrics(env)
       if (url.pathname === '/admin/adoption' && req.method === 'GET') return adminAdoption(env)
       if (url.pathname === '/admin/costs' && req.method === 'GET') return adminCosts(env)
+      if (url.pathname === '/admin/flags') {
+        if (req.method === 'GET') return response(JSON.stringify(await lireFlags(env)))
+        if (req.method === 'POST') return setFlag(env, await req.text())
+      }
       const repMatch = url.pathname.match(/^\/admin\/reports\/(rep-[\w-]{10,60})$/)
       if (repMatch && req.method === 'POST') {
         const raw = await req.text()
@@ -3871,6 +3995,13 @@ export default {
           status: 429,
           headers: { 'Content-Type': 'application/json', 'Retry-After': '60', ...CORS },
         })
+      }
+      // Ce qui est demande, et rien d'autre : le nom de la route, sans qui l'a
+      // demandee. Le comptage part APRES la reponse (waitUntil) pour ne jamais
+      // ralentir ce qu'il observe, et ne compte pas les preflight CORS, qui
+      // doubleraient chaque chiffre.
+      if (req.method !== 'OPTIONS') {
+        ctx.waitUntil(compter(env, `route:${nomRoute(url.pathname)}`))
       }
       return await routes.fetch(req, env, ctx)
     } catch (e) {

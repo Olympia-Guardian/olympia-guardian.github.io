@@ -2,7 +2,7 @@
 // persos, groupes, activité) et actions ciblées — visible du seul compte
 // ADMIN_USER_ID (le worker répond 404 à tous les autres).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { WORKER_API } from '../api'
 import { useI18n } from '../i18n'
 import { AdminIcons } from './AdminIcons'
@@ -117,6 +117,52 @@ interface Adoption {
   persosActifs: number
 }
 
+/** Un classement de compteurs : le plus demande en haut, avec une barre pour
+ *  comparer d'un coup d'oeil. Les cles portent leur prefixe (`ecran:`,
+ *  `route:`) pour ne pas se melanger dans la meme table ; il tombe a
+ *  l'affichage, il ne dit rien au lecteur. */
+function Palmares({
+  titre,
+  prefixe,
+  metrics,
+}: {
+  titre: string
+  prefixe: string
+  metrics: Metric[]
+}) {
+  const lignes = useMemo(() => {
+    const total = new Map<string, number>()
+    for (const m of metrics) {
+      if (!m.cle.startsWith(prefixe)) continue
+      const nom = m.cle.slice(prefixe.length)
+      total.set(nom, (total.get(nom) ?? 0) + m.n)
+    }
+    return [...total.entries()].sort((a, b) => b[1] - a[1])
+  }, [metrics, prefixe])
+  const haut = lignes[0]?.[1] ?? 1
+
+  return (
+    <div className="admin-palmares">
+      <h5>{titre}</h5>
+      {lignes.length === 0 ? (
+        <p className="muted">—</p>
+      ) : (
+        <ul>
+          {lignes.map(([nom, n]) => (
+            <li key={nom}>
+              <span className="admin-palmares-nom">{nom}</span>
+              <span className="admin-palmares-barre">
+                <i style={{ width: `${Math.max(2, Math.round((n / haut) * 100))}%` }} />
+              </span>
+              <b>{n}</b>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 interface Metric {
   jour: string
   cle: string
@@ -132,15 +178,23 @@ export function AdminPage({ token }: { token: string }) {
   const [saisie, setSaisie] = useState('')
   const [verrouille, setVerrouille] = useState(false)
   const [onglet, setOnglet] = useState<
-    'apercu' | 'sante' | 'adoption' | 'couts' | 'reports' | 'comptes' | 'groupes' | 'icones'
-  >(
-    'apercu',
-  )
+    | 'apercu'
+    | 'sante'
+    | 'usage'
+    | 'adoption'
+    | 'couts'
+    | 'reports'
+    | 'comptes'
+    | 'groupes'
+    | 'interrupteurs'
+    | 'icones'
+  >('apercu')
   const [reports, setReports] = useState<Report[] | null>(null)
   const [metrics, setMetrics] = useState<Metric[] | null>(null)
   const [fraicheur, setFraicheur] = useState<number | null>(null)
   const [adoption, setAdoption] = useState<Adoption | null>(null)
   const [couts, setCouts] = useState<{ lignes: Record<string, number>; total: number } | null>(null)
+  const [flags, setFlags] = useState<Record<string, boolean> | null>(null)
 
   const entetes = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
@@ -224,8 +278,39 @@ export function AdminPage({ token }: { token: string }) {
     })()
   }, [onglet, adoption, pin, entetes])
 
+  // Les interrupteurs, a l'ouverture de leur onglet.
   useEffect(() => {
-    if (onglet !== 'sante' || metrics !== null || !pin) return
+    if (onglet !== 'interrupteurs' || flags !== null || !pin) return
+    void (async () => {
+      try {
+        const res = await fetch(`${WORKER_API}/admin/flags`, { headers: entetes() })
+        setFlags(res.ok ? await res.json() : {})
+      } catch {
+        setFlags({})
+      }
+    })()
+  }, [onglet, flags, pin, entetes])
+
+  async function basculerFlag(cle: string, actif: boolean) {
+    // On affiche le nouvel etat tout de suite, et on revient en arriere si le
+    // worker refuse : un interrupteur qui met une seconde a bouger donne envie
+    // de cliquer deux fois.
+    setFlags((prev) => ({ ...(prev ?? {}), [cle]: actif }))
+    try {
+      const res = await fetch(`${WORKER_API}/admin/flags`, {
+        method: 'POST',
+        headers: { ...entetes(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cle, actif }),
+      })
+      if (!res.ok) throw new Error(String(res.status))
+      setFlags(await res.json())
+    } catch {
+      setFlags((prev) => ({ ...(prev ?? {}), [cle]: !actif }))
+    }
+  }
+
+  useEffect(() => {
+    if ((onglet !== 'sante' && onglet !== 'usage') || metrics !== null || !pin) return
     void (async () => {
       try {
         const res = await fetch(`${WORKER_API}/admin/metrics`, { headers: entetes() })
@@ -352,11 +437,13 @@ export function AdminPage({ token }: { token: string }) {
           [
             ['apercu', t('adminTabOverview')],
             ['sante', t('adminTabHealth')],
+            ['usage', t('adminTabUsage')],
             ['adoption', t('adminTabAdoption')],
             ['couts', t('adminTabCosts')],
             ['reports', t('adminTabReports')],
             ['comptes', t('adminTabAccounts')],
             ['groupes', t('adminTabGroups')],
+            ['interrupteurs', t('adminTabFlags')],
             ['icones', t('adminTabIcons')],
           ] as const
         ).map(([id, label]) => (
@@ -374,6 +461,71 @@ export function AdminPage({ token }: { token: string }) {
       </div>
 
       {onglet === 'icones' && <AdminIcons />}
+
+      {/* Ce qui sert vraiment. Deux mesures cote a cote : les ecrans ouverts,
+          annonces par le navigateur, et les routes appelees, comptees par le
+          worker. Les deux sont anonymes — un compteur par jour et par cle, rien
+          qui dise QUI. Le marche et le guide n'apparaissent que dans la
+          premiere : ils ne parlent jamais au worker. */}
+      {onglet === 'usage' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabUsage')}</h4>
+            <span className="muted">{t('adminUsageHint')}</span>
+          </header>
+          {metrics === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : (
+            <div className="admin-usage">
+              <Palmares titre={t('adminUsageScreens')} prefixe="ecran:" metrics={metrics} />
+              <Palmares titre={t('adminUsageRoutes')} prefixe="route:" metrics={metrics} />
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Eteindre sans deployer. Eteindre n'efface rien : un groupe de raid
+          deja cree continue de vivre, seule sa creation se ferme. */}
+      {onglet === 'interrupteurs' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabFlags')}</h4>
+          </header>
+          {flags === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : (
+            <ul className="admin-flags">
+              {(
+                [
+                  ['market', t('market'), t('adminFlagMarket')],
+                  ['raid', t('followRaid'), t('adminFlagRaid')],
+                  ['suggestions', t('adminFlagSuggestionsTitle'), t('adminFlagSuggestions')],
+                ] as const
+              ).map(([cle, nom, aide]) => {
+                const actif = flags[cle] !== false
+                return (
+                  <li key={cle} className={actif ? '' : 'est-eteint'}>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={actif}
+                        onChange={(e) => void basculerFlag(cle, e.target.checked)}
+                      />
+                      <span>
+                        <b>{nom}</b>
+                        <small>{aide}</small>
+                      </span>
+                    </label>
+                    <span className="admin-flag-etat">
+                      {actif ? t('adminFlagOn') : t('adminFlagOff')}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       {onglet === 'sante' && (
         <section className="relic-series group-card">

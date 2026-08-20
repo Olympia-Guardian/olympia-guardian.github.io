@@ -157,6 +157,29 @@ const STR = {
   },
   adminTabAccounts: { fr: 'Comptes', en: 'Accounts' },
   adminTabGroups: { fr: 'Groupes', en: 'Groups' },
+  adminTabUsage: { fr: 'Usage', en: 'Usage' },
+  adminUsageHint: {
+    fr: 'Sur quatorze jours. Anonyme : un compteur par jour, jamais qui.',
+    en: 'Over fourteen days. Anonymous: one counter per day, never who.',
+  },
+  adminUsageScreens: { fr: 'Écrans ouverts', en: 'Screens opened' },
+  adminUsageRoutes: { fr: 'Routes appelées', en: 'API routes called' },
+  adminTabFlags: { fr: 'Interrupteurs', en: 'Switches' },
+  adminFlagOn: { fr: 'Allumé', en: 'On' },
+  adminFlagOff: { fr: 'Éteint', en: 'Off' },
+  adminFlagMarket: {
+    fr: 'Éteint, l’onglet disparaît pour tout le monde. Rien n’est perdu : la page interroge Universalis en direct.',
+    en: 'Off, the tab disappears for everyone. Nothing is lost: the page queries Universalis live.',
+  },
+  adminFlagRaid: {
+    fr: 'Éteint, on ne peut plus créer de groupe de raid. Ceux qui existent continuent de fonctionner.',
+    en: 'Off, no new raid group can be created. Existing ones keep working.',
+  },
+  adminFlagSuggestionsTitle: { fr: 'Suggestions entre joueurs', en: 'Player suggestions' },
+  adminFlagSuggestions: {
+    fr: 'Éteint, le bouton « suggérer » disparaît et le worker refuse les envois.',
+    en: 'Off, the “suggest” button disappears and the worker refuses new ones.',
+  },
   adminTabIcons: { fr: 'Icônes', en: 'Icons' },
   adminIconsNote: {
     fr: 'Les icônes du jeu, servies par XIVAPI. Clique pour copier le numéro : c’est lui qui s’écrit dans TAB_ICONS. Les feuilles donnent un nom ; le parcours par numéro sert pour tout le reste, où le jeu n’en donne aucun.',

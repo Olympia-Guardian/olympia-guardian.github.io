@@ -47,6 +47,7 @@ export function GroupCreateDialog({
   verifiedIds,
   canOnline,
   paliers,
+  raidOuvert,
   repriseNom,
   repriseIds,
   onCreate,
@@ -57,6 +58,9 @@ export function GroupCreateDialog({
   canOnline: boolean
   /** Paliers de raid disponibles, null tant qu'ils chargent. */
   paliers: RaidPalier[] | null
+  /** Les groupes de raid sont-ils ouverts ? Le worker le revérifie de son côté :
+   *  cacher un bouton n'est pas une sécurité, seulement une politesse. */
+  raidOuvert: boolean
   /** Groupe dont on peut reprendre les membres, s'il y en a un. */
   repriseNom?: string
   repriseIds?: number[]
@@ -153,19 +157,21 @@ export function GroupCreateDialog({
               </b>
               <small>{t('followCollectionsDesc')}</small>
             </button>
-            <button
-              type="button"
-              className="group-choix"
-              onClick={() => {
-                setType('raid')
-                setEtape(tier ? 'groupe' : 'palier')
-              }}
-            >
-              <b>
-                <TabIcon k="raid" /> {t('followRaid')}
-              </b>
-              <small>{t('followRaidDesc')}</small>
-            </button>
+            {raidOuvert && (
+              <button
+                type="button"
+                className="group-choix"
+                onClick={() => {
+                  setType('raid')
+                  setEtape(tier ? 'groupe' : 'palier')
+                }}
+              >
+                <b>
+                  <TabIcon k="raid" /> {t('followRaid')}
+                </b>
+                <small>{t('followRaidDesc')}</small>
+              </button>
+            )}
           </div>
         )}
 
@@ -844,6 +850,7 @@ function GroupCard({
 }
 
 export function GroupsPage({
+  raidOuvert,
   grp,
   paliers,
   verifiedIds,
@@ -852,6 +859,8 @@ export function GroupsPage({
   token,
   myUserId,
 }: {
+  /** Les groupes de raid sont-ils ouverts ? */
+  raidOuvert: boolean
   grp: GroupsController
   paliers: RaidPalier[] | null
   verifiedIds: number[]
@@ -942,6 +951,7 @@ export function GroupsPage({
           verifiedIds={verifiedIds}
           canOnline={canOnline}
           paliers={paliers}
+          raidOuvert={raidOuvert}
           repriseNom={grp.active?.name}
           repriseIds={grp.active?.members}
           onCreate={(name, members, online, type, tier) => {

@@ -3251,6 +3251,109 @@ a.player-name:hover {
   color: var(--ink-2);
 }
 
+/* ------------------------------------------------ usage et interrupteurs */
+
+/* Deux classements cote a cote : les ecrans que le navigateur annonce, et les
+   routes que le worker compte. Les premiers disent ce qu'on REGARDE, les
+   secondes ce qu'on DEMANDE, et l'ecart entre les deux est instructif. */
+.admin-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.admin-palmares h5 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--gold);
+}
+
+.admin-palmares ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-palmares li {
+  display: grid;
+  grid-template-columns: minmax(0, 8em) 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.admin-palmares-nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+
+.admin-palmares-barre {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.admin-palmares-barre i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+
+.admin-flags {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-flags li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+}
+
+/* Un element eteint doit se voir sans lire l'etiquette : c'est l'etat rare, et
+   celui qu'on oublie d'avoir laisse. */
+.admin-flags li.est-eteint {
+  border-color: rgba(208, 59, 59, 0.5);
+  background: rgba(208, 59, 59, 0.08);
+}
+
+.admin-flags .check {
+  flex: 1;
+  align-items: flex-start;
+}
+
+.admin-flags small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-2);
+}
+
+.admin-flag-etat {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--good);
+}
+
+.admin-flags li.est-eteint .admin-flag-etat {
+  color: var(--critical);
+}
+
 /* ------------------------------------------------ catalogue des icones */
 
 .admin-icons {

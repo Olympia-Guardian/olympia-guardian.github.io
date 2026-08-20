@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, KIND_FAMILIES, LODESTONE_KINDS, PLANNING_KINDS, type Kind } from './api'
 import { useAuth, useFournisseurs, vientDeSeConnecter } from './auth'
 import { useDigest } from './digest'
+import { noterEcran, useFlags } from './flags'
 import { useGroups } from './groups'
 import { MyPage } from './views/MyPage'
 import { detectLang, kindLabel, persistLang, translate, useI18n, LangContext, type Lang } from './i18n'
@@ -105,6 +106,10 @@ export default function App() {
 
   const relicDb = useRelicDb()
   const raidDb = useRaidDb()
+
+  // Ce qui est allume. Tout l'est tant que le worker n'a pas repondu : une
+  // panne de reseau ne doit pas eteindre le site.
+  const flags = useFlags()
 
   // Session (capture #login=… et restaure le hash de groupe AVANT sa lecture)
   const auth = useAuth()
@@ -369,6 +374,13 @@ export default function App() {
   // « Quoi de neuf depuis la dernière visite »
   const digest = useDigest(ready)
 
+  // Quel ecran sert, et lequel ne sert pas. Anonyme : rien qui identifie qui
+  // que ce soit ne quitte le navigateur, le worker ne tient qu'un compteur par
+  // jour et par ecran.
+  useEffect(() => {
+    noterEcran(tab)
+  }, [tab])
+
 
   // Une adresse de collection qu'on ne montre pas hors compte (/collections#emotes)
   // ramène au choix de collection : mieux vaut la liste de ce qui existe qu'une
@@ -378,6 +390,13 @@ export default function App() {
       setTab('collections')
     if (horsCompte && tab === 'fashion') setTab('collections')
   }, [horsCompte, tab])
+
+  // Un ecran eteint pendant qu'on le regarde, ou ouvert par son adresse, ramene
+  // au planning : mieux vaut une page qui existe qu'un ecran vide sans onglet
+  // pour en sortir.
+  useEffect(() => {
+    if (!flags.market && tab === 'market') setTab('planning')
+  }, [flags.market, tab])
 
   /** Qui peut toucher a l'equipement de qui. Le proprietaire verifie du
    *  personnage, evidemment, mais aussi le CHEF du groupe : un static tient
@@ -631,12 +650,14 @@ export default function App() {
               </>
             ) : (
               <>
-                <button
-                  className={`btn btn-ghost account-btn ${tab === 'market' ? 'is-active' : ''}`}
-                  onClick={() => setTab('market')}
-                >
-                  <TabIcon k="market" /> {t('market')}
-                </button>
+                {flags.market && (
+                  <button
+                    className={`btn btn-ghost account-btn ${tab === 'market' ? 'is-active' : ''}`}
+                    onClick={() => setTab('market')}
+                  >
+                    <TabIcon k="market" /> {t('market')}
+                  </button>
+                )}
                 <button
                   className={`btn btn-ghost account-btn ${tab === 'mypage' ? 'is-active' : ''}`}
                   onClick={() => setTab('mypage')}
@@ -1070,7 +1091,7 @@ export default function App() {
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
-                  auth.token && grp.active?.shared
+                  flags.suggestions && auth.token && grp.active?.shared
                     ? {
                         exclude: verifiedIds,
                         sentKeys: sugg.sent,
@@ -1144,7 +1165,7 @@ export default function App() {
                 only={newsOnly}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
                 suggest={
-                  auth.token && grp.active?.shared
+                  flags.suggestions && auth.token && grp.active?.shared
                     ? {
                         exclude: verifiedIds,
                         sentKeys: sugg.sent,
@@ -1207,6 +1228,7 @@ export default function App() {
               })()}
             {tab === 'groups' && (
               <GroupsPage
+                raidOuvert={flags.raid}
                 grp={grp}
                 paliers={raidDb?.paliers ?? null}
                 verifiedIds={verifiedIds}
@@ -1295,6 +1317,7 @@ export default function App() {
             verifiedIds={verifiedIds}
             canOnline={!!auth.token}
             paliers={raidDb?.paliers ?? null}
+            raidOuvert={flags.raid}
             repriseNom={grp.active?.name}
             repriseIds={grp.active?.members}
             onCreate={(name, members, online, type, tier) => {

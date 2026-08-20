@@ -4,6 +4,7 @@ import { lsGet, lsRemove, lsSet } from './storage'
 // Guide regroupe tous les sujets, relisibles à volonté.
 
 import { useEffect, useState } from 'react'
+import { FLAGS_ALLUMES, type Flags } from './flags'
 import { useI18n, type StrKey } from './i18n'
 import { TabIcon } from './ui'
 
@@ -16,8 +17,17 @@ export const HELP_TOPICS: { key: string; icon: string; title: StrKey; body: StrK
   { key: 'relics', icon: 'avancement', title: 'helpRelicsTitle', body: 'helpRelicsBody' },
   { key: 'mypage', icon: 'journal', title: 'helpMypageTitle', body: 'helpMypageBody' },
   { key: 'groups', icon: 'groups', title: 'helpGroupsTitle', body: 'helpGroupsBody' },
+  { key: 'butin', icon: 'raid', title: 'helpButinTitle', body: 'helpButinBody' },
+  { key: 'market', icon: 'market', title: 'helpMarketTitle', body: 'helpMarketBody' },
   { key: 'bell', icon: 'bell', title: 'helpBellTitle', body: 'helpBellBody' },
 ]
+
+/** L'interrupteur qui commande un sujet, quand il y en a un. Un guide qui
+ *  decrit une fonctionnalite eteinte fait chercher un ecran qui n'existe plus. */
+const SUJET_INTERRUPTEUR: Record<string, keyof Flags> = {
+  butin: 'raid',
+  market: 'market',
+}
 
 function readSeen(): string[] {
   try {
@@ -88,7 +98,13 @@ export function ActiveHelp({ topicKey }: { topicKey: string | null }) {
  *  l'impression d'avoir raté quelque chose. */
 const SUJETS_HORS_COMPTE = ['link', 'planning', 'collections', 'groups']
 
-export function GuidePage({ connecte = true }: { connecte?: boolean }) {
+export function GuidePage({
+  connecte = true,
+  flags = FLAGS_ALLUMES,
+}: {
+  connecte?: boolean
+  flags?: Flags
+}) {
   const { t } = useI18n()
   const [resetDone, setResetDone] = useState(false)
   return (
@@ -108,7 +124,14 @@ export function GuidePage({ connecte = true }: { connecte?: boolean }) {
         </button>
       </div>
       <p className="modal-muted">{t('guideIntro')}</p>
-      {HELP_TOPICS.filter((h) => connecte || SUJETS_HORS_COMPTE.includes(h.key)).map((topic) => (
+      {HELP_TOPICS.filter((h) => {
+        // Un sujet sans interrupteur ne s'eteint jamais : le repli sur une cle
+        // par defaut aurait fait disparaitre tout le guide le jour ou cette
+        // cle-la se trouve eteinte.
+        const inter = SUJET_INTERRUPTEUR[h.key]
+        if (inter && flags[inter] === false) return false
+        return connecte || SUJETS_HORS_COMPTE.includes(h.key)
+      }).map((topic) => (
         <section key={topic.key} className="relic-series group-card">
           <header className="relic-series-head">
             <h4 className="relic-series-name">

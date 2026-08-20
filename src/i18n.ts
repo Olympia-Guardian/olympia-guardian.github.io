@@ -1100,8 +1100,18 @@ const STR = {
   },
   helpGroupsTitle: { fr: 'Groupes & Contacts', en: 'Groups & Contacts' },
   helpGroupsBody: {
-    fr: 'Deux types de groupes : hors ligne (tu suis qui tu veux par ID Lodestone) et en ligne (chacun rejoint via un lien d’invitation, validé par le créateur). Les contacts sont tes amis : partage ton lien de contact, vois leurs persos, invite-les direct dans tes groupes, et bloque en silence si besoin.',
-    en: 'Two kinds of groups: offline (track anyone by Lodestone ID) and online (people join via an invite link, approved by the owner). Contacts are your friends: share your contact link, see their characters, invite them straight into your groups, and block silently if needed.',
+    fr: 'Un groupe suit soit les collections, soit l’équipement d’un palier savage. Deux types au choix : hors ligne (tu suis qui tu veux par ID Lodestone) et en ligne (chacun rejoint via un lien d’invitation, validé par le créateur). Les contacts sont tes amis : partage ton lien de contact, vois leurs persos, invite-les direct dans tes groupes, et bloque en silence si besoin.',
+    en: 'A group follows either collections or the gear of one savage tier. Two kinds to pick from: offline (track anyone by Lodestone ID) and online (people join via an invite link, approved by the owner). Contacts are your friends: share your contact link, see their characters, invite them straight into your groups, and block silently if needed.',
+  },
+  helpButinTitle: { fr: 'Équipement de raid', en: 'Raid gear' },
+  helpButinBody: {
+    fr: 'Chacun colle son BiS depuis Etro ou XIVGear, et tout s’en déduit : ce qui tombe en savage, ce qui s’achète en mémoquartz. En haut, le nombre de soirées qu’il reste à faire sur chaque étage, et le détail de qui attend quoi. En dessous, une carte par joueur, rangée comme la fenêtre d’équipement du jeu. Cliquer une pièce dit « je l’ai obtenue » ; une pièce de mémoquartz monte deux marches, achetée puis améliorée. Les composants d’amélioration se comptent à part : ils tombent en savage eux aussi, mais au hasard des étages.',
+    en: 'Everyone pastes their BiS from Etro or XIVGear, and the rest follows: what drops in savage, what is bought with tomestones. At the top, how many clears each floor still needs, and who is waiting for what. Below, one card per player, laid out like the game’s equipment window. Clicking a piece says “I got it”; a tomestone piece takes two steps, bought then upgraded. Upgrade components are counted separately: they drop in savage too, but on no fixed floor.',
+  },
+  helpMarketTitle: { fr: 'Mon Marché', en: 'My Market' },
+  helpMarketBody: {
+    fr: 'Ce qui te manque et qui s’achète à l’hôtel des ventes. Les prix viennent d’Universalis : la proposition la moins chère trouvée, tous serveurs de la région confondus, comparée au prix moyen constaté pour dire si ça monte ou si ça descend. Filtre par collection, par prix maximum, ou cherche un objet par son nom.',
+    en: 'What you are missing and can simply buy. Prices come from Universalis: the cheapest listing found across the region’s servers, compared to the going average so you can tell whether it is climbing or falling. Filter by collection, by maximum price, or search an item by name.',
   },
   /** Hors compte : ni contacts, ni groupe en ligne. Decrire les deux ferait
    *  chercher des boutons qui n'existent pas a l'ecran. */

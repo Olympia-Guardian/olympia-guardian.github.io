@@ -557,7 +557,11 @@ export default function App() {
             ? 'mypage'
             : tab === 'groups'
               ? 'groups'
-              : null
+              : tab === 'butin'
+                ? 'butin'
+                : tab === 'market'
+                  ? 'market'
+                  : null
 
   // « Avancement » compare les membres entre eux : seul, il n'y a personne
   // contre qui se mesurer, et la page se resume a un podium a une marche.
@@ -1241,7 +1245,7 @@ export default function App() {
             {tab === 'admin' && auth.token && auth.user?.isAdmin && (
               <AdminPage token={auth.token} />
             )}
-            {tab === 'guide' && <GuidePage connecte={!horsCompte} />}
+            {tab === 'guide' && <GuidePage connecte={!horsCompte} flags={flags} />}
             {/* Les persos du COMPTE, pas ceux du groupe affiche : un perso
                 verifie mais absent du roster existe quand meme, et la page
                 annoncait « aucun perso verifie » a tort. */}

@@ -123,10 +123,12 @@ interface Adoption {
  *  l'affichage, il ne dit rien au lecteur. */
 function Palmares({
   titre,
+  aide,
   prefixe,
   metrics,
 }: {
   titre: string
+  aide?: string
   prefixe: string
   metrics: Metric[]
 }) {
@@ -144,6 +146,7 @@ function Palmares({
   return (
     <div className="admin-palmares">
       <h5>{titre}</h5>
+      {aide && <p className="muted admin-palmares-aide">{aide}</p>}
       {lignes.length === 0 ? (
         <p className="muted">—</p>
       ) : (
@@ -477,7 +480,12 @@ export function AdminPage({ token }: { token: string }) {
             <p className="muted">{t('loading')}</p>
           ) : (
             <div className="admin-usage">
-              <Palmares titre={t('adminUsageScreens')} prefixe="ecran:" metrics={metrics} />
+              <Palmares
+                titre={t('adminUsageScreens')}
+                aide={t('adminUsageScreensHint')}
+                prefixe="ecran:"
+                metrics={metrics}
+              />
               <Palmares titre={t('adminUsageRoutes')} prefixe="route:" metrics={metrics} />
             </div>
           )}

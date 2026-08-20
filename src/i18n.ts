@@ -163,6 +163,10 @@ const STR = {
     en: 'Over fourteen days. Anonymous: one counter per day, never who.',
   },
   adminUsageScreens: { fr: 'Écrans ouverts', en: 'Screens opened' },
+  adminUsageScreensHint: {
+    fr: 'Annoncés par le navigateur. Un bloqueur de publicité coupe ce signal : ces visites manquent ici, jamais dans les routes.',
+    en: 'Announced by the browser. An ad blocker cuts this signal: those visits are missing here, never from the routes.',
+  },
   adminUsageRoutes: { fr: 'Routes appelées', en: 'API routes called' },
   adminTabFlags: { fr: 'Interrupteurs', en: 'Switches' },
   adminFlagOn: { fr: 'Allumé', en: 'On' },

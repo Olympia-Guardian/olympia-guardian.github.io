@@ -54,22 +54,29 @@ export function useFlags(): Flags {
  *  quelqu'un fait l'aller-retour entre deux onglets. */
 const annonces = new Set<string>()
 
+/** Refusé une fois, on n'insiste plus de la visite. Un bloqueur de publicité
+ *  reconnaît ce genre d'appel et le coupe ; ré-essayer à chaque écran ne le
+ *  ferait pas passer davantage, et remplissait la console d'erreurs rouges chez
+ *  qui en a un. */
+let refuse = false
+
 /** Annonce l'écran ouvert. Anonyme : aucun identifiant ne part, le worker ne
- *  garde qu'un compteur par jour et par écran. Silencieux en cas d'échec —
- *  une mesure ne doit jamais gêner ce qu'elle mesure. */
+ *  garde qu'un compteur par jour et par écran.
+ *
+ *  Le refus est un résultat acceptable, pas une panne à réparer : qui bloque ce
+ *  genre d'appel a fait un choix, et une mesure ne doit jamais gêner ce qu'elle
+ *  mesure. On n'a donc aucun repli — le `fetch` de secours ne servait qu'à
+ *  échouer une seconde fois, plus bruyamment. */
 export function noterEcran(ecran: string) {
-  if (annonces.has(ecran)) return
+  if (refuse || annonces.has(ecran)) return
   annonces.add(ecran)
-  const corps = JSON.stringify({ ecran })
   try {
     // sendBeacon ne bloque rien et survit à la fermeture de l'onglet. Son type
     // par défaut évite la requête préliminaire CORS, le worker lisant le corps
     // lui-même.
-    if (navigator.sendBeacon?.(`${WORKER_API}/usage`, corps)) return
+    if (navigator.sendBeacon?.(`${WORKER_API}/usage`, JSON.stringify({ ecran }))) return
   } catch {
-    // navigateur sans sendBeacon : on retombe sur fetch
+    // navigateur sans sendBeacon, ou appel coupé
   }
-  void fetch(`${WORKER_API}/usage`, { method: 'POST', body: corps, keepalive: true }).catch(
-    () => undefined,
-  )
+  refuse = true
 }

@@ -3269,6 +3269,11 @@ a.player-name:hover {
   color: var(--gold);
 }
 
+.admin-palmares-aide {
+  margin: -4px 0 8px;
+  font-size: 11px;
+}
+
 .admin-palmares ul {
   list-style: none;
   margin: 0;

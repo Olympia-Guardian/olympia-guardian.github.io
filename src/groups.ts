@@ -37,6 +37,7 @@ import {
   type InviteStatus,
 } from './groupsApi'
 import { WORKER_API } from './api'
+import { etatLive } from './live'
 import { readHashParam, setHashParam } from './store'
 import { lienPartage } from './routes'
 
@@ -81,6 +82,8 @@ const LEGACY_GROUPS_KEY = 'ogs.groups.v1'
 const LEGACY_ROSTER_KEY = 'ogs.roster.v2'
 
 const POLL_MS = 90_000
+/** Socket vivant : le poll n'est qu'un filet, voir suggestions.ts. */
+const POLL_DIRECT_MS = 600_000
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -290,11 +293,15 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
     }
   }, [])
 
+  /** L'heure de la dernière liste reçue, par le poll ou par le direct. */
+  const derniereLectureServeur = useRef(0)
+
   const refreshServer = useCallback(async () => {
     const tok = tokenRef.current
     if (!tok) return
     try {
       const { groups } = await apiListGroups(tok)
+      derniereLectureServeur.current = Date.now()
       setServer(groups)
     } catch {
       // hors-ligne / jeton périmé : on garde l'état courant
@@ -423,9 +430,13 @@ export function useGroups(token: string | null, verifiedCharIds: number[]) {
   }, [])
 
   // Rafraîchissement périodique : liste du compte + demandes en attente.
+  // Le direct (useLive) rafraîchit déjà sur événement : socket connecté, le
+  // poll s'espace à dix minutes et se tait quand l'onglet est caché.
   useEffect(() => {
     const timer = setInterval(() => {
-      if (tokenRef.current) void refreshServer()
+      if (document.hidden) return
+      const filet = etatLive.connecte && Date.now() - derniereLectureServeur.current < POLL_DIRECT_MS
+      if (tokenRef.current && !filet) void refreshServer()
       void checkPending()
     }, POLL_MS)
     return () => clearInterval(timer)

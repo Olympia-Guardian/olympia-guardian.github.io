@@ -14,6 +14,11 @@ export interface LiveEvent {
 const PING_MS = 45_000
 const MAX_BACKOFF_MS = 30_000
 
+/** L'état du direct, lisible par qui veut SANS s'abonner. Les timers de
+ *  secours le consultent à chaque tour : un binding vivant suffit, une valeur
+ *  React aurait re-rendu l'application entière à chaque coupure de réseau. */
+export const etatLive = { connecte: false }
+
 export function useLive(token: string | null, onEvent: (e: LiveEvent) => void) {
   // Le handler vit dans une ref : sa fraîcheur ne recrée pas la connexion.
   const handlerRef = useRef(onEvent)
@@ -38,6 +43,7 @@ export function useLive(token: string | null, onEvent: (e: LiveEvent) => void) {
       }
       ws.onopen = () => {
         backoff = 1000
+        etatLive.connecte = true
         pingTimer = setInterval(() => ws?.send('ping'), PING_MS)
       }
       ws.onmessage = (ev) => {
@@ -50,6 +56,7 @@ export function useLive(token: string | null, onEvent: (e: LiveEvent) => void) {
         }
       }
       ws.onclose = () => {
+        etatLive.connecte = false
         if (pingTimer) clearInterval(pingTimer)
         pingTimer = null
         scheduleRetry()

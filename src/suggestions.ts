@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { invalidateCharacter } from './api'
+import { etatLive } from './live'
 import {
   apiInbox,
   apiResolveSuggestions,
@@ -18,6 +19,11 @@ import {
 } from './groupsApi'
 
 const POLL_MS = 90_000
+/** Quand le direct est CONNECTÉ, le poll n'est qu'un filet : dix minutes
+ *  suffisent. À 90 s en permanence, quatre-vingts pour cent des requêtes du
+ *  worker étaient des sondages qui ne rapportaient rien — le WebSocket avait
+ *  déjà tout dit. 90 s ne reste la cadence que socket mort. */
+const POLL_DIRECT_MS = 600_000
 
 /** Clé d'une suggestion dans les vues : perso:collection:objet. */
 export function suggKey(charId: number, kind: string, itemId: number): string {
@@ -35,6 +41,10 @@ export function useInbox(token: string | null) {
   const tokenRef = useRef(token)
   tokenRef.current = token
 
+  // L'heure de la dernière lecture, par n'importe quel chemin : le poll, le
+  // retour d'onglet, ou l'événement du direct qui appelle refresh().
+  const derniereLecture = useRef(0)
+
   const refresh = useCallback(async () => {
     const tok = tokenRef.current
     if (!tok) {
@@ -47,6 +57,7 @@ export function useInbox(token: string | null) {
     }
     try {
       const box = await apiInbox(tok)
+      derniereLecture.current = Date.now()
       setList(box.suggestions)
       setSent(new Set(box.sent.map((s) => suggKey(s.charId, s.kind, s.itemId))))
       setFriendRequests(box.friendRequests)
@@ -62,7 +73,12 @@ export function useInbox(token: string | null) {
   }, [token, refresh])
 
   useEffect(() => {
-    const timer = setInterval(() => void refresh(), POLL_MS)
+    const timer = setInterval(() => {
+      // Onglet caché : le retour sur l'onglet resynchronise déjà.
+      if (document.hidden) return
+      if (etatLive.connecte && Date.now() - derniereLecture.current < POLL_DIRECT_MS) return
+      void refresh()
+    }, POLL_MS)
     // Retour sur l'onglet : synchro immédiate plutôt qu'attendre le poll.
     const onVisible = () => {
       if (document.visibilityState === 'visible') void refresh()

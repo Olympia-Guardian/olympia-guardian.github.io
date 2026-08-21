@@ -16,9 +16,25 @@ export const AVATAR_FALLBACK =
  *  local, plutot que d'afficher 883 cases vides. */
 export const ROLL_ICON = `${import.meta.env.BASE_URL}assets/orchestrion_roll.jpg`
 
-/** Vignette d'un objet : celle du catalogue, sauf pour l'orchestrion. */
+/** Meme histoire pour les portraits : leur vignette de catalogue rend du HTML
+ *  au lieu d'une image, donc les 398 cases tombaient sur la pastille de repli.
+ *
+ *  Il n'existe AUCUNE petite image propre a un portrait : ni chez FFXIV Collect
+ *  (leur propre liste affiche la meme image generique pour tous), ni dans les
+ *  donnees du jeu (les 398 kits d'encadrement partagent une seule icone). La
+ *  seule illustration distincte pese trois megaoctets, ce qui interdit la
+ *  grille mais convient a la fiche, qui l'affiche deja au clic.
+ *
+ *  On sert donc l'icone du jeu du kit d'encadrement : identique pour tous elle
+ *  aussi, mais c'est une vraie vignette d'objet au lieu d'une case cassee. */
+export const FRAME_ICON = xivIconUrl('026625')
+
+/** Vignette d'un objet : celle du catalogue, sauf quand le catalogue n'en sert
+ *  plus (rouleaux d'orchestrion, portraits). */
 export function itemIcon(kind: string, icon: string): string {
-  return kind === 'orchestrions' ? ROLL_ICON : icon
+  if (kind === 'orchestrions') return ROLL_ICON
+  if (kind === 'frames') return FRAME_ICON
+  return icon
 }
 
 /** onError d'<img> : remplace par l'image de repli (une seule fois). */

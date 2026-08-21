@@ -20,7 +20,6 @@ const LODESTONE = 'https://eu.finalfantasyxiv.com/lodestone'
 const MOBILE_UA =
   'Mozilla/5.0 (Linux; Android 4.0.4; Galaxy Nexus Build/IMM76B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.76 Mobile Safari/537.36'
 const CATALOG_BASE = 'https://olympia-guardian.github.io/data/'
-const COLLECT_API = 'https://ffxivcollect.com/api'
 
 // Une collection bouge une fois par semaine, pas toutes les heures : une heure
 // de cache multipliait par six nos lectures chez Square Enix pour une fraicheur
@@ -213,7 +212,7 @@ const SEGMENTS = new Set([
   'join', 'link', 'me', 'member', 'members', 'metrics', 'overview',
   'providers', 'purge-tokens', 'raid', 'report', 'reports', 'request',
   'requests', 'resolve', 'respond', 'room', 'rotate', 'search-character',
-  'seed', 'sent', 'suggest', 'suggestions', 'usage', 'user', 'verify', 'ws',
+  'seed', 'sent', 'suggest', 'suggestions', 'sync', 'targets', 'usage', 'user', 'verify', 'ws',
 ])
 
 function nomRoute(pathname) {
@@ -2351,41 +2350,11 @@ async function removeGroupMember(env, user, id, charId) {
  *  données FFXIV Collect, à la vérification du perso. Appelée par le
  *  NAVIGATEUR (le WAF de Collect bloque le worker) et réservée au propriétaire
  *  vérifié. N'enlève jamais rien : ajoute ce qui existe là-bas. */
-// FFXIV Collect lit le Lodestone la ou nous ne savons pas le faire : les succes
-// n'y figurent nulle part ailleurs. Son API rend les identifiants possedes, et
-// dix-sept kilo-octets suffisent pour un personnage entier. (COLLECT_API est
-// declare en tete de fichier, avec les autres adresses exterieures.)
-
-/** Ce que FFXIV Collect sait d'un perso, par identifiants. Null si le site ne
- *  le connait pas ou ne repond pas : ce n'est pas une erreur, seulement une
- *  fiche qui n'existe pas chez eux. */
-async function collectDoc(charId) {
-  let d
-  try {
-    const res = await fetch(`${COLLECT_API}/characters/${charId}?ids=true`, {
-      signal: AbortSignal.timeout(15000),
-    })
-    if (!res.ok) return null
-    d = await res.json()
-  } catch {
-    return null
-  }
-  const doc = {}
-  for (const kind of HIDDEN_KINDS) {
-    const ids = d?.[kind]?.ids
-    if (Array.isArray(ids)) doc[kind] = ids.filter((n) => Number.isInteger(n) && n > 0)
-  }
-  // Les reliques sont rangees par famille chez eux, a plat chez nous.
-  const relics = [
-    ...new Set(
-      ['weapons', 'ultimate', 'armor', 'tools'].flatMap((g) =>
-        Array.isArray(d?.relics?.[g]?.ids) ? d.relics[g].ids : [],
-      ),
-    ),
-  ]
-  if (relics.length > 0) doc.relics = relics
-  return doc
-}
+// Le worker NE LIT PAS FFXIV Collect, et ce n'est pas un oubli : leur
+// protection anti-bot bloque les requetes venant des Workers Cloudflare (403
+// de defi, verifie depuis leur reseau). Les lecteurs sont donc ailleurs — le
+// navigateur du joueur pour le bouton, GitHub Actions pour la ronde de nuit —
+// et le worker ne fait que FUSIONNER ce qu'on lui apporte.
 
 /** Fusionne un document dans les collections d'un perso.
  *
@@ -2446,40 +2415,48 @@ async function collectSync(env, user, charId, raw) {
   return response(JSON.stringify({ ok: true, added }))
 }
 
-/** POST /character/:id/collect-refresh : le joueur demande sa mise a jour, et
- *  c'est le WORKER qui va chercher chez Collect. Le navigateur n'a plus a le
- *  faire : un bloqueur, un reseau d'entreprise ou un telephone en veille ne
- *  peuvent plus faire echouer la synchro. */
-async function collectRefresh(env, user, charId) {
-  if (!(await verifiedBinding(env, user.id, charId))) {
-    return response('{"error":"not the verified owner"}', 403)
+// ---------------------------------------------------- la ronde par Actions
+//
+// Deux routes pour le script scripts/collect-sync.mjs, lance chaque nuit par
+// le workflow de donnees : la liste des persos a relire, et la fusion de ce
+// qu'il a lu. Protegees par un secret partage (SYNC_TOKEN cote worker, meme
+// valeur dans les secrets GitHub) — sans lui, 404, comme l'admin : rien ne
+// trahit leur existence, et la fonctionnalite est eteinte tant que le secret
+// n'est pas pose.
+
+function syncAutorise(env, req) {
+  const attendu = env.SYNC_TOKEN
+  if (!attendu) return false
+  const fourni = req.headers.get('X-Sync-Token') ?? ''
+  let diff = fourni.length === attendu.length ? 0 : 1
+  for (let i = 0; i < attendu.length; i++) {
+    diff |= (fourni.charCodeAt(i) || 0) ^ attendu.charCodeAt(i)
   }
-  const doc = await collectDoc(charId)
-  if (!doc) return response('{"error":"collect unavailable"}', 502)
-  const added = await fusionnerCollect(env, charId, doc)
-  if (added < 0) return response('{"error":"invalid ids"}', 422)
-  return response(JSON.stringify({ ok: true, added }))
+  return diff === 0
 }
 
-/** La ronde de nuit : tous les persos connus, un par un. Les succes ne se
- *  scrapent pas chez nous, ils viennent de la ; sans ce passage, un joueur
- *  devrait penser a cliquer pour que son groupe voie ses succes. */
-async function syncCollectNocturne(env) {
+/** GET /sync/targets : les persos connus, pour la ronde de nuit. */
+async function syncTargets(env) {
   const rows = await env.DB.prepare('SELECT id FROM characters ORDER BY id').all()
-  let ok = 0
-  let ajouts = 0
-  for (const r of rows.results) {
-    const doc = await collectDoc(r.id)
-    if (!doc) continue
-    const n = await fusionnerCollect(env, r.id, doc)
-    if (n < 0) continue
-    ok++
-    ajouts += n
+  return response(JSON.stringify({ ids: rows.results.map((r) => r.id) }))
+}
+
+/** POST /sync/collect/:id : fusionne ce que la ronde a lu chez Collect. */
+async function syncCollectPush(env, charId, raw) {
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
   }
-  void compter(env, 'collect_ok', ok)
-  void compter(env, 'collect_manque', rows.results.length - ok)
-  if (ajouts > 0) void compter(env, 'collect_ajouts', ajouts)
-  return { persos: rows.results.length, ok, ajouts }
+  const connu = await env.DB.prepare('SELECT 1 AS ok FROM characters WHERE id = ?1')
+    .bind(charId)
+    .first()
+  if (!connu) return response('{"error":"unknown character"}', 404)
+  const added = await fusionnerCollect(env, charId, doc)
+  if (added < 0) return response('{"error":"invalid ids"}', 422)
+  if (added > 0) void compter(env, 'collect_ajouts', added)
+  return response(JSON.stringify({ ok: true, added }))
 }
 
 // ---------------------------------------------------------------- suggestions
@@ -3489,12 +3466,8 @@ async function menageNocturne(env) {
       .toISOString()
       .slice(0, 10)
     const compteurs = await env.DB.prepare('DELETE FROM metrics WHERE jour < ?1').bind(limite).run()
-    // Les succes ne se scrapent pas chez nous : sans ce passage, un joueur
-    // devrait penser a cliquer pour que son groupe voie les siens.
-    const collect = await syncCollectNocturne(env)
     console.log(
-      `ménage nocturne : ${sessions.meta.changes} session(s), ${compteurs.meta.changes} compteur(s), ` +
-        `Collect ${collect.ok}/${collect.persos} perso(s), ${collect.ajouts} entrée(s) ajoutée(s)`,
+      `ménage nocturne : ${sessions.meta.changes} session(s), ${compteurs.meta.changes} compteur(s)`,
     )
   } catch (e) {
     // Un ménage raté n'est pas grave en soi, mais il doit laisser une trace :
@@ -3685,6 +3658,20 @@ const routes = {
     // afficherait des boutons qui échouent tant que les clés ne sont pas
     // posées — et, une fois posées, les boutons apparaissent tout seuls sans
     // qu'il faille recompiler le front.
+    // La ronde de nuit (GitHub Actions). Sans secret valide : 404, comme si
+    // ces routes n'existaient pas.
+    const syncMatch = url.pathname.match(/^\/sync\/(targets|collect\/(\d{1,12}))$/)
+    if (syncMatch) {
+      if (!syncAutorise(env, req)) return response('{"error":"not found"}', 404)
+      if (syncMatch[1] === 'targets' && req.method === 'GET') return syncTargets(env)
+      if (syncMatch[2] && req.method === 'POST') {
+        const raw = await req.text()
+        if (raw.length > 262_144) return response('{"error":"too large"}', 413)
+        return syncCollectPush(env, Number(syncMatch[2]), raw)
+      }
+      return response('{"error":"method not allowed"}', 405)
+    }
+
     // Ce qui est allume. Public : le front en a besoin avant de savoir qui
     // regarde, et l'information n'a rien de secret.
     if (url.pathname === '/flags' && req.method === 'GET') return getFlags(env)
@@ -3756,7 +3743,7 @@ const routes = {
     // --- personnages : GET /character/:id[?force=1] · POST /character/:id/seed
     //                   PUT /character/:id/collections (propriétaire vérifié)
     const charMatch = url.pathname.match(
-      /^\/character\/(\d{1,12})(\/seed|\/collections|\/collect-sync|\/collect-refresh)?$/,
+      /^\/character\/(\d{1,12})(\/seed|\/collections|\/collect-sync)?$/,
     )
     if (charMatch) {
       const id = Number(charMatch[1])
@@ -3766,11 +3753,6 @@ const routes = {
         const raw = await req.text()
         if (raw.length > 262_144) return response('{"error":"too large"}', 413)
         return collectSync(env, user, id, raw)
-      }
-      if (charMatch[2] === '/collect-refresh' && req.method === 'POST') {
-        const user = await authenticate(env, req)
-        if (!user) return response('{"error":"unauthorized"}', 401)
-        return collectRefresh(env, user, id)
       }
       if (charMatch[2] === '/seed' && req.method === 'POST') {
         const raw = await req.text()

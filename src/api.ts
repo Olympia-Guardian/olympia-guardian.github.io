@@ -500,20 +500,15 @@ async function seedFromCollect(lodestoneId: number): Promise<void> {
   })
 }
 
-/** Demande au WORKER d'aller relire FFXIV Collect. Le navigateur ne fait plus
- *  l'aller-retour lui-même : un bloqueur, un réseau d'entreprise ou un
- *  téléphone en veille ne peuvent plus faire échouer la synchro, et la même
- *  lecture sert à la ronde de nuit. Renvoie le nombre d'entrées ajoutées. */
+/** Relit FFXIV Collect et fusionne ici. C'est le NAVIGATEUR qui lit, et ce
+ *  n'est pas un retour en arrière anodin : la protection anti-bot de Collect
+ *  bloque les requêtes des Workers Cloudflare (403 de défi), jamais celles d'un
+ *  navigateur. La ronde de nuit, elle, lit depuis GitHub Actions — même raison.
+ *  Renvoie le nombre d'entrées ajoutées. */
 export async function refreshCollect(lodestoneId: number, token: string): Promise<number> {
-  const res = await fetch(`${WORKER_API}/character/${lodestoneId}/collect-refresh`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(30000),
-  })
-  if (!res.ok) throw new Error(`collect-refresh ${res.status}`)
-  const j = await res.json()
-  invalidateCharacter(lodestoneId)
-  return j.added ?? 0
+  const found = await fetchCollectDoc(lodestoneId)
+  if (!found) throw new Error('collect unavailable')
+  return pushCollectSync(lodestoneId, found.doc, token)
 }
 
 /** Import FFXIV Collect (fusion, ne retire jamais rien) — propriétaire

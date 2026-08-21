@@ -7,6 +7,8 @@ dist/
 
 # état local de wrangler dev (worker)
 worker/.wrangler/
+# secrets du worker en dev local : le vrai passe par wrangler secret put
+worker/.dev.vars
 worker/.dev-dump.sql
 
 # genere au build depuis git log (scripts/changelog.mjs) : committe, chaque

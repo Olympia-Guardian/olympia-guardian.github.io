@@ -20,6 +20,14 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/fetch-data.mjs
+      # La ronde FFXIV Collect tourne ICI et non dans le worker : leur
+      # protection anti-bot bloque les requetes des Workers Cloudflare, pas
+      # celles des runners GitHub. Elle ne fait pas echouer le rafraichissement
+      # des catalogues : demain est un autre passage.
+      - run: node scripts/collect-sync.mjs
+        continue-on-error: true
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
       - name: Commit & push si changement
         id: commit
         run: |

@@ -1,11 +1,11 @@
 import { lsGet, lsSet } from './storage'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, KIND_FAMILIES, LODESTONE_KINDS, PLANNING_KINDS, type Kind } from './api'
 import { useAuth, useFournisseurs, vientDeSeConnecter } from './auth'
 import { useDigest } from './digest'
 import { noterEcran, useFlags } from './flags'
 import { useGroups } from './groups'
-import { MyPage } from './views/MyPage'
+
 import { detectLang, kindLabel, persistLang, translate, useI18n, LangContext, type Lang } from './i18n'
 import { ItemPanel, type ShownItem } from './ItemPanel'
 import { RosterBar } from './RosterBar'
@@ -33,23 +33,33 @@ import {
 import { useContactInvite, useContacts } from './contacts'
 import { crossSuggestions, type CrossSuggestion } from './crossOutfits'
 import { patchNews } from './news'
-import { AccountPage } from './views/Account'
-import { LoginPage } from './views/Login'
-import { NewsPage } from './views/News'
 import { ActiveHelp, GuidePage } from './Help'
 import { GlobalLoader } from './Loader'
 import { useLive } from './live'
 import { NotificationsPanel } from './Notifications'
 import { ReportDialog } from './Report'
 import { useSuggestions } from './suggestions'
-import { AdminPage } from './views/Admin'
-import { GroupCreateDialog, GroupsPage } from './views/Groups'
-import { Market } from './views/Market'
 import { Matrix } from './views/Matrix'
 import { Planning } from './views/Planning'
-import { Butin } from './views/Butin'
 import { marches, type Bis, type Etat as EtatRaid } from './raid'
-import { Relics } from './views/Relics'
+
+// Les ecrans lourds partent dans leur propre paquet, charge au premier
+// affichage. Tout tenait dans un seul fichier de 522 Ko : le visiteur sans
+// compte, qui ne verra jamais que les montures et les mascottes, telechargeait
+// l'administration, les reliques et leurs couts, et Mon Journal. Le planning et
+// les collections restent d'office, ce sont les deux ecrans d'arrivee.
+const MyPage = lazy(() => import('./views/MyPage').then((m) => ({ default: m.MyPage })))
+const Relics = lazy(() => import('./views/Relics').then((m) => ({ default: m.Relics })))
+const AdminPage = lazy(() => import('./views/Admin').then((m) => ({ default: m.AdminPage })))
+const GroupsPage = lazy(() => import('./views/Groups').then((m) => ({ default: m.GroupsPage })))
+const GroupCreateDialog = lazy(() =>
+  import('./views/Groups').then((m) => ({ default: m.GroupCreateDialog })),
+)
+const Market = lazy(() => import('./views/Market').then((m) => ({ default: m.Market })))
+const Butin = lazy(() => import('./views/Butin').then((m) => ({ default: m.Butin })))
+const AccountPage = lazy(() => import('./views/Account').then((m) => ({ default: m.AccountPage })))
+const LoginPage = lazy(() => import('./views/Login').then((m) => ({ default: m.LoginPage })))
+const NewsPage = lazy(() => import('./views/News').then((m) => ({ default: m.NewsPage })))
 
 /** Les écrans qui parlent de collections, donc ceux qu'un groupe de raid n'a
  *  pas. Tout le reste (mon journal, l'administration, le guide, le marché) lui
@@ -881,457 +891,462 @@ export default function App() {
           />
           )}
 
-          <main className="main">
-            {grp.error && (
-              <div className="notice join-banner">
-                {/* Le bandeau ne traitait qu'un cas ; toutes les autres
-                    erreurs étaient enregistrées sans jamais être affichées,
-                    donc une action ratée ne produisait rien à l'écran. */}
-                <span>
-                  {grp.error === 'invite'
-                    ? t('inviteInvalid')
-                    : grp.error === 'timeout'
-                      ? t('errTimeout')
-                      : grp.error === 'offline'
-                        ? t('errOffline')
-                        : t('errAction', { error: grp.error })}
-                </span>
-                <button className="icon-btn" onClick={grp.dismissError} title={t('dismiss')}>
-                  ×
-                </button>
-              </div>
-            )}
-            {grp.invite && (
-              <div className="notice join-banner">
-                {grp.invite.status === 'pending' ? (
-                  <span>⏳ {t('invitePending', { name: grp.invite.name })}</span>
-                ) : grp.invite.status === 'member' ? (
-                  <span>{t('inviteAlreadyMember', { name: grp.invite.name })}</span>
-                ) : !auth.token ? (
-                  <>
-                    <span>{t('inviteGuest', { name: grp.invite.name })}</span>
-                    <button className="btn btn-primary btn-mini" onClick={() => setTab('login')}>
-                      {t('joinLogin')}
-                    </button>
-                  </>
-                ) : verifiedIds.length === 0 ? (
-                  <span>{t('inviteNeedChar', { name: grp.invite.name })}</span>
-                ) : (
-                  <>
-                    <span>{t('inviteAsk', { name: grp.invite.name })}</span>
-                    {verifiedIds.map((id) => (
-                      <JoinChip
-                        key={id}
-                        charId={id}
-                        onJoin={() => void grp.requestJoin(grp.invite!.code, id)}
-                      />
-                    ))}
-                  </>
-                )}
-                <button className="icon-btn" onClick={grp.dismissInvite} title={t('dismiss')}>
-                  ×
-                </button>
-              </div>
-            )}
-            {cinv.invite && cinv.invite.status !== 'self' && (
-              <div className="notice join-banner">
-                {cinv.invite.status === 'friend' ? (
-                  <span>{t('contactAlready', { name: cinv.invite.name })}</span>
-                ) : cinv.invite.status === 'pending' ? (
-                  <span>⏳ {t('contactPending', { name: cinv.invite.name })}</span>
-                ) : cinv.invite.status === 'pendingIn' ? (
-                  <>
-                    <span>{t('contactPendingIn', { name: cinv.invite.name })}</span>
-                    <button
-                      className="btn btn-primary btn-mini"
-                      onClick={() =>
-                        void sugg
-                          .respondFriend(
-                            sugg.friendRequests.find((f) => f.name === cinv.invite!.name)?.userId ?? '',
-                            true,
-                          )
-                          .then(() => {
-                            contacts.refresh()
-                            cinv.dismiss()
-                          })
-                      }
-                    >
-                      ✓ {t('requestApprove')}
-                    </button>
-                  </>
-                ) : !auth.token ? (
-                  <>
-                    <span>{t('contactGuest', { name: cinv.invite.name })}</span>
-                    <button className="btn btn-primary btn-mini" onClick={() => setTab('login')}>
-                      {t('joinLogin')}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span>{t('contactAsk', { name: cinv.invite.name })}</span>
-                    <button
-                      className="btn btn-primary btn-mini"
-                      onClick={() =>
-                        void contacts
-                          .request({ code: cinv.invite!.code })
-                          .then((status) => {
-                            if (status === 'friend') cinv.dismiss()
-                            else cinv.markPending()
-                          })
-                          .catch((e) => alert(e instanceof Error ? e.message : String(e)))
-                      }
-                    >
-                      <TabIcon k="addfriend" /> {t('contactSend')}
-                    </button>
-                  </>
-                )}
-                <button className="icon-btn" onClick={cinv.dismiss} title={t('dismiss')}>
-                  ×
-                </button>
-              </div>
-            )}
-            {/* Fiche de secours : elle ignore les collections cochées à la
-                main et se lirait comme une perte. On le dit, et on propose de
-                réessayer plutôt que de laisser quelqu'un croire au pire. */}
-            {ready.some((m) => m.data.partial) && (
-              <p className="notice notice-stale">
-                {t('charPartial')}{' '}
-                <button
-                  className="btn btn-mini btn-ghost"
-                  onClick={() => {
-                    for (const m of ready.filter((x) => x.data.partial)) refresh(m.id)
-                  }}
-                >
-                  {t('charPartialRetry')}
-                </button>
-              </p>
-            )}
-            {dataAge !== null && dataAge >= 3 && (
-              <p className="notice notice-stale">{t('dataStale', { n: dataAge })}</p>
-            )}
-            {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
-            {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}
-
-            {/* Le discours d'accueil se tait sur la page de connexion : il y
-                repete l'invitation a se connecter et repousse le formulaire
-                sous la ligne de flottaison. */}
-            {db &&
-              members.length === 0 &&
-              tab !== 'mypage' &&
-              tab !== 'groups' &&
-              tab !== 'login' &&
-              tab !== 'collections' && (
-                <div className="hero">
-                  <h1>{t('heroTitle')}</h1>
-                  <p>{t('heroBody')}</p>
-                  {/* Les deux seules actions possibles a cet instant. Sans
-                      elles, le formulaire d'ajout restait cache dans la barre
-                      laterale et la connexion tout en haut a droite. */}
-                  <div className="hero-actions">
-                    <button className="btn btn-primary" onClick={() => setTab('login')}>
-                      <TabIcon k="login" /> {t('heroLogin')}
-                    </button>
-                    <button className="btn btn-ghost" onClick={viseChampAjout}>
-                      <TabIcon k="addfriend" /> {t('heroFollow')}
-                    </button>
-                  </div>
-                  <p className="hero-hint">{t('heroHint')}</p>
+          {/* Une seule frontiere d'attente : le paquet d'un ecran arrive en
+              quelques dizaines de millisecondes sur une connexion ordinaire, et
+              un cadre de chargement par ecran clignoterait pour rien. */}
+          <Suspense fallback={<p className="empty">{t('loading')}</p>}>
+            <main className="main">
+              {grp.error && (
+                <div className="notice join-banner">
+                  {/* Le bandeau ne traitait qu'un cas ; toutes les autres
+                      erreurs étaient enregistrées sans jamais être affichées,
+                      donc une action ratée ne produisait rien à l'écran. */}
+                  <span>
+                    {grp.error === 'invite'
+                      ? t('inviteInvalid')
+                      : grp.error === 'timeout'
+                        ? t('errTimeout')
+                        : grp.error === 'offline'
+                          ? t('errOffline')
+                          : t('errAction', { error: grp.error })}
+                  </span>
+                  <button className="icon-btn" onClick={grp.dismissError} title={t('dismiss')}>
+                    ×
+                  </button>
                 </div>
               )}
-
-            {db && ready.length > 0 && activeReady.length === 0 && tab !== 'groups' && tab !== 'mypage' && (
-              <p className="empty">{t('allAbsent')}</p>
-            )}
-
-            {/* Rappel d'accueil : sans lui, personne n'irait jamais chercher
-                les notes de patch. Il s'efface pour ce patch d'un clic, et
-                revient tout seul au suivant. */}
-            {tab === 'planning' && newsCard && (
-              <div className="notice news-recall">
-                <span>
-                  {t('newsCard', { patch: newsCard.patch, n: newsCard.total })}
-                  {newsCard.missing !== null && newsCard.missing > 0 && (
-                    <b> {t('newsMissing', { n: newsCard.missing })}</b>
+              {grp.invite && (
+                <div className="notice join-banner">
+                  {grp.invite.status === 'pending' ? (
+                    <span>⏳ {t('invitePending', { name: grp.invite.name })}</span>
+                  ) : grp.invite.status === 'member' ? (
+                    <span>{t('inviteAlreadyMember', { name: grp.invite.name })}</span>
+                  ) : !auth.token ? (
+                    <>
+                      <span>{t('inviteGuest', { name: grp.invite.name })}</span>
+                      <button className="btn btn-primary btn-mini" onClick={() => setTab('login')}>
+                        {t('joinLogin')}
+                      </button>
+                    </>
+                  ) : verifiedIds.length === 0 ? (
+                    <span>{t('inviteNeedChar', { name: grp.invite.name })}</span>
+                  ) : (
+                    <>
+                      <span>{t('inviteAsk', { name: grp.invite.name })}</span>
+                      {verifiedIds.map((id) => (
+                        <JoinChip
+                          key={id}
+                          charId={id}
+                          onJoin={() => void grp.requestJoin(grp.invite!.code, id)}
+                        />
+                      ))}
+                    </>
                   )}
-                </span>
-                <span className="news-recall-actions">
-                  <button className="btn btn-primary btn-mini" onClick={() => setTab('news')}>
-                    {t('newsCardSee')}
+                  <button className="icon-btn" onClick={grp.dismissInvite} title={t('dismiss')}>
+                    ×
                   </button>
+                </div>
+              )}
+              {cinv.invite && cinv.invite.status !== 'self' && (
+                <div className="notice join-banner">
+                  {cinv.invite.status === 'friend' ? (
+                    <span>{t('contactAlready', { name: cinv.invite.name })}</span>
+                  ) : cinv.invite.status === 'pending' ? (
+                    <span>⏳ {t('contactPending', { name: cinv.invite.name })}</span>
+                  ) : cinv.invite.status === 'pendingIn' ? (
+                    <>
+                      <span>{t('contactPendingIn', { name: cinv.invite.name })}</span>
+                      <button
+                        className="btn btn-primary btn-mini"
+                        onClick={() =>
+                          void sugg
+                            .respondFriend(
+                              sugg.friendRequests.find((f) => f.name === cinv.invite!.name)?.userId ?? '',
+                              true,
+                            )
+                            .then(() => {
+                              contacts.refresh()
+                              cinv.dismiss()
+                            })
+                        }
+                      >
+                        ✓ {t('requestApprove')}
+                      </button>
+                    </>
+                  ) : !auth.token ? (
+                    <>
+                      <span>{t('contactGuest', { name: cinv.invite.name })}</span>
+                      <button className="btn btn-primary btn-mini" onClick={() => setTab('login')}>
+                        {t('joinLogin')}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>{t('contactAsk', { name: cinv.invite.name })}</span>
+                      <button
+                        className="btn btn-primary btn-mini"
+                        onClick={() =>
+                          void contacts
+                            .request({ code: cinv.invite!.code })
+                            .then((status) => {
+                              if (status === 'friend') cinv.dismiss()
+                              else cinv.markPending()
+                            })
+                            .catch((e) => alert(e instanceof Error ? e.message : String(e)))
+                        }
+                      >
+                        <TabIcon k="addfriend" /> {t('contactSend')}
+                      </button>
+                    </>
+                  )}
+                  <button className="icon-btn" onClick={cinv.dismiss} title={t('dismiss')}>
+                    ×
+                  </button>
+                </div>
+              )}
+              {/* Fiche de secours : elle ignore les collections cochées à la
+                  main et se lirait comme une perte. On le dit, et on propose de
+                  réessayer plutôt que de laisser quelqu'un croire au pire. */}
+              {ready.some((m) => m.data.partial) && (
+                <p className="notice notice-stale">
+                  {t('charPartial')}{' '}
                   <button
-                    className="btn btn-ghost btn-mini"
+                    className="btn btn-mini btn-ghost"
                     onClick={() => {
-                      setNewsSeen(newsCard.patch)
-                      lsSet('ogs.newsseen.v1', newsCard.patch)
+                      for (const m of ready.filter((x) => x.data.partial)) refresh(m.id)
                     }}
                   >
-                    {t('newsCardHide')}
+                    {t('charPartialRetry')}
                   </button>
-                </span>
-              </div>
-            )}
-            {db && activeReady.length > 0 && tab === 'planning' && (
-              <Planning
-                db={db}
-                ready={activeReady}
-                ownedSets={ownedSets}
-                kinds={kindsVus}
-                // Les succes ne se remplissent que par la synchro FFXIV
-                // Collect, qui demande un perso verifie : hors compte, la
-                // section serait vide pour tout le monde.
-                avecSucces={!horsCompte}
-                onShowItem={(item, kind) => setShownItem({ item, kind })}
-              />
-            )}
-            {tab === 'collections' && (
-              <div className="pick-kind">
-                <h2>{t('pickKindTitle')}</h2>
-                <p>{t('pickKindCollections')}</p>
-              </div>
-            )}
-            {db && activeReady.length > 0 && tab === 'fashion' && (
-              <Matrix
-                kind="fashions"
-                titleLabel={t('fashionFamily')}
-                items={fashionItems}
-                ready={activeReady}
-                ownedSets={ownedSets}
-                only={newsOnly}
-                onShowItem={(item, kind) => setShownItem({ item, kind })}
-                suggest={
-                  flags.suggestions && auth.token && grp.active?.shared
-                    ? {
-                        exclude: verifiedIds,
-                        sentKeys: sugg.sent,
-                        send: async (charId, kind, itemId) => {
-                          sugg.markSent(charId, kind, itemId, true)
-                          try {
-                            await apiSuggest(auth.token!, charId, [{ kind, itemId }])
-                          } catch (e) {
-                            sugg.markSent(charId, kind, itemId, false)
-                            throw e
-                          }
-                        },
-                      }
-                    : undefined
-                }
-                ownAdd={
-                  auth.token && verifiedIds.length > 0
-                    ? {
-                        chars: verifiedIds,
-                        add: async (charId, kind, itemId) => {
-                          // Un seul objet ajouté : on l'envoie tel quel plutôt
-                          // que de réaffirmer toute la collection, ce qui
-                          // écrasait ce qu'un autre onglet venait d'écrire.
-                          await auth.saveCollections(charId, { [kind]: { add: [itemId] } })
-                          invalidateCharacter(charId)
-                          reload(charId)
-                        },
-                      }
-                    : undefined
-                }
-              />
-            )}
-            {db &&
-              activeReady.length > 0 &&
-              tab !== 'planning' &&
-              tab !== 'relics' &&
-              tab !== 'mypage' &&
-              tab !== 'market' &&
-              tab !== 'groups' &&
-              tab !== 'admin' &&
-              tab !== 'guide' &&
-              tab !== 'news' &&
-              tab !== 'account' &&
-              tab !== 'login' &&
-              tab !== 'fashion' &&
-              tab !== 'collections' &&
-              tab !== 'butin' &&
-              dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
-            {db &&
-              activeReady.length > 0 &&
-              tab !== 'planning' &&
-              tab !== 'relics' &&
-              tab !== 'mypage' &&
-              tab !== 'market' &&
-              tab !== 'groups' &&
-              tab !== 'admin' &&
-              tab !== 'guide' &&
-              tab !== 'news' &&
-              tab !== 'account' &&
-              tab !== 'login' &&
-              tab !== 'fashion' &&
-              tab !== 'collections' &&
-              tab !== 'butin' &&
-              !dbPending.has(tab) && (
-              <Matrix
-                key={tab}
-                kind={tab}
-                items={db[tab]}
-                ready={activeReady}
-                ownedSets={ownedSets}
-                only={newsOnly}
-                onShowItem={(item, kind) => setShownItem({ item, kind })}
-                suggest={
-                  flags.suggestions && auth.token && grp.active?.shared
-                    ? {
-                        exclude: verifiedIds,
-                        sentKeys: sugg.sent,
-                        send: async (charId, kind, itemId) => {
-                          sugg.markSent(charId, kind, itemId, true)
-                          try {
-                            await apiSuggest(auth.token!, charId, [{ kind, itemId }])
-                          } catch (e) {
-                            sugg.markSent(charId, kind, itemId, false)
-                            throw e
-                          }
-                        },
-                      }
-                    : undefined
-                }
-                ownAdd={
-                  auth.token && verifiedIds.length > 0
-                    ? {
-                        chars: verifiedIds,
-                        add: async (charId, kind, itemId) => {
-                          // Un seul objet ajouté : on l'envoie tel quel plutôt
-                          // que de réaffirmer toute la collection, ce qui
-                          // écrasait ce qu'un autre onglet venait d'écrire.
-                          await auth.saveCollections(charId, { [kind]: { add: [itemId] } })
-                          invalidateCharacter(charId)
-                          reload(charId)
-                        },
-                      }
-                    : undefined
-                }
-              />
-            )}
-            {db && activeReady.length > 0 && tab === 'relics' &&
-              (relicDb ? (
-                <Relics
-                  db={relicDb}
-                  cdb={db}
-                  ready={activeReady}
-                  kinds={horsCompte ? LODESTONE_KINDS : undefined}
-                  avecReliques={!horsCompte}
-                />
-              ) : (
-                <p className="empty">{t('relicsLoading')}</p>
-              ))}
-            {tab === 'butin' &&
-              (() => {
-                const palier = raidDb?.paliers.find((p) => p.cle === grp.active?.tier)
-                if (!raidDb) return <p className="empty">{t('relicsLoading')}</p>
-                if (!palier) return <p className="empty">{t('butinNoTier')}</p>
-                return (
-                  <Butin
-                    palier={palier}
-                    ready={activeReady}
-                    bis={bisGroupe}
-                    peutModifier={peutModifierRaid}
-                    onImport={importerBisJoueur}
-                    onBascule={basculerRaid}
-                  />
-                )
-              })()}
-            {tab === 'groups' && (
-              <GroupsPage
-                raidOuvert={flags.raid}
-                grp={grp}
-                paliers={raidDb?.paliers ?? null}
-                verifiedIds={verifiedIds}
-                canOnline={!!auth.token}
-                contacts={contacts}
-                token={auth.token}
-                myUserId={auth.user?.id ?? null}
-              />
-            )}
-            {tab === 'admin' && auth.token && auth.user?.isAdmin && (
-              <AdminPage token={auth.token} />
-            )}
-            {tab === 'guide' && (
-              <GuidePage
-                connecte={!horsCompte}
-                flags={flags}
-                // Le guide coche ce qui est deja fait : une marche franchie ne
-                // se relit pas, et le joueur voit ou il en est sans compter.
-                avancement={{
-                  connecte: !!auth.token,
-                  perso: verifiedIds.length > 0,
-                  groupe: grp.groups.length > 0,
-                  raid: grp.groups.some((g) => g.type === 'raid'),
-                }}
-                onAller={(onglet) => setTab(onglet as Tab)}
-              />
-            )}
-            {/* Les persos du COMPTE, pas ceux du groupe affiche : un perso
-                verifie mais absent du roster existe quand meme, et la page
-                annoncait « aucun perso verifie » a tort. */}
-            {tab === 'account' && auth.user && auth.token && (
-              <AccountPage
-                user={auth.user}
-                token={auth.token}
-                db={db}
-                lang={lang}
-                setLang={setLang}
-                chars={verifiedIds.map((id) => ({
-                  id,
-                  name: nomMembre(ready.find((m) => m.id === id) ?? {}),
-                }))}
-                onImport={async (charId, par) => {
-                  // Uniquement des ajouts : un fichier partiel ne peut rien
-                  // effacer, et le frein du worker n'a même pas à intervenir.
-                  const delta = Object.fromEntries(
-                    Object.entries(par).map(([k, ids]) => [k, { add: ids }]),
-                  )
-                  await auth.saveCollections(charId, delta)
-                  invalidateCharacter(charId)
-                  reload(charId)
-                }}
-                onLogout={deconnexion}
-                onManageChars={() => setTab('mypage')}
-              />
-            )}
-            {tab === 'login' && !auth.user && (
-              <LoginPage
-                fournisseurs={fournisseurs}
-                onLogin={(f) => auth.login(f)}
-                onGuide={() => setTab('guide')}
-              />
-            )}
-            {tab === 'news' && (
-              <NewsPage
-                db={db}
-                chars={myChars}
-                onShowItem={(item, kind) => setShownItem({ item, kind })}
-                onOpenCollection={openCollectionForPatch}
-              />
-            )}
-            {db && tab === 'market' && (
-              <Market
-                db={db}
-                chars={ready.filter((m) => verifiedIds.includes(m.id))}
-                onBuy={async (charId, kind, id) => {
-                  await auth.saveCollections(charId, { [kind]: { add: [id] } })
-                  invalidateCharacter(charId)
-                  reload(charId)
-                }}
-              />
-            )}
+                </p>
+              )}
+              {dataAge !== null && dataAge >= 3 && (
+                <p className="notice notice-stale">{t('dataStale', { n: dataAge })}</p>
+              )}
+              {dbError && <p className="empty">{t('dbError', { error: dbError })}</p>}
+              {!dbError && !db && <p className="empty">{t('dbLoading')}</p>}
 
-            {db && tab === 'mypage' && (
-              <MyPage
-                db={db}
-                dbPending={dbPending}
-                relicDb={relicDb}
-                auth={auth}
-                members={members}
-                onCharacterUpdated={(charId) => {
-                  if (members.some((m) => m.id === charId)) refresh(charId)
-                }}
-              />
-            )}
-          </main>
+              {/* Le discours d'accueil se tait sur la page de connexion : il y
+                  repete l'invitation a se connecter et repousse le formulaire
+                  sous la ligne de flottaison. */}
+              {db &&
+                members.length === 0 &&
+                tab !== 'mypage' &&
+                tab !== 'groups' &&
+                tab !== 'login' &&
+                tab !== 'collections' && (
+                  <div className="hero">
+                    <h1>{t('heroTitle')}</h1>
+                    <p>{t('heroBody')}</p>
+                    {/* Les deux seules actions possibles a cet instant. Sans
+                        elles, le formulaire d'ajout restait cache dans la barre
+                        laterale et la connexion tout en haut a droite. */}
+                    <div className="hero-actions">
+                      <button className="btn btn-primary" onClick={() => setTab('login')}>
+                        <TabIcon k="login" /> {t('heroLogin')}
+                      </button>
+                      <button className="btn btn-ghost" onClick={viseChampAjout}>
+                        <TabIcon k="addfriend" /> {t('heroFollow')}
+                      </button>
+                    </div>
+                    <p className="hero-hint">{t('heroHint')}</p>
+                  </div>
+                )}
+
+              {db && ready.length > 0 && activeReady.length === 0 && tab !== 'groups' && tab !== 'mypage' && (
+                <p className="empty">{t('allAbsent')}</p>
+              )}
+
+              {/* Rappel d'accueil : sans lui, personne n'irait jamais chercher
+                  les notes de patch. Il s'efface pour ce patch d'un clic, et
+                  revient tout seul au suivant. */}
+              {tab === 'planning' && newsCard && (
+                <div className="notice news-recall">
+                  <span>
+                    {t('newsCard', { patch: newsCard.patch, n: newsCard.total })}
+                    {newsCard.missing !== null && newsCard.missing > 0 && (
+                      <b> {t('newsMissing', { n: newsCard.missing })}</b>
+                    )}
+                  </span>
+                  <span className="news-recall-actions">
+                    <button className="btn btn-primary btn-mini" onClick={() => setTab('news')}>
+                      {t('newsCardSee')}
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-mini"
+                      onClick={() => {
+                        setNewsSeen(newsCard.patch)
+                        lsSet('ogs.newsseen.v1', newsCard.patch)
+                      }}
+                    >
+                      {t('newsCardHide')}
+                    </button>
+                  </span>
+                </div>
+              )}
+              {db && activeReady.length > 0 && tab === 'planning' && (
+                <Planning
+                  db={db}
+                  ready={activeReady}
+                  ownedSets={ownedSets}
+                  kinds={kindsVus}
+                  // Les succes ne se remplissent que par la synchro FFXIV
+                  // Collect, qui demande un perso verifie : hors compte, la
+                  // section serait vide pour tout le monde.
+                  avecSucces={!horsCompte}
+                  onShowItem={(item, kind) => setShownItem({ item, kind })}
+                />
+              )}
+              {tab === 'collections' && (
+                <div className="pick-kind">
+                  <h2>{t('pickKindTitle')}</h2>
+                  <p>{t('pickKindCollections')}</p>
+                </div>
+              )}
+              {db && activeReady.length > 0 && tab === 'fashion' && (
+                <Matrix
+                  kind="fashions"
+                  titleLabel={t('fashionFamily')}
+                  items={fashionItems}
+                  ready={activeReady}
+                  ownedSets={ownedSets}
+                  only={newsOnly}
+                  onShowItem={(item, kind) => setShownItem({ item, kind })}
+                  suggest={
+                    flags.suggestions && auth.token && grp.active?.shared
+                      ? {
+                          exclude: verifiedIds,
+                          sentKeys: sugg.sent,
+                          send: async (charId, kind, itemId) => {
+                            sugg.markSent(charId, kind, itemId, true)
+                            try {
+                              await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                            } catch (e) {
+                              sugg.markSent(charId, kind, itemId, false)
+                              throw e
+                            }
+                          },
+                        }
+                      : undefined
+                  }
+                  ownAdd={
+                    auth.token && verifiedIds.length > 0
+                      ? {
+                          chars: verifiedIds,
+                          add: async (charId, kind, itemId) => {
+                            // Un seul objet ajouté : on l'envoie tel quel plutôt
+                            // que de réaffirmer toute la collection, ce qui
+                            // écrasait ce qu'un autre onglet venait d'écrire.
+                            await auth.saveCollections(charId, { [kind]: { add: [itemId] } })
+                            invalidateCharacter(charId)
+                            reload(charId)
+                          },
+                        }
+                      : undefined
+                  }
+                />
+              )}
+              {db &&
+                activeReady.length > 0 &&
+                tab !== 'planning' &&
+                tab !== 'relics' &&
+                tab !== 'mypage' &&
+                tab !== 'market' &&
+                tab !== 'groups' &&
+                tab !== 'admin' &&
+                tab !== 'guide' &&
+                tab !== 'news' &&
+                tab !== 'account' &&
+                tab !== 'login' &&
+                tab !== 'fashion' &&
+                tab !== 'collections' &&
+                tab !== 'butin' &&
+                dbPending.has(tab) && <p className="empty">{t('dbLoading')}</p>}
+              {db &&
+                activeReady.length > 0 &&
+                tab !== 'planning' &&
+                tab !== 'relics' &&
+                tab !== 'mypage' &&
+                tab !== 'market' &&
+                tab !== 'groups' &&
+                tab !== 'admin' &&
+                tab !== 'guide' &&
+                tab !== 'news' &&
+                tab !== 'account' &&
+                tab !== 'login' &&
+                tab !== 'fashion' &&
+                tab !== 'collections' &&
+                tab !== 'butin' &&
+                !dbPending.has(tab) && (
+                <Matrix
+                  key={tab}
+                  kind={tab}
+                  items={db[tab]}
+                  ready={activeReady}
+                  ownedSets={ownedSets}
+                  only={newsOnly}
+                  onShowItem={(item, kind) => setShownItem({ item, kind })}
+                  suggest={
+                    flags.suggestions && auth.token && grp.active?.shared
+                      ? {
+                          exclude: verifiedIds,
+                          sentKeys: sugg.sent,
+                          send: async (charId, kind, itemId) => {
+                            sugg.markSent(charId, kind, itemId, true)
+                            try {
+                              await apiSuggest(auth.token!, charId, [{ kind, itemId }])
+                            } catch (e) {
+                              sugg.markSent(charId, kind, itemId, false)
+                              throw e
+                            }
+                          },
+                        }
+                      : undefined
+                  }
+                  ownAdd={
+                    auth.token && verifiedIds.length > 0
+                      ? {
+                          chars: verifiedIds,
+                          add: async (charId, kind, itemId) => {
+                            // Un seul objet ajouté : on l'envoie tel quel plutôt
+                            // que de réaffirmer toute la collection, ce qui
+                            // écrasait ce qu'un autre onglet venait d'écrire.
+                            await auth.saveCollections(charId, { [kind]: { add: [itemId] } })
+                            invalidateCharacter(charId)
+                            reload(charId)
+                          },
+                        }
+                      : undefined
+                  }
+                />
+              )}
+              {db && activeReady.length > 0 && tab === 'relics' &&
+                (relicDb ? (
+                  <Relics
+                    db={relicDb}
+                    cdb={db}
+                    ready={activeReady}
+                    kinds={horsCompte ? LODESTONE_KINDS : undefined}
+                    avecReliques={!horsCompte}
+                  />
+                ) : (
+                  <p className="empty">{t('relicsLoading')}</p>
+                ))}
+              {tab === 'butin' &&
+                (() => {
+                  const palier = raidDb?.paliers.find((p) => p.cle === grp.active?.tier)
+                  if (!raidDb) return <p className="empty">{t('relicsLoading')}</p>
+                  if (!palier) return <p className="empty">{t('butinNoTier')}</p>
+                  return (
+                    <Butin
+                      palier={palier}
+                      ready={activeReady}
+                      bis={bisGroupe}
+                      peutModifier={peutModifierRaid}
+                      onImport={importerBisJoueur}
+                      onBascule={basculerRaid}
+                    />
+                  )
+                })()}
+              {tab === 'groups' && (
+                <GroupsPage
+                  raidOuvert={flags.raid}
+                  grp={grp}
+                  paliers={raidDb?.paliers ?? null}
+                  verifiedIds={verifiedIds}
+                  canOnline={!!auth.token}
+                  contacts={contacts}
+                  token={auth.token}
+                  myUserId={auth.user?.id ?? null}
+                />
+              )}
+              {tab === 'admin' && auth.token && auth.user?.isAdmin && (
+                <AdminPage token={auth.token} />
+              )}
+              {tab === 'guide' && (
+                <GuidePage
+                  connecte={!horsCompte}
+                  flags={flags}
+                  // Le guide coche ce qui est deja fait : une marche franchie ne
+                  // se relit pas, et le joueur voit ou il en est sans compter.
+                  avancement={{
+                    connecte: !!auth.token,
+                    perso: verifiedIds.length > 0,
+                    groupe: grp.groups.length > 0,
+                    raid: grp.groups.some((g) => g.type === 'raid'),
+                  }}
+                  onAller={(onglet) => setTab(onglet as Tab)}
+                />
+              )}
+              {/* Les persos du COMPTE, pas ceux du groupe affiche : un perso
+                  verifie mais absent du roster existe quand meme, et la page
+                  annoncait « aucun perso verifie » a tort. */}
+              {tab === 'account' && auth.user && auth.token && (
+                <AccountPage
+                  user={auth.user}
+                  token={auth.token}
+                  db={db}
+                  lang={lang}
+                  setLang={setLang}
+                  chars={verifiedIds.map((id) => ({
+                    id,
+                    name: nomMembre(ready.find((m) => m.id === id) ?? {}),
+                  }))}
+                  onImport={async (charId, par) => {
+                    // Uniquement des ajouts : un fichier partiel ne peut rien
+                    // effacer, et le frein du worker n'a même pas à intervenir.
+                    const delta = Object.fromEntries(
+                      Object.entries(par).map(([k, ids]) => [k, { add: ids }]),
+                    )
+                    await auth.saveCollections(charId, delta)
+                    invalidateCharacter(charId)
+                    reload(charId)
+                  }}
+                  onLogout={deconnexion}
+                  onManageChars={() => setTab('mypage')}
+                />
+              )}
+              {tab === 'login' && !auth.user && (
+                <LoginPage
+                  fournisseurs={fournisseurs}
+                  onLogin={(f) => auth.login(f)}
+                  onGuide={() => setTab('guide')}
+                />
+              )}
+              {tab === 'news' && (
+                <NewsPage
+                  db={db}
+                  chars={myChars}
+                  onShowItem={(item, kind) => setShownItem({ item, kind })}
+                  onOpenCollection={openCollectionForPatch}
+                />
+              )}
+              {db && tab === 'market' && (
+                <Market
+                  db={db}
+                  chars={ready.filter((m) => verifiedIds.includes(m.id))}
+                  onBuy={async (charId, kind, id) => {
+                    await auth.saveCollections(charId, { [kind]: { add: [id] } })
+                    invalidateCharacter(charId)
+                    reload(charId)
+                  }}
+                />
+              )}
+
+              {db && tab === 'mypage' && (
+                <MyPage
+                  db={db}
+                  dbPending={dbPending}
+                  relicDb={relicDb}
+                  auth={auth}
+                  members={members}
+                  onCharacterUpdated={(charId) => {
+                    if (members.some((m) => m.id === charId)) refresh(charId)
+                  }}
+                />
+              )}
+            </main>
+          </Suspense>
         </div>
 
         {creatingGroup && (

@@ -162,11 +162,23 @@ function RunCard({
   )
 }
 
+/** Les succes qui se decrochent A PLUSIEURS. Le filtre est mecanique, tire du
+ *  type et du groupe que FFXIV Collect porte deja : sur les 3946 succes du jeu,
+ *  275 relevent du raid, des defis et des donjons. Le reste (quetes, artisanat,
+ *  exploration, objets) n'a rien a organiser en groupe.
+ *
+ *  Ils ne peuvent PAS rejoindre les sorties ci-dessus : une sortie se batit sur
+ *  la source d'un objet, et un succes n'en a aucune. D'ou leur section a part. */
+const GROUPES_DE_GROUPE = ['Raids', 'Trials', 'Dungeons']
+const succesDeGroupe = (a: Item) =>
+  a.achTypeEn === 'Battle' && GROUPES_DE_GROUPE.includes(a.groupEn ?? '')
+
 export function Planning({
   db,
   ready,
   ownedSets,
   kinds: KINDS_VUS = PLANNING_KINDS,
+  avecSucces = false,
   onShowItem,
 }: {
   db: Db
@@ -176,6 +188,10 @@ export function Planning({
    *  compte : proposer de farmer des cartes à quelqu'un qui ne peut pas les
    *  cocher, c'est lui promettre un suivi qui n'existera jamais. */
   kinds?: Kind[]
+  /** Montrer les succès de contenu de groupe. Faux hors compte : ils ne se
+   *  remplissent que par la synchro FFXIV Collect, qui demande un personnage
+   *  vérifié. */
+  avecSucces?: boolean
   onShowItem: (item: Item, kind: Kind) => void
 }) {
   const { lang, t } = useI18n()
@@ -192,6 +208,27 @@ export function Planning({
   // est une soirée en soi, et rien ne permettait de la préparer.
   const [expansion, setExpansion] = useState<number | 'all'>('all')
   const [search, setSearch] = useState('')
+
+  const [visibleSucces, setVisibleSucces] = useState(20)
+
+  /** Les succes de groupe qu'il reste a decrocher, les plus demandes d'abord.
+   *  Meme filtre d'extension et meme seuil que les sorties : le planning parle
+   *  d'une seule chose a la fois. */
+  const succes = useMemo(() => {
+    if (!avecSucces) return []
+    const minM = Math.min(minMissing, ready.length)
+    const out: { item: Item; manquants: Character[] }[] = []
+    for (const item of db.achievements) {
+      if (!succesDeGroupe(item)) continue
+      if (expansion !== 'all' && expansionDe(item.patch) !== expansion) continue
+      const manquants = ready
+        .filter((m) => !ownedSets.get(m.id)?.achievements.has(item.id))
+        .map((m) => m.data)
+      if (manquants.length < minM) continue
+      out.push({ item, manquants })
+    }
+    return out.sort((a, b) => b.manquants.length - a.manquants.length)
+  }, [avecSucces, db, ready, ownedSets, expansion, minMissing])
 
   const runs = useMemo(() => {
     const map = new Map<string, Run>()
@@ -402,6 +439,46 @@ export function Planning({
           spellCheck={false}
         />
       </div>
+
+      {/* Les succes de contenu de groupe. A part, et non melanges aux sorties :
+          une sortie se batit sur la SOURCE d'un objet, et pas un seul des 275
+          succes n'en porte. Ici on ne compte rien, on ne suit aucun palier : on
+          liste ce qui reste a decrocher, et chacun coche quand il l'a. */}
+      {avecSucces && succes.length > 0 && (
+        <section className="relic-series group-card succes-bloc">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('planSucces')}</h4>
+            <span className="muted">{t('planSuccesHint', { n: succes.length })}</span>
+          </header>
+          <ul className="succes-liste">
+            {succes.slice(0, visibleSucces).map(({ item, manquants }) => (
+              <li key={item.id}>
+                <img
+                  src={item.icon}
+                  alt=""
+                  width={32}
+                  height={32}
+                  loading="lazy"
+                  onError={onItemImgError}
+                />
+                <span className="succes-texte">
+                  <b>{lang === 'fr' ? item.name : item.nameEn}</b>
+                  <small>{lang === 'fr' ? item.description : item.descriptionEn}</small>
+                </span>
+                <AvatarStack chars={manquants} />
+              </li>
+            ))}
+          </ul>
+          {succes.length > visibleSucces && (
+            <button
+              className="btn btn-ghost more"
+              onClick={() => setVisibleSucces((v) => v + 20)}
+            >
+              {t('showMore', { n: succes.length - visibleSucces })}
+            </button>
+          )}
+        </section>
+      )}
 
       {filteredRuns.length === 0 && <p className="empty">{t('planningEmpty')}</p>}
 

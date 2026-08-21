@@ -500,6 +500,22 @@ async function seedFromCollect(lodestoneId: number): Promise<void> {
   })
 }
 
+/** Demande au WORKER d'aller relire FFXIV Collect. Le navigateur ne fait plus
+ *  l'aller-retour lui-même : un bloqueur, un réseau d'entreprise ou un
+ *  téléphone en veille ne peuvent plus faire échouer la synchro, et la même
+ *  lecture sert à la ronde de nuit. Renvoie le nombre d'entrées ajoutées. */
+export async function refreshCollect(lodestoneId: number, token: string): Promise<number> {
+  const res = await fetch(`${WORKER_API}/character/${lodestoneId}/collect-refresh`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(30000),
+  })
+  if (!res.ok) throw new Error(`collect-refresh ${res.status}`)
+  const j = await res.json()
+  invalidateCharacter(lodestoneId)
+  return j.added ?? 0
+}
+
 /** Import FFXIV Collect (fusion, ne retire jamais rien) — propriétaire
  *  vérifié uniquement. Renvoie le nombre d'entrées ajoutées. */
 export async function pushCollectSync(

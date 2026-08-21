@@ -8,6 +8,7 @@ import {
   fetchCollectDoc,
   invalidateCharacter,
   pushCollectSync,
+  refreshCollect,
   type Character,
   type CharProfile,
   type Item,
@@ -1531,7 +1532,25 @@ export function MyPage({
 
   // Import FFXIV Collect à la demande : rapatrie ce qui est coché là-bas
   // (union côté worker, ne retire jamais rien). Utile après coup — p. ex.
-  // récupérer ses succès sur un perso vérifié avant leur arrivée ici.
+  // récupérer ses succès sans attendre la ronde de nuit.
+  //
+  // C'est le WORKER qui va lire, pas le navigateur : un bloqueur, un réseau
+  // d'entreprise ou un téléphone en veille ne peuvent plus faire échouer la
+  // synchro, et c'est la même lecture que celle de la nuit.
+  const [collecting, setCollecting] = useState(false)
+
+  async function importCollect() {
+    if (!verified || !auth.token) return
+    setCollecting(true)
+    try {
+      const added = await refreshCollect(verified.charId, auth.token)
+      showToast(added > 0 ? t('collectSynced', { n: added }) : t('collectNothingNew'))
+      if (added > 0) setChar(await fetchCharacter(verified.charId))
+    } catch {
+      setNotice(t('collectUnavailable'))
+    }
+    setCollecting(false)
+  }
 
   async function doUnbind(charId: number, name: string) {
     if (!confirm(t('unbindConfirm', { name }))) return
@@ -1899,6 +1918,15 @@ export function MyPage({
                       onClick={() => void forceSync()}
                     >
                       <TabIcon k="sync" /> {syncing ? t('syncRunning') : t('syncForce')}
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-mini"
+                      disabled={collecting}
+                      title={t('collectRefreshTitle')}
+                      onClick={() => void importCollect()}
+                    >
+                      <TabIcon k="collect" />{' '}
+                      {collecting ? t('collectRunning') : t('collectRefresh')}
                     </button>
                     {/* Les actions rares passent derriere trois points, comme le
                         menu du compte : elles encombraient une ligne ou seule la

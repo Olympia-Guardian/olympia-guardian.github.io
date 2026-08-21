@@ -3324,6 +3324,64 @@ a.player-name:hover {
   font-size: 13px;
 }
 
+/* Les succes de groupe : une ligne chacun, ceux que le plus de monde attend en
+   haut. Ni compteur ni barre, comme demande — on liste ce qui reste a
+   decrocher, et chacun coche quand il l'a. */
+.succes-bloc {
+  margin-bottom: 18px;
+}
+
+.succes-liste {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.succes-liste li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+}
+
+.succes-liste li:hover {
+  background: var(--surface-2);
+}
+
+.succes-liste img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: var(--radius-s);
+  flex-shrink: 0;
+}
+
+.succes-texte {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.succes-texte b {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.succes-texte small {
+  font-size: 11px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ------------------------------------------------ usage et interrupteurs */
 
 /* Deux classements cote a cote : les ecrans que le navigateur annonce, et les

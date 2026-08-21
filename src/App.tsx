@@ -1076,6 +1076,10 @@ export default function App() {
                 ready={activeReady}
                 ownedSets={ownedSets}
                 kinds={kindsVus}
+                // Les succes ne se remplissent que par la synchro FFXIV
+                // Collect, qui demande un perso verifie : hors compte, la
+                // section serait vide pour tout le monde.
+                avecSucces={!horsCompte}
                 onShowItem={(item, kind) => setShownItem({ item, kind })}
               />
             )}

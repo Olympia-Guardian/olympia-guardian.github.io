@@ -1095,6 +1095,21 @@ const STR = {
     fr: 'Crée un groupe qui suit un palier savage, colle ton BiS Etro ou XIVGear, et le compte des soirées se fait tout seul.',
     en: 'Create a group that follows a savage tier, paste your Etro or XIVGear BiS, and the clear count works itself out.',
   },
+  planSucces: { fr: 'Succès à décrocher ensemble', en: 'Achievements to earn together' },
+  planSuccesHint: {
+    fr: '{n} succès de raid, de défi ou de donjon. Personne ne compte les kills : on coche quand on l’a.',
+    en: '{n} raid, trial and dungeon achievements. Nobody counts clears: tick it when you have it.',
+  },
+  collectRefresh: { fr: 'Récupérer mes succès', en: 'Fetch my achievements' },
+  collectRefreshTitle: {
+    fr: 'Relit ta fiche FFXIV Collect et fusionne ce qui manque ici. Rien n’est jamais retiré, et ça se refait tout seul chaque nuit.',
+    en: 'Reads your FFXIV Collect page and merges what is missing here. Nothing is ever removed, and it runs again on its own every night.',
+  },
+  collectRunning: { fr: 'Lecture…', en: 'Reading…' },
+  collectUnavailable: {
+    fr: 'FFXIV Collect ne connaît pas ce personnage, ou n’a pas répondu.',
+    en: 'FFXIV Collect does not know this character, or did not answer.',
+  },
   guideResetHelp: { fr: 'Revoir les aides actives', en: 'Replay active help' },
   guideResetDone: {
     fr: 'Elles réapparaîtront sur chaque écran ✓',

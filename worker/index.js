@@ -2351,22 +2351,53 @@ async function removeGroupMember(env, user, id, charId) {
  *  données FFXIV Collect, à la vérification du perso. Appelée par le
  *  NAVIGATEUR (le WAF de Collect bloque le worker) et réservée au propriétaire
  *  vérifié. N'enlève jamais rien : ajoute ce qui existe là-bas. */
-async function collectSync(env, user, charId, raw) {
-  const binding = await env.DB.prepare(
-    'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
-  )
-    .bind(user.id, charId)
-    .first()
-  if (!binding) return response('{"error":"not the verified owner"}', 403)
-  let doc
+// FFXIV Collect lit le Lodestone la ou nous ne savons pas le faire : les succes
+// n'y figurent nulle part ailleurs. Son API rend les identifiants possedes, et
+// dix-sept kilo-octets suffisent pour un personnage entier. (COLLECT_API est
+// declare en tete de fichier, avec les autres adresses exterieures.)
+
+/** Ce que FFXIV Collect sait d'un perso, par identifiants. Null si le site ne
+ *  le connait pas ou ne repond pas : ce n'est pas une erreur, seulement une
+ *  fiche qui n'existe pas chez eux. */
+async function collectDoc(charId) {
+  let d
   try {
-    doc = JSON.parse(raw)
+    const res = await fetch(`${COLLECT_API}/characters/${charId}?ids=true`, {
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return null
+    d = await res.json()
   } catch {
-    return response('{"error":"invalid body"}', 422)
+    return null
   }
-  const rows = await env.DB.prepare(
-    'SELECT kind, ids, source FROM collections WHERE char_id = ?1',
-  )
+  const doc = {}
+  for (const kind of HIDDEN_KINDS) {
+    const ids = d?.[kind]?.ids
+    if (Array.isArray(ids)) doc[kind] = ids.filter((n) => Number.isInteger(n) && n > 0)
+  }
+  // Les reliques sont rangees par famille chez eux, a plat chez nous.
+  const relics = [
+    ...new Set(
+      ['weapons', 'ultimate', 'armor', 'tools'].flatMap((g) =>
+        Array.isArray(d?.relics?.[g]?.ids) ? d.relics[g].ids : [],
+      ),
+    ),
+  ]
+  if (relics.length > 0) doc.relics = relics
+  return doc
+}
+
+/** Fusionne un document dans les collections d'un perso.
+ *
+ *  ON NE RETIRE JAMAIS RIEN. Une case cochee dans Codex le reste, meme si
+ *  Collect ne la connait pas : leur lecture du Lodestone peut etre vieille,
+ *  partielle, ou porter sur une collection que le joueur a rendue privee. Entre
+ *  effacer le travail de quelqu'un et garder une coche de trop, le choix est
+ *  vite fait.
+ *
+ *  Rend le nombre d'entrees ajoutees, ou -1 si un document est invalide. */
+async function fusionnerCollect(env, charId, doc) {
+  const rows = await env.DB.prepare('SELECT kind, ids, source FROM collections WHERE char_id = ?1')
     .bind(charId)
     .all()
   const current = new Map(rows.results.map((r) => [r.kind, r]))
@@ -2380,7 +2411,7 @@ async function collectSync(env, user, charId, raw) {
   for (const kind of [...HIDDEN_KINDS, 'relics']) {
     const incoming = doc?.[kind]
     if (incoming === undefined) continue
-    if (!validIds(incoming, 6000)) return response('{"error":"invalid ids"}', 422)
+    if (!validIds(incoming, 6000)) return -1
     const cur = current.get(kind)
     const curIds = cur ? JSON.parse(cur.ids) : []
     const merged = [...new Set([...curIds, ...incoming])]
@@ -2394,7 +2425,61 @@ async function collectSync(env, user, charId, raw) {
     await env.DB.batch(stmts)
     await notify(env, await usersSharingChar(env, charId), { t: 'char', id: charId })
   }
+  return added
+}
+
+async function collectSync(env, user, charId, raw) {
+  const binding = await env.DB.prepare(
+    'SELECT verified FROM bindings WHERE user_id = ?1 AND char_id = ?2 AND verified = 1',
+  )
+    .bind(user.id, charId)
+    .first()
+  if (!binding) return response('{"error":"not the verified owner"}', 403)
+  let doc
+  try {
+    doc = JSON.parse(raw)
+  } catch {
+    return response('{"error":"invalid body"}', 422)
+  }
+  const added = await fusionnerCollect(env, charId, doc)
+  if (added < 0) return response('{"error":"invalid ids"}', 422)
   return response(JSON.stringify({ ok: true, added }))
+}
+
+/** POST /character/:id/collect-refresh : le joueur demande sa mise a jour, et
+ *  c'est le WORKER qui va chercher chez Collect. Le navigateur n'a plus a le
+ *  faire : un bloqueur, un reseau d'entreprise ou un telephone en veille ne
+ *  peuvent plus faire echouer la synchro. */
+async function collectRefresh(env, user, charId) {
+  if (!(await verifiedBinding(env, user.id, charId))) {
+    return response('{"error":"not the verified owner"}', 403)
+  }
+  const doc = await collectDoc(charId)
+  if (!doc) return response('{"error":"collect unavailable"}', 502)
+  const added = await fusionnerCollect(env, charId, doc)
+  if (added < 0) return response('{"error":"invalid ids"}', 422)
+  return response(JSON.stringify({ ok: true, added }))
+}
+
+/** La ronde de nuit : tous les persos connus, un par un. Les succes ne se
+ *  scrapent pas chez nous, ils viennent de la ; sans ce passage, un joueur
+ *  devrait penser a cliquer pour que son groupe voie ses succes. */
+async function syncCollectNocturne(env) {
+  const rows = await env.DB.prepare('SELECT id FROM characters ORDER BY id').all()
+  let ok = 0
+  let ajouts = 0
+  for (const r of rows.results) {
+    const doc = await collectDoc(r.id)
+    if (!doc) continue
+    const n = await fusionnerCollect(env, r.id, doc)
+    if (n < 0) continue
+    ok++
+    ajouts += n
+  }
+  void compter(env, 'collect_ok', ok)
+  void compter(env, 'collect_manque', rows.results.length - ok)
+  if (ajouts > 0) void compter(env, 'collect_ajouts', ajouts)
+  return { persos: rows.results.length, ok, ajouts }
 }
 
 // ---------------------------------------------------------------- suggestions
@@ -3404,8 +3489,12 @@ async function menageNocturne(env) {
       .toISOString()
       .slice(0, 10)
     const compteurs = await env.DB.prepare('DELETE FROM metrics WHERE jour < ?1').bind(limite).run()
+    // Les succes ne se scrapent pas chez nous : sans ce passage, un joueur
+    // devrait penser a cliquer pour que son groupe voie les siens.
+    const collect = await syncCollectNocturne(env)
     console.log(
-      `ménage nocturne : ${sessions.meta.changes} session(s), ${compteurs.meta.changes} compteur(s)`,
+      `ménage nocturne : ${sessions.meta.changes} session(s), ${compteurs.meta.changes} compteur(s), ` +
+        `Collect ${collect.ok}/${collect.persos} perso(s), ${collect.ajouts} entrée(s) ajoutée(s)`,
     )
   } catch (e) {
     // Un ménage raté n'est pas grave en soi, mais il doit laisser une trace :
@@ -3667,7 +3756,7 @@ const routes = {
     // --- personnages : GET /character/:id[?force=1] · POST /character/:id/seed
     //                   PUT /character/:id/collections (propriétaire vérifié)
     const charMatch = url.pathname.match(
-      /^\/character\/(\d{1,12})(\/seed|\/collections|\/collect-sync)?$/,
+      /^\/character\/(\d{1,12})(\/seed|\/collections|\/collect-sync|\/collect-refresh)?$/,
     )
     if (charMatch) {
       const id = Number(charMatch[1])
@@ -3677,6 +3766,11 @@ const routes = {
         const raw = await req.text()
         if (raw.length > 262_144) return response('{"error":"too large"}', 413)
         return collectSync(env, user, id, raw)
+      }
+      if (charMatch[2] === '/collect-refresh' && req.method === 'POST') {
+        const user = await authenticate(env, req)
+        if (!user) return response('{"error":"unauthorized"}', 401)
+        return collectRefresh(env, user, id)
       }
       if (charMatch[2] === '/seed' && req.method === 'POST') {
         const raw = await req.text()

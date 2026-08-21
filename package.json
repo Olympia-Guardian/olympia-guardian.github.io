@@ -8,7 +8,7 @@
     "dev:local": "vite --mode localworker --port 5199 --strictPort",
     "dev:worker": "npx wrangler@4.122.0 dev --local --port 8788 --config worker/wrangler.toml",
     "dev:pull": "node scripts/dev-pull.mjs",
-    "build": "tsc --noEmit && vite build && node scripts/pages.mjs",
+    "build": "tsc --noEmit && node scripts/changelog.mjs && vite build && node scripts/pages.mjs",
     "preview": "vite preview",
     "backup": "node scripts/backup.mjs"
   },

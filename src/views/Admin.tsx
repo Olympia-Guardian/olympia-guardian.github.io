@@ -166,6 +166,14 @@ function Palmares({
   )
 }
 
+/** Une entree du journal : un commit, premiere phrase en titre. */
+interface Entree {
+  hash: string
+  date: string
+  titre: string
+  recit?: string
+}
+
 interface Metric {
   jour: string
   cle: string
@@ -190,6 +198,7 @@ export function AdminPage({ token }: { token: string }) {
     | 'comptes'
     | 'groupes'
     | 'interrupteurs'
+    | 'changelog'
     | 'icones'
   >('apercu')
   const [reports, setReports] = useState<Report[] | null>(null)
@@ -198,6 +207,7 @@ export function AdminPage({ token }: { token: string }) {
   const [adoption, setAdoption] = useState<Adoption | null>(null)
   const [couts, setCouts] = useState<{ lignes: Record<string, number>; total: number } | null>(null)
   const [flags, setFlags] = useState<Record<string, boolean> | null>(null)
+  const [changelog, setChangelog] = useState<Entree[] | null>(null)
 
   const entetes = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'X-Admin-Pin': pin }),
@@ -280,6 +290,21 @@ export function AdminPage({ token }: { token: string }) {
       }
     })()
   }, [onglet, adoption, pin, entetes])
+
+  // Le journal des modifications, genere au build depuis git log. Il vit dans
+  // les donnees publiques (le depot l'est aussi) : seul l'ECRAN est reserve a
+  // l'admin, pour l'instant.
+  useEffect(() => {
+    if (onglet !== 'changelog' || changelog !== null) return
+    void (async () => {
+      try {
+        const res = await fetch(`${import.meta.env.BASE_URL}data/changelog.json`)
+        setChangelog(res.ok ? ((await res.json()) as { entrees: Entree[] }).entrees : [])
+      } catch {
+        setChangelog([])
+      }
+    })()
+  }, [onglet, changelog])
 
   // Les interrupteurs, a l'ouverture de leur onglet.
   useEffect(() => {
@@ -447,6 +472,7 @@ export function AdminPage({ token }: { token: string }) {
             ['comptes', t('adminTabAccounts')],
             ['groupes', t('adminTabGroups')],
             ['interrupteurs', t('adminTabFlags')],
+            ['changelog', t('adminTabChangelog')],
             ['icones', t('adminTabIcons')],
           ] as const
         ).map(([id, label]) => (
@@ -464,6 +490,36 @@ export function AdminPage({ token }: { token: string }) {
       </div>
 
       {onglet === 'icones' && <AdminIcons />}
+
+      {/* Le journal des modifications : les messages de commit, tels quels.
+          Ils racontent deja quoi, pourquoi, et ce qui a failli mal tourner —
+          les recopier ailleurs serait de la double saisie qui finit par
+          mentir. La premiere phrase se lit fermee, le recit s'ouvre au clic. */}
+      {onglet === 'changelog' && (
+        <section className="relic-series group-card">
+          <header className="relic-series-head">
+            <h4 className="relic-series-name">{t('adminTabChangelog')}</h4>
+            {changelog && <span className="muted">{t('changelogCompte', { n: changelog.length })}</span>}
+          </header>
+          {changelog === null ? (
+            <p className="muted">{t('loading')}</p>
+          ) : changelog.length === 0 ? (
+            <p className="muted">{t('changelogVide')}</p>
+          ) : (
+            <div className="changelog">
+              {changelog.map((e) => (
+                <details key={e.hash} className="changelog-entree">
+                  <summary>
+                    <span className="changelog-date">{e.date}</span>
+                    <span className="changelog-titre">{e.titre}</span>
+                  </summary>
+                  {e.recit && <p className="changelog-recit">{e.recit}</p>}
+                </details>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Ce qui sert vraiment. Deux mesures cote a cote : les ecrans ouverts,
           annonces par le navigateur, et les routes appelees, comptees par le

@@ -9,6 +9,10 @@ dist/
 worker/.wrangler/
 worker/.dev-dump.sql
 
+# genere au build depuis git log (scripts/changelog.mjs) : committe, chaque
+# commit le rendrait obsolete
+public/data/changelog.json
+
 # Sauvegardes de la base : contiennent comptes, sessions et identifiants
 # Discord. Ne doivent JAMAIS partir dans un depot, public ou non.
 backups/

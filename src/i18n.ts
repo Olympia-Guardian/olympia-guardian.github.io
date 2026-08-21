@@ -1115,6 +1115,12 @@ const STR = {
     fr: 'Replie les paliers, les matériaux et les totaux : il ne reste que la grille des reliques. Cliquer fait toujours la même chose.',
     en: 'Folds away tiers, materials and totals: only the relic grid remains. Clicking still does the same thing.',
   },
+  adminTabChangelog: { fr: 'Journal des modifs', en: 'Changelog' },
+  changelogCompte: { fr: '{n} entrées, du plus récent au plus ancien', en: '{n} entries, newest first' },
+  changelogVide: {
+    fr: 'Aucune entrée. Le fichier se génère au build depuis l’historique git.',
+    en: 'No entries. The file is generated at build time from the git history.',
+  },
   guideResetHelp: { fr: 'Revoir les aides actives', en: 'Replay active help' },
   guideResetDone: {
     fr: 'Elles réapparaîtront sur chaque écran ✓',

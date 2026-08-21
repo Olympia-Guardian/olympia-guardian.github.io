@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historique entier : le build genere le journal des modifications
+          # depuis git log (scripts/changelog.mjs). En profondeur 1, il ne
+          # verrait qu'un commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -3382,6 +3382,39 @@ a.player-name:hover {
   white-space: nowrap;
 }
 
+/* « Icônes seules » : tout ce qui explique disparait, la grille reste. On ne
+   retire rien du DOM et on ne recalcule rien — les chaines de paliers, les
+   coches et les clics fonctionnent exactement pareil, seule la mise en page se
+   replie. Une vue a part aurait duplique toute la logique des paliers. */
+.relics-compact .relic-step-info,
+.relics-compact .relic-role-label,
+.relics-compact .relic-steps-wrap,
+.relics-compact .relic-totals,
+.relics-compact .relic-global,
+.relics-compact .relic-note {
+  display: none;
+}
+
+/* Les paliers se suivent au lieu de s'empiler : sans ca, chaque palier gardait
+   sa ligne et la grille restait aussi haute qu'avant. */
+.relics-compact .relic-icon-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.relics-compact .relic-icon-step {
+  display: contents;
+}
+
+.relics-compact .relic-icons {
+  gap: 4px;
+}
+
+.relics-compact .relic-cat-body {
+  gap: 10px;
+}
+
 /* ------------------------------------------------ usage et interrupteurs */
 
 /* Deux classements cote a cote : les ecrans que le navigateur annonce, et les

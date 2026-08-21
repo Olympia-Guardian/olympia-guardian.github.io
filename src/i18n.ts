@@ -1110,6 +1110,11 @@ const STR = {
     fr: 'FFXIV Collect ne connaît pas ce personnage, ou n’a pas répondu.',
     en: 'FFXIV Collect does not know this character, or did not answer.',
   },
+  relicCompact: { fr: 'Icônes seules', en: 'Icons only' },
+  relicCompactTitle: {
+    fr: 'Replie les paliers, les matériaux et les totaux : il ne reste que la grille des reliques. Cliquer fait toujours la même chose.',
+    en: 'Folds away tiers, materials and totals: only the relic grid remains. Clicking still does the same thing.',
+  },
   guideResetHelp: { fr: 'Revoir les aides actives', en: 'Replay active help' },
   guideResetDone: {
     fr: 'Elles réapparaîtront sur chaque écran ✓',

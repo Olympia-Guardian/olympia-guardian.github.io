@@ -1020,6 +1020,12 @@ export function Relics({
 }) {
   const { lang, t } = useI18n()
   const [mode, setMode] = useState<'quick' | 'inspect'>('inspect')
+  // « Icônes seules » : les paliers, les matériaux et les totaux se replient,
+  // il ne reste que la grille. C'est un choix d'AFFICHAGE, pas un troisième
+  // mode : cliquer une relique fait toujours ce que dit le mode ci-dessus, et
+  // les chaînes de paliers continuent de s'appliquer. Rien n'est recalculé,
+  // seule la mise en page change — d'où une bascule plutôt qu'une vue à part.
+  const [compact, setCompact] = useState(false)
   const [pick, setPick] = useState<RelicPick | null>(null)
 
   const ownedSets = useMemo(
@@ -1135,7 +1141,7 @@ export function Relics({
     : undefined
 
   return (
-    <div className="view">
+    <div className={`view ${compact ? 'relics-compact' : ''}`}>
       {onToggleRelic && (
         <div className="controls editor-controls">
           <div className="mode-switch">
@@ -1157,6 +1163,14 @@ export function Relics({
               <TabIcon k="inspect" /> {t('modeInspect')}
             </button>
           </div>
+          <button
+            className={`mode-btn ${compact ? 'is-active' : ''}`}
+            title={t('relicCompactTitle')}
+            aria-pressed={compact}
+            onClick={() => setCompact((v) => !v)}
+          >
+            <TabIcon k="collections" /> {t('relicCompact')}
+          </button>
         </div>
       )}
       {pick && onToggleRelic && (

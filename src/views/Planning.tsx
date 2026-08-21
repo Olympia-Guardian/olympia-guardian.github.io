@@ -211,11 +211,21 @@ export function Planning({
 
   const [visibleSucces, setVisibleSucces] = useState(20)
 
+  /** Les collections proposées au filtre. Les succès s'y ajoutent, alors qu'ils
+   *  ne participent PAS aux sorties : sans eux dans la liste, choisir une
+   *  collection laissait leur section affichée quoi qu'on choisisse, et rien ne
+   *  permettait de les isoler. */
+  const KINDS_FILTRE = useMemo(
+    () => (avecSucces ? [...KINDS_VUS, 'achievements' as Kind] : KINDS_VUS),
+    [KINDS_VUS, avecSucces],
+  )
+
   /** Les succes de groupe qu'il reste a decrocher, les plus demandes d'abord.
    *  Meme filtre d'extension et meme seuil que les sorties : le planning parle
    *  d'une seule chose a la fois. */
   const succes = useMemo(() => {
-    if (!avecSucces) return []
+    // Une autre collection au filtre : la section n'a rien a faire la.
+    if (!avecSucces || (kindFilter !== 'all' && kindFilter !== 'achievements')) return []
     const minM = Math.min(minMissing, ready.length)
     const out: { item: Item; manquants: Character[] }[] = []
     for (const item of db.achievements) {
@@ -228,11 +238,14 @@ export function Planning({
       out.push({ item, manquants })
     }
     return out.sort((a, b) => b.manquants.length - a.manquants.length)
-  }, [avecSucces, db, ready, ownedSets, expansion, minMissing])
+  }, [avecSucces, kindFilter, db, ready, ownedSets, expansion, minMissing])
 
   const runs = useMemo(() => {
     const map = new Map<string, Run>()
-    const kinds: Kind[] = kindFilter === 'all' ? KINDS_VUS : [kindFilter]
+    // « achievements » ne traverse jamais cette boucle : une sortie se batit
+    // sur la source d'un objet, et un succes n'en a aucune.
+    const kinds: Kind[] =
+      kindFilter === 'all' ? KINDS_VUS : kindFilter === 'achievements' ? [] : [kindFilter]
     // En vue « juste pour moi », un seuil > 1 gardé d'avant viderait tout.
     const minM = Math.min(minMissing, ready.length)
     for (const kind of kinds) {
@@ -353,21 +366,23 @@ export function Planning({
   }, [runs, search, lang])
 
   const stats = useMemo(() => {
-    const counts = Object.fromEntries(KINDS_VUS.map((k) => [k, new Set<number>()])) as Record<
+    const counts = Object.fromEntries(KINDS_FILTRE.map((k) => [k, new Set<number>()])) as Record<
       Kind,
       Set<number>
     >
     for (const run of runs) for (const e of run.entries) counts[e.kind]?.add(e.item.id)
+    // Les succes ne viennent pas des sorties : leur tuile compte la section.
+    for (const { item } of succes) counts.achievements?.add(item.id)
     return { counts, runs: runs.length }
-  }, [runs, KINDS_VUS])
+  }, [runs, succes, KINDS_FILTRE])
 
   const [visible, setVisible] = useState(30)
 
   // Le filtre garde son choix d'une session à l'autre : s'il vise une
   // collection qu'on ne montre plus, on revient à « toutes ».
   useEffect(() => {
-    if (kindFilter !== 'all' && !KINDS_VUS.includes(kindFilter)) setKindFilter('all')
-  }, [kindFilter, KINDS_VUS])
+    if (kindFilter !== 'all' && !KINDS_FILTRE.includes(kindFilter)) setKindFilter('all')
+  }, [kindFilter, KINDS_FILTRE])
 
   if (ready.length === 0) return null
 
@@ -375,7 +390,7 @@ export function Planning({
     <div className="view">
       <div className="stat-row">
         <StatTile value={stats.runs} label={t('tileRuns')} />
-        {(kindFilter === 'all' ? KINDS_VUS : [kindFilter]).map((k) => (
+        {(kindFilter === 'all' ? KINDS_FILTRE : [kindFilter]).map((k) => (
           <StatTile key={k} value={stats.counts[k].size} label={t(TILE_KEYS[k])} />
         ))}
       </div>
@@ -404,7 +419,7 @@ export function Planning({
           onChange={(e) => setKindFilter(e.target.value as KindFilter)}
         >
           <option value="all">{t('allCollections')}</option>
-          {KINDS_VUS.map((k) => (
+          {KINDS_FILTRE.map((k) => (
             <option key={k} value={k}>
               {kindLabel(lang, k)}
             </option>
@@ -480,7 +495,9 @@ export function Planning({
         </section>
       )}
 
-      {filteredRuns.length === 0 && <p className="empty">{t('planningEmpty')}</p>}
+      {filteredRuns.length === 0 && kindFilter !== 'achievements' && (
+        <p className="empty">{t('planningEmpty')}</p>
+      )}
 
       <div className="run-list">
         {filteredRuns.slice(0, visible).map((run) => (

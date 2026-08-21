@@ -1,5 +1,5 @@
 import { lsGet, lsSet } from './storage'
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { KINDS, KIND_FAMILIES, LODESTONE_KINDS, PLANNING_KINDS, type Kind } from './api'
 import { useAuth, useFournisseurs, vientDeSeConnecter } from './auth'
 import { useDigest } from './digest'
@@ -48,18 +48,44 @@ import { marches, type Bis, type Etat as EtatRaid } from './raid'
 // compte, qui ne verra jamais que les montures et les mascottes, telechargeait
 // l'administration, les reliques et leurs couts, et Mon Journal. Le planning et
 // les collections restent d'office, ce sont les deux ecrans d'arrivee.
-const MyPage = lazy(() => import('./views/MyPage').then((m) => ({ default: m.MyPage })))
-const Relics = lazy(() => import('./views/Relics').then((m) => ({ default: m.Relics })))
-const AdminPage = lazy(() => import('./views/Admin').then((m) => ({ default: m.AdminPage })))
-const GroupsPage = lazy(() => import('./views/Groups').then((m) => ({ default: m.GroupsPage })))
-const GroupCreateDialog = lazy(() =>
+//
+// `ecran` rattrape le paquet disparu : chaque deploiement renomme les fichiers
+// (le hash change), et un onglet reste ouvert sur l'ancien index.html jusqu'a
+// dix minutes. Cliquer « Mon Journal » dans cette fenetre demandait un fichier
+// qui n'existe plus, et l'ecran d'erreur global s'affichait pour un simple
+// cache perime. On recharge la page : le nouvel index.html pointe les bons
+// paquets. Une fois par minute au plus, pour qu'une vraie panne (hors ligne,
+// deploiement casse) montre l'erreur au lieu de recharger en boucle.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- la contrainte de React.lazy
+function ecran<T extends ComponentType<any>>(charge: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    charge().catch((e) => {
+      const cle = 'ogs.rechargement.paquet'
+      const dernier = Number(sessionStorage.getItem(cle) ?? 0)
+      if (Date.now() - dernier > 60_000) {
+        sessionStorage.setItem(cle, String(Date.now()))
+        location.reload()
+        // La page part : une promesse qui ne se resout jamais evite un eclair
+        // d'ecran d'erreur pendant le rechargement.
+        return new Promise<{ default: T }>(() => {})
+      }
+      throw e
+    }),
+  )
+}
+
+const MyPage = ecran(() => import('./views/MyPage').then((m) => ({ default: m.MyPage })))
+const Relics = ecran(() => import('./views/Relics').then((m) => ({ default: m.Relics })))
+const AdminPage = ecran(() => import('./views/Admin').then((m) => ({ default: m.AdminPage })))
+const GroupsPage = ecran(() => import('./views/Groups').then((m) => ({ default: m.GroupsPage })))
+const GroupCreateDialog = ecran(() =>
   import('./views/Groups').then((m) => ({ default: m.GroupCreateDialog })),
 )
-const Market = lazy(() => import('./views/Market').then((m) => ({ default: m.Market })))
-const Butin = lazy(() => import('./views/Butin').then((m) => ({ default: m.Butin })))
-const AccountPage = lazy(() => import('./views/Account').then((m) => ({ default: m.AccountPage })))
-const LoginPage = lazy(() => import('./views/Login').then((m) => ({ default: m.LoginPage })))
-const NewsPage = lazy(() => import('./views/News').then((m) => ({ default: m.NewsPage })))
+const Market = ecran(() => import('./views/Market').then((m) => ({ default: m.Market })))
+const Butin = ecran(() => import('./views/Butin').then((m) => ({ default: m.Butin })))
+const AccountPage = ecran(() => import('./views/Account').then((m) => ({ default: m.AccountPage })))
+const LoginPage = ecran(() => import('./views/Login').then((m) => ({ default: m.LoginPage })))
+const NewsPage = ecran(() => import('./views/News').then((m) => ({ default: m.NewsPage })))
 
 /** Les écrans qui parlent de collections, donc ceux qu'un groupe de raid n'a
  *  pas. Tout le reste (mon journal, l'administration, le guide, le marché) lui
